@@ -10,7 +10,9 @@ group = 'com.mr'
 version = '0.0.1-SNAPSHOT'
 
 java {
-    sourceCompatibility = '17' // 자바 17
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 configurations {
@@ -25,25 +27,28 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-validation' // DTO 유효성 검증용
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
 
     // Swagger
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 
-    // JWT
+    // JWT (이전 프로젝트 유틸 코드를 쓰실 거라면 0.11.5가 안전해요!)
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5' // JWT JSON 파싱용
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
-    //PostgreSQL 18, JPA
+    // PostgreSQL 18, JPA
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'org.postgresql:postgresql'
 
-    // Lombok & DevTools
+    // Lombok, DevTools
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // Health Check
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -51,4 +56,14 @@ dependencies {
 
 test {
     useJUnitPlatform()
+}
+
+// Private Config Copy
+tasks.register('copyPrivateConfig', Copy) {
+    from './MR_config/local'
+    into 'src/main/resources'
+}
+
+tasks.named('processResources') {
+    dependsOn 'copyPrivateConfig'
 }
