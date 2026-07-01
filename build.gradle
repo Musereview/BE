@@ -64,6 +64,6 @@ tasks.register('copyPrivateConfig', Copy) {
     into 'src/main/resources'
 }
 
-//tasks.named('processResources') {
-//    dependsOn 'copyPrivateConfig'
-//}
+tasks.named('processResources') {
+    dependsOn 'copyPrivateConfig'
+}
