@@ -1,7 +1,7 @@
 plugins {
     id 'java'
     id 'org.springframework.boot' version '3.2.2'
-    id 'io.spring.dependency-management' version '1.1.4'
+    id 'io.spring.dependency-management' version '1.1.7'
     // formater
     id 'io.spring.javaformat' version '0.0.41'
 }
@@ -64,6 +64,6 @@ tasks.register('copyPrivateConfig', Copy) {
     into 'src/main/resources'
 }
 
-tasks.named('processResources') {
-    dependsOn 'copyPrivateConfig'
-}
+//tasks.named('processResources') {
+//    dependsOn 'copyPrivateConfig'
+//}
