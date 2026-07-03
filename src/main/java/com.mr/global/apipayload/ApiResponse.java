@@ -1,7 +1,7 @@
-package com.mr.global.apiPayLoad;
+package com.mr.global.apipayload;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.mr.global.apiPayLoad.code.CommonStatus;
+import com.mr.global.apipayload.code.CommonStatus;
 
 @JsonPropertyOrder({"isSuccess", "code", "message", "data"})
 public record ApiResponse<T>(

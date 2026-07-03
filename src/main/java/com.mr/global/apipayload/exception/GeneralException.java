@@ -1,7 +1,7 @@
-package com.mr.global.apiPayLoad.exception;
+package com.mr.global.apipayload.exception;
 
-import com.mr.global.apiPayLoad.code.BaseCode;
-import com.mr.global.apiPayLoad.code.StatusReasonDTO;
+import com.mr.global.apipayload.code.BaseCode;
+import com.mr.global.apipayload.code.StatusReasonDTO;
 import lombok.Getter;
 
 @Getter

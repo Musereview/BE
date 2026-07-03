@@ -1,4 +1,4 @@
-package com.mr.global.apiPayLoad.code;
+package com.mr.global.apipayload.code;
 
 import org.springframework.http.HttpStatus;
 

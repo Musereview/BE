@@ -1,4 +1,4 @@
-package com.mr.global.apiPayLoad.code;
+package com.mr.global.apipayload.code;
 
 import org.springframework.http.HttpStatus;
 import lombok.AllArgsConstructor;
@@ -8,11 +8,10 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum CommonStatus implements BaseCode {
 
-    // 성공 응답
+    // 공통 성공 / 실패
     SUCCESS(HttpStatus.OK, "COMMON_200", "요청에 성공하였습니다."),
-
-    // 도메인 에러코드 예시
-    TOKEN_MISSING(HttpStatus.BAD_REQUEST, "AUTH_400_07", "토큰 값이 필요합니다."),
+    INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "COMMON_400_01", "입력값이 올바르지 않습니다."),
+    HTTP_MESSAGE_NOT_READABLE(HttpStatus.BAD_REQUEST, "COMMON_400_02", "요청 본문(JSON) 파싱에 실패했습니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_500_01", "서버 에러가 발생했습니다.");
 
     private final HttpStatus status;
