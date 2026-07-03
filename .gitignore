@@ -44,3 +44,9 @@ application*.yml
 *.key
 *.pem
 *.jks
+
+
+MR_config/*
+!MR_config/local/
+MR_config/local/*
+!MR_config/local/application.example.yml
