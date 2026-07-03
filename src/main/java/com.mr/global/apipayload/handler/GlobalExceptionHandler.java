@@ -16,9 +16,9 @@ public class GlobalExceptionHandler {
 
     // 커스텀 예외
     @ExceptionHandler(GeneralException.class)
-    public ResponseEntity<ApiResponse<Void>> handleGeneralException(GeneralException e) {
+    public ResponseEntity<ApiResponse<Object>> handleGeneralException(GeneralException e) {
         var reason = e.getErrorReason();
-        var response = ApiResponse.onFailure(reason.code(), reason.message(), null);
+        ApiResponse<Object> response = ApiResponse.onFailure(reason.code(), reason.message(), null);
         return new ResponseEntity<>(response, reason.status());
     }
 
@@ -31,15 +31,15 @@ public class GlobalExceptionHandler {
                         error -> error.getField(),
                         error -> error.getDefaultMessage() != null ? error.getDefaultMessage() : "올바르지 않은 형식입니다."
                 ));
-        var response = ApiResponse.onFailure(status.getCode(), status.getMessage(), errors);
+        ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), errors);
         return new ResponseEntity<>(response, status.getStatus());
     }
 
     // JSON 파싱 에러
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
+    public ResponseEntity<ApiResponse<Object>> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
         var status = CommonStatus.HTTP_MESSAGE_NOT_READABLE;
-        var response = ApiResponse.onFailure(status.getCode(), status.getMessage(), null);
+        ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), null);
         return new ResponseEntity<>(response, status.getStatus());
     }
 
@@ -52,15 +52,15 @@ public class GlobalExceptionHandler {
                         violation -> violation.getPropertyPath().toString(),
                         violation -> violation.getMessage()
                 ));
-        var response = ApiResponse.onFailure(status.getCode(), status.getMessage(), errors);
+        ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), errors);
         return new ResponseEntity<>(response, status.getStatus());
     }
 
     // 그 외  전체 서버 에러 처리
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleAllException(Exception e) {
+    public ResponseEntity<ApiResponse<Object>> handleAllException(Exception e) {
         var status = CommonStatus.INTERNAL_SERVER_ERROR;
-        var response = ApiResponse.onFailure(status.getCode(), status.getMessage(), null);
+        ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), null);
         return new ResponseEntity<>(response, status.getStatus());
     }
 }
