@@ -60,6 +60,13 @@ test {
 
 // Private Config Copy
 tasks.register('copyPrivateConfig', Copy) {
+    def envDir = file('./MR_config/local')
+
+    if (!envDir.exists()) {
+        envDir.mkdirs()
+        file('./MR_config/local/application.yml').text = "# 이 경로에 복사한 로컬 설정을 채워 넣어 주세요!"
+    }
+
     from './MR_config/local'
     into 'src/main/resources'
 }

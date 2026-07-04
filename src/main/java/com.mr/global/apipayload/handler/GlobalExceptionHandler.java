@@ -29,7 +29,8 @@ public class GlobalExceptionHandler {
         var errors = e.getBindingResult().getFieldErrors().stream()
                 .collect(Collectors.toMap(
                         error -> error.getField(),
-                        error -> error.getDefaultMessage() != null ? error.getDefaultMessage() : "올바르지 않은 형식입니다."
+                        error -> error.getDefaultMessage() != null ? error.getDefaultMessage() : "올바르지 않은 형식입니다.",
+                        (existing, replacement) -> existing
                 ));
         ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), errors);
         return new ResponseEntity<>(response, status.getStatus());
@@ -50,7 +51,8 @@ public class GlobalExceptionHandler {
         var errors = e.getConstraintViolations().stream()
                 .collect(Collectors.toMap(
                         violation -> violation.getPropertyPath().toString(),
-                        violation -> violation.getMessage()
+                        violation -> violation.getMessage(),
+                        (existing, replacement) -> existing
                 ));
         ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), errors);
         return new ResponseEntity<>(response, status.getStatus());

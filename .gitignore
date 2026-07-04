@@ -1,4 +1,6 @@
-# Git ignore for Spring Boot / Java / Gradle / IntelliJ
+# ================================================================= #
+# Git ignore for Spring Boot / Java / Gradle / IntelliJ (Muse Review)
+# ================================================================= #
 
 HELP.md
 .gradle
@@ -38,15 +40,14 @@ out/
 Thumbs.db
 desktop.ini
 
-### Sensitive Data ###
-application*.properties
-application*.yml
+# 암호키 및 보안 인증서 관련 파일
 *.key
 *.pem
 *.jks
 
 
 MR_config/*
-!MR_config/local/
+
 MR_config/local/*
+
 !MR_config/local/application.example.yml
