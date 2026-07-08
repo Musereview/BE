@@ -25,7 +25,7 @@ public class PracticeStatistics extends BaseCreatedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "practice_statisics_id")
+    @Column(name = "practice_statistics_id")
     private Long id;
 
     /** TODO: User 도메인 엔티티 연관관계 연결 예정 */
