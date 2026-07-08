@@ -36,7 +36,9 @@ public class LlmCallLog extends BaseCreatedEntity {
     @Column(name = "llm_call_log_id")
     private Long id;
 
-    /** TODO: User 도메인 엔티티 연관관계 연결 예정 */
+    /**
+     * TODO: User 도메인 엔티티 연관관계 연결 예정
+     */
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
@@ -119,11 +121,9 @@ public class LlmCallLog extends BaseCreatedEntity {
         this.errorMessage = errorMessage;
     }
 
-    public static LlmCallLog success(Long userId, Analysis analysis, AnalysisReport analysisReport,
-                                     MentorMessage mentorMessage, LlmPurpose purpose, String modelName, String promptVersion,
-                                     JsonNode promptSnapshotJson, Integer promptTokens, Integer completionTokens,
-                                     Integer totalTokens, BigDecimal temperature, Integer latencyMs, Boolean cacheHit,
-                                     String inputHash) {
+    private static LlmCallLogBuilder baseBuilder(Long userId, Analysis analysis, AnalysisReport analysisReport,
+                                                 MentorMessage mentorMessage, LlmPurpose purpose, String modelName, String promptVersion,
+                                                 JsonNode promptSnapshotJson, BigDecimal temperature, Integer latencyMs, String inputHash) {
         return LlmCallLog.builder()
                 .userId(userId)
                 .analysis(analysis)
@@ -133,14 +133,34 @@ public class LlmCallLog extends BaseCreatedEntity {
                 .modelName(modelName)
                 .promptVersion(promptVersion)
                 .promptSnapshotJson(promptSnapshotJson)
+                .temperature(temperature)
+                .latencyMs(latencyMs)
+                .inputHash(inputHash);
+    }
+
+    public static LlmCallLog success(Long userId, Analysis analysis, AnalysisReport analysisReport,
+                                     MentorMessage mentorMessage, LlmPurpose purpose, String modelName, String promptVersion,
+                                     JsonNode promptSnapshotJson, Integer promptTokens, Integer completionTokens,
+                                     Integer totalTokens, BigDecimal temperature, Integer latencyMs, Boolean cacheHit,
+                                     String inputHash) {
+        return baseBuilder(
+                userId,
+                analysis,
+                analysisReport,
+                mentorMessage,
+                purpose,
+                modelName,
+                promptVersion,
+                promptSnapshotJson,
+                temperature,
+                latencyMs,
+                inputHash
+        )
                 .promptTokens(promptTokens)
                 .completionTokens(completionTokens)
                 .totalTokens(totalTokens)
-                .temperature(temperature)
-                .latencyMs(latencyMs)
                 .cacheHit(cacheHit)
                 .status(LlmCallStatus.SUCCESS)
-                .inputHash(inputHash)
                 .build();
     }
 
@@ -148,20 +168,21 @@ public class LlmCallLog extends BaseCreatedEntity {
                                     MentorMessage mentorMessage, LlmPurpose purpose, String modelName, String promptVersion,
                                     JsonNode promptSnapshotJson, BigDecimal temperature, Integer latencyMs, String inputHash,
                                     String errorMessage) {
-        return LlmCallLog.builder()
-                .userId(userId)
-                .analysis(analysis)
-                .analysisReport(analysisReport)
-                .mentorMessage(mentorMessage)
-                .purpose(purpose)
-                .modelName(modelName)
-                .promptVersion(promptVersion)
-                .promptSnapshotJson(promptSnapshotJson)
-                .temperature(temperature)
-                .latencyMs(latencyMs)
+        return baseBuilder(
+                userId,
+                analysis,
+                analysisReport,
+                mentorMessage,
+                purpose,
+                modelName,
+                promptVersion,
+                promptSnapshotJson,
+                temperature,
+                latencyMs,
+                inputHash
+        )
                 .cacheHit(false)
                 .status(LlmCallStatus.FAILED)
-                .inputHash(inputHash)
                 .errorMessage(errorMessage)
                 .build();
     }
@@ -170,20 +191,21 @@ public class LlmCallLog extends BaseCreatedEntity {
                                      MentorMessage mentorMessage, LlmPurpose purpose, String modelName, String promptVersion,
                                      JsonNode promptSnapshotJson, BigDecimal temperature, Integer latencyMs, String inputHash,
                                      String errorMessage) {
-        return LlmCallLog.builder()
-                .userId(userId)
-                .analysis(analysis)
-                .analysisReport(analysisReport)
-                .mentorMessage(mentorMessage)
-                .purpose(purpose)
-                .modelName(modelName)
-                .promptVersion(promptVersion)
-                .promptSnapshotJson(promptSnapshotJson)
-                .temperature(temperature)
-                .latencyMs(latencyMs)
+        return baseBuilder(
+                userId,
+                analysis,
+                analysisReport,
+                mentorMessage,
+                purpose,
+                modelName,
+                promptVersion,
+                promptSnapshotJson,
+                temperature,
+                latencyMs,
+                inputHash
+        )
                 .cacheHit(false)
                 .status(LlmCallStatus.TIMEOUT)
-                .inputHash(inputHash)
                 .errorMessage(errorMessage)
                 .build();
     }
