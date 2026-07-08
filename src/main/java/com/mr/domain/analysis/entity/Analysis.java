@@ -123,12 +123,18 @@ public class Analysis extends BaseCreatedEntity {
     }
 
     public void startProcessing() {
+        if (this.status != AnalysisStatus.PENDING) {
+            throw new IllegalStateException("PENDING 상태의 분석만 PROCESSING으로 변경할 수 있습니다.");
+        }
         this.status = AnalysisStatus.PROCESSING;
     }
 
     public void complete(Integer totalScore, AnalysisGrade grade, String summary, BigDecimal scaleScore,
                          BigDecimal tensionScore, BigDecimal progressionScore, BigDecimal voiceLeadingScore,
                          String rawResultJson) {
+        if (this.status != AnalysisStatus.PROCESSING) {
+            throw new IllegalStateException("PROCESSING 상태의 분석만 완료 처리할 수 있습니다.");
+        }
         this.status = AnalysisStatus.COMPLETED;
         this.totalScore = totalScore;
         this.grade = grade;
@@ -142,6 +148,9 @@ public class Analysis extends BaseCreatedEntity {
     }
 
     public void fail(String failedReason) {
+        if (this.status == AnalysisStatus.COMPLETED) {
+            throw new IllegalStateException("이미 완료된 분석은 실패 처리할 수 없습니다.");
+        }
         this.status = AnalysisStatus.FAILED;
         this.failedReason = failedReason;
         this.completedAt = LocalDateTime.now();
