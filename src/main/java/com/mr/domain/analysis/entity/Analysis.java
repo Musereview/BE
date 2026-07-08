@@ -84,6 +84,7 @@ public class Analysis extends BaseCreatedEntity {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Builder(access = AccessLevel.PRIVATE)
     private Analysis(Long userId, Long playingId, String analysisVersion, Integer startBar, Integer endBar,
                      AnalysisStatus status, Integer totalScore, AnalysisGrade grade, String summary,
                      String analysisRequestJson, BigDecimal scaleScore, BigDecimal tensionScore,
@@ -110,25 +111,15 @@ public class Analysis extends BaseCreatedEntity {
 
     public static Analysis createPending(Long userId, Long playingId, Integer startBar, Integer endBar,
                                          String analysisRequestJson) {
-        return new Analysis(
-                userId,
-                playingId,
-                "v1",
-                startBar,
-                endBar,
-                AnalysisStatus.PENDING,
-                null,
-                null,
-                null,
-                analysisRequestJson,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-        );
+        return Analysis.builder()
+                .userId(userId)
+                .playingId(playingId)
+                .analysisVersion("v1")
+                .startBar(startBar)
+                .endBar(endBar)
+                .status(AnalysisStatus.PENDING)
+                .analysisRequestJson(analysisRequestJson)
+                .build();
     }
 
     public void startProcessing() {
