@@ -3,14 +3,8 @@ package com.mr.domain.analysis.entity;
 import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.global.entity.BaseCreatedEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
@@ -20,7 +14,12 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(name = "analysis")
+// TODO: 추후 User, Playing 도메인 인덱스 추가
+@Table(
+        name = "analysis",
+        indexes = {
+                @Index(name = "idx_analysis_status", columnList = "status")
+        })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Analysis extends BaseCreatedEntity {
 
@@ -33,7 +32,7 @@ public class Analysis extends BaseCreatedEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    /** TODO: History 도메인의 Playing 엔티티 연관관계 연결 예정 */
+    /** TODO: Playing 엔티티 연관관계 연결 예정 */
     @Column(name = "playing_id", nullable = false)
     private Long playingId;
 
