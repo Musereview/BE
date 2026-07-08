@@ -3,10 +3,9 @@ package com.mr.domain.analysis.entity;
 import com.mr.domain.analysis.entity.enums.ContentFormat;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import com.mr.domain.analysis.entity.enums.LlmStatus;
-import com.mr.global.entity.BaseCreatedEntity;
+import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -14,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "analysis_reports")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class AnalysisReport extends BaseCreatedEntity {
+public class AnalysisReport extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
