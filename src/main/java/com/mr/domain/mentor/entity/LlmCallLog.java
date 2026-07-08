@@ -1,5 +1,6 @@
 package com.mr.domain.mentor.entity;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.AnalysisReport;
 import com.mr.domain.mentor.entity.enums.LlmCallStatus;
@@ -21,6 +22,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @Entity
@@ -59,8 +62,9 @@ public class LlmCallLog extends BaseCreatedEntity {
     @Column(name = "prompt_version", length = 30)
     private String promptVersion;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "prompt_snapshot_json", columnDefinition = "json")
-    private String promptSnapshotJson;
+    private JsonNode promptSnapshotJson;
 
     @Column(name = "prompt_tokens")
     private Integer promptTokens;
@@ -93,7 +97,7 @@ public class LlmCallLog extends BaseCreatedEntity {
     @Builder
     private LlmCallLog(Long userId, Analysis analysis, AnalysisReport analysisReport,
                        MentorMessage mentorMessage, LlmPurpose purpose, String modelName, String promptVersion,
-                       String promptSnapshotJson, Integer promptTokens, Integer completionTokens,
+                       JsonNode promptSnapshotJson, Integer promptTokens, Integer completionTokens,
                        Integer totalTokens, BigDecimal temperature, Integer latencyMs, Boolean cacheHit,
                        LlmCallStatus status, String inputHash, String errorMessage) {
         this.userId = userId;
@@ -117,7 +121,7 @@ public class LlmCallLog extends BaseCreatedEntity {
 
     public static LlmCallLog success(Long userId, Analysis analysis, AnalysisReport analysisReport,
                                      MentorMessage mentorMessage, LlmPurpose purpose, String modelName, String promptVersion,
-                                     String promptSnapshotJson, Integer promptTokens, Integer completionTokens,
+                                     JsonNode promptSnapshotJson, Integer promptTokens, Integer completionTokens,
                                      Integer totalTokens, BigDecimal temperature, Integer latencyMs, Boolean cacheHit,
                                      String inputHash) {
         return LlmCallLog.builder()
@@ -142,7 +146,7 @@ public class LlmCallLog extends BaseCreatedEntity {
 
     public static LlmCallLog failed(Long userId, Analysis analysis, AnalysisReport analysisReport,
                                     MentorMessage mentorMessage, LlmPurpose purpose, String modelName, String promptVersion,
-                                    String promptSnapshotJson, BigDecimal temperature, Integer latencyMs, String inputHash,
+                                    JsonNode promptSnapshotJson, BigDecimal temperature, Integer latencyMs, String inputHash,
                                     String errorMessage) {
         return LlmCallLog.builder()
                 .userId(userId)
@@ -164,7 +168,7 @@ public class LlmCallLog extends BaseCreatedEntity {
 
     public static LlmCallLog timeout(Long userId, Analysis analysis, AnalysisReport analysisReport,
                                      MentorMessage mentorMessage, LlmPurpose purpose, String modelName, String promptVersion,
-                                     String promptSnapshotJson, BigDecimal temperature, Integer latencyMs, String inputHash,
+                                     JsonNode promptSnapshotJson, BigDecimal temperature, Integer latencyMs, String inputHash,
                                      String errorMessage) {
         return LlmCallLog.builder()
                 .userId(userId)
