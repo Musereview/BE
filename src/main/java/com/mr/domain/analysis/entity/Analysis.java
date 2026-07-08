@@ -90,6 +90,10 @@ public class Analysis extends BaseCreatedEntity {
                      String analysisRequestJson, BigDecimal scaleScore, BigDecimal tensionScore,
                      BigDecimal progressionScore, BigDecimal voiceLeadingScore, String rawResultJson,
                      String failedReason, LocalDateTime completedAt) {
+        validatePositive(startBar, "startBar");
+        validatePositive(endBar, "endBar");
+        validateBarRange(startBar, endBar);
+
         this.userId = userId;
         this.playingId = playingId;
         this.analysisVersion = analysisVersion;
@@ -120,6 +124,18 @@ public class Analysis extends BaseCreatedEntity {
                 .status(AnalysisStatus.PENDING)
                 .analysisRequestJson(analysisRequestJson)
                 .build();
+    }
+
+    private static void validatePositive(Integer value, String fieldName) {
+        if (value == null || value <= 0) {
+            throw new IllegalArgumentException(fieldName + "은(는) 필수이며 양수여야 합니다.");
+        }
+    }
+
+    private static void validateBarRange(Integer startBar, Integer endBar) {
+        if (startBar > endBar) {
+            throw new IllegalArgumentException("startBar는 endBar보다 클 수 없습니다.");
+        }
     }
 
     public void startProcessing() {
