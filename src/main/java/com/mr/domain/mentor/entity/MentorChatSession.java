@@ -2,7 +2,7 @@ package com.mr.domain.mentor.entity;
 
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.mentor.entity.enums.MentorChatStatus;
-import com.mr.global.entity.BaseCreatedEntity;
+import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class MentorChatSession extends BaseCreatedEntity {
+public class MentorChatSession extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
