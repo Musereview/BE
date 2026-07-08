@@ -163,7 +163,7 @@ public class Analysis extends BaseCreatedEntity {
     }
 
     public void fail(String failedReason) {
-        if (this.status == AnalysisStatus.COMPLETED) {
+        if (this.status == AnalysisStatus.COMPLETED || this.status == AnalysisStatus.FAILED) {
             throw new IllegalStateException("이미 완료된 분석은 실패 처리할 수 없습니다.");
         }
         this.status = AnalysisStatus.FAILED;
