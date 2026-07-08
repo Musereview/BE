@@ -51,3 +51,7 @@ MR_config/*
 MR_config/local/*
 
 !MR_config/local/application.example.yml
+
+# Spring Boot local config
+src/main/resources/application.yml
+src/main/resources/application-local.yml
