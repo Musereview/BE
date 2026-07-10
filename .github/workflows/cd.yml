@@ -44,7 +44,9 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/musereview:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/musereview:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/musereview:${{ github.sha }}    
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.0
