@@ -3,7 +3,7 @@ services:
     image: postgres:16
     container_name: musereview-postgres
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     environment:
       POSTGRES_DB: mr_db
       POSTGRES_USER: musereview
