@@ -25,4 +25,4 @@ aws:
 decorator:
   datasource:
     p6spy:
-      enable-logging: true
+      enable-logging: ${P6SPY_ENABLE_LOGGING:false}
