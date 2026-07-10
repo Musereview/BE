@@ -62,3 +62,7 @@ app.jar
 ### AWS CLI ###
 aws/
 awscliv2.zip
+
+# Spring Boot local config
+src/main/resources/application.yml
+src/main/resources/application-local.yml
