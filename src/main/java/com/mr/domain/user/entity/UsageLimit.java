@@ -1,6 +1,6 @@
 package com.mr.domain.user.entity;
 
-import com.mr.domain.user.entity.enums.UserUsageErrorStatus;
+import com.mr.domain.user.exception.UserUsageErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseCreatedEntity;
 import jakarta.persistence.*;

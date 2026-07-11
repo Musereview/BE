@@ -1,8 +1,7 @@
 package com.mr.domain.auth.entity;
 
-import com.mr.domain.auth.entity.enums.AuthErrorStatus;
+import com.mr.domain.auth.exception.AuthErrorStatus;
 import com.mr.domain.auth.entity.enums.SocialType;
-import com.mr.global.apipayload.code.CommonStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseCreatedEntity;
 import jakarta.persistence.*;
