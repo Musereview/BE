@@ -50,8 +50,8 @@ oauth:
 # AI 도입 및 AWS S3 공통 구조
 external:
   ai:
-    base-url: "https://example.com"
-    api-key: ${API_KEY:}
+    base-url: ${AI_BASE_URL:}
+    api-key: ${AI_API_KEY:}
     model: ${AI_MODEL:}
 
 aws:
