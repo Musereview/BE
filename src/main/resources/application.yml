@@ -1,0 +1,60 @@
+spring:
+  config:
+    import:
+      - optional:file:.env[.properties]      #.env 파일 자동 로드
+
+  application:
+    name: musereview-backend
+
+  # 공통 데이터베이스 접속 규칙 (실제 정보는 각자 .env나 application-prod에서 오버라이딩)
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/mr_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+
+  # 공통 JPA 및 하이버네이트 구동 설정
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_DDL_AUTO:update} # 배포 환경(prod)에선 validate로 덮어씌워짐
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # 파일 업로드 용량 제한
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+# Spring Security 및 JWT 인증 설정
+jwt:
+  secret: ${JWT_SECRET_KEY}
+  access-token-validity-in-seconds: 1800     # Access Token 만료 시간 (30분)
+  refresh-token-validity-in-seconds: 604800  # Refresh Token 만료 시간 (7일)
+
+# 소셜 로그인 API 연동
+oauth:
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID:}
+    client-secret: ${KAKAO_CLIENT_SECRET:}
+    redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:8080/login/oauth2/code/kakao}
+
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+    redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/login/oauth2/code/google}
+
+# AI 도입 및 AWS S3 공통 구조
+external:
+  ai:
+    base-url: ${AI_BASE_URL:}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:}
+
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET:}
+    region: ${AWS_REGION:ap-northeast-2}
