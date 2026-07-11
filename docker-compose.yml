@@ -1,0 +1,15 @@
+services:
+  backend:
+    image: ${DOCKERHUB_USERNAME}/musereview:latest
+    container_name: musereview-be
+    restart: unless-stopped
+    
+    env_file:
+      - .env
+        
+    environment:
+      TZ: Asia/Seoul
+      SPRING_PROFILES_ACTIVE: prod
+        
+    ports:
+      - "127.0.0.1:8080:8080"

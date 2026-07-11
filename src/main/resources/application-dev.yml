@@ -1,0 +1,24 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+
+  flyway:
+    enabled: false
+
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: true
+      logging: slf4j
+      multiline: true
+
+logging:
+  level:
+    root: info
+    org.hibernate.SQL: debug
