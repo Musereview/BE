@@ -52,8 +52,7 @@ public class SocialAuth extends BaseCreatedEntity {
 
     @Builder(access = AccessLevel.PRIVATE)
     private SocialAuth(Long userId, SocialType socialType, String socialId, String refreshToken,
-                       LocalDateTime expiredAt, String deviceInfo) {
-
+                       String refreshTokenHash, LocalDateTime expiredAt, String deviceInfo) {
         validateRequiredField(userId);
         validateRequiredField(socialType);
         validateRequiredField(socialId);
@@ -62,17 +61,23 @@ public class SocialAuth extends BaseCreatedEntity {
         this.socialType = socialType;
         this.socialId = socialId;
         this.refreshToken = refreshToken;
+        this.refreshTokenHash = refreshTokenHash;
         this.expiredAt = expiredAt;
         this.deviceInfo = deviceInfo;
     }
 
     public static SocialAuth create(Long userId, SocialType socialType, String socialId,
-                                    String refreshToken, LocalDateTime expiredAt, String deviceInfo) {
+                                    String encryptedToken, String tokenHash, LocalDateTime expiredAt, String deviceInfo) {
+        validateRequiredField(encryptedToken);
+        validateRequiredField(tokenHash);
+        validateExpiryTime(expiredAt);
+
         return SocialAuth.builder()
                 .userId(userId)
                 .socialType(socialType)
                 .socialId(socialId)
-                .refreshToken(refreshToken)
+                .refreshToken(encryptedToken)
+                .refreshTokenHash(tokenHash)
                 .expiredAt(expiredAt)
                 .deviceInfo(deviceInfo)
                 .build();
@@ -82,14 +87,17 @@ public class SocialAuth extends BaseCreatedEntity {
             throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
         }
     }
+    private static void validateExpiryTime(LocalDateTime expiredAt) {
+        if (expiredAt == null || expiredAt.isBefore(LocalDateTime.now())) {
+            throw new GeneralException(AuthErrorStatus.INVALID_TOKEN_EXPIRY);
+        }
+    }
 
     public void updateRefreshToken(String encryptedToken, String tokenHash, LocalDateTime newExpiredAt, String deviceInfo) {
         validateRequiredField(encryptedToken);
         validateRequiredField(tokenHash);
+        validateExpiryTime(newExpiredAt);
 
-        if (newExpiredAt == null || newExpiredAt.isBefore(LocalDateTime.now())) {
-            throw new GeneralException(AuthErrorStatus.INVALID_TOKEN_EXPIRY);
-        }
         this.refreshToken = encryptedToken;
         this.refreshTokenHash = tokenHash;
         this.expiredAt = newExpiredAt;
@@ -98,6 +106,7 @@ public class SocialAuth extends BaseCreatedEntity {
 
     public void expireToken() {
         this.refreshToken = null;
+        this.refreshTokenHash = null;
         this.expiredAt = null;
     }
 }
