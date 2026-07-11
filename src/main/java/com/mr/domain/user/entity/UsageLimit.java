@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @Table(
         name = "usage_limit",
         indexes = {
-                @Index(name = "idx_usage_limit_user_date", columnList = "user_id, limit_date")
+                @Index(name = "idx_usage_limit_user_date", columnList = "user_id, limit_date", unique = true)
         })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UsageLimit extends BaseCreatedEntity {
