@@ -12,15 +12,13 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import static com.mr.domain.user.entity.UsageLimit.validateRequired;
-
 @Getter
 @Entity
 // TODO: 추후 User 도메인 완성 시 단방향/양방향 인덱스 추가
 @Table(
         name = "social_auth",
         indexes = {
-                @Index(name = "idx_social_auth_refresh_token", columnList = "refresh_token")
+                @Index(name = "idx_social_auth_token_hash", columnList = "refresh_token_hash")
         })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SocialAuth extends BaseCreatedEntity {
@@ -41,8 +39,11 @@ public class SocialAuth extends BaseCreatedEntity {
     @Column(name = "social_id", nullable = false, length = 100)
     private String socialId;
 
-    @Column(name = "refresh_token", length = 500)
+    @Column(name = "refresh_token", length = 1000)
     private String refreshToken;
+
+    @Column(name = "refresh_token_hash", length = 64, unique = true)
+    private String refreshTokenHash;
 
     @Column(name = "expired_at")
     private LocalDateTime expiredAt;
@@ -53,9 +54,10 @@ public class SocialAuth extends BaseCreatedEntity {
     @Builder(access = AccessLevel.PRIVATE)
     private SocialAuth(Long userId, SocialType socialType, String socialId, String refreshToken,
                        LocalDateTime expiredAt, String deviceInfo) {
-        validateRequired(userId, "userId");
-        validateRequired(socialType, "socialType");
-        validateRequired(socialId, "socialId");
+
+        validateRequiredField(userId);
+        validateRequiredField(socialType);
+        validateRequiredField(socialId);
 
         this.userId = userId;
         this.socialType = socialType;
@@ -82,16 +84,15 @@ public class SocialAuth extends BaseCreatedEntity {
         }
     }
 
-    public void updateRefreshToken(String newRefreshToken, LocalDateTime newExpiredAt, String deviceInfo) {
-        if (newRefreshToken == null || newRefreshToken.trim().isEmpty()) {
-            throw new GeneralException(AuthErrorStatus.TOKEN_MISSING);
-        }
+    public void updateRefreshToken(String encryptedToken, String tokenHash, LocalDateTime newExpiredAt, String deviceInfo) {
+        validateRequiredField(encryptedToken);
+        validateRequiredField(tokenHash);
 
         if (newExpiredAt == null || newExpiredAt.isBefore(LocalDateTime.now())) {
             throw new GeneralException(AuthErrorStatus.INVALID_TOKEN_EXPIRY);
         }
-
-        this.refreshToken = newRefreshToken;
+        this.refreshToken = encryptedToken;
+        this.refreshTokenHash = tokenHash;
         this.expiredAt = newExpiredAt;
         this.deviceInfo = deviceInfo;
     }
