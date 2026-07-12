@@ -14,10 +14,14 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table (name = "playing")
+@Table(name = "playing")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Playing extends BaseCreatedDeletedEntity {
+
+    private static final int DEFAULT_BPM = 120;
+    private static final int MIN_BPM = 50;
+    private static final int MAX_BPM = 200;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -75,13 +79,13 @@ public class Playing extends BaseCreatedDeletedEntity {
     ) {
 
         validateUserId(userId);
-        validateBpm(bpm);
+        validateBackingTrack(mode, backingTrackId);
 
         this.userId = userId;
         this.backingTrackId = backingTrackId;
         this.mode = mode;
         this.status = status;
-        this.bpm = bpm;
+        this.bpm = resolveBpm(bpm);
         this.metronomeEnabled = metronomeEnabled;
         this.isPublic = isPublic;
     }
@@ -92,10 +96,21 @@ public class Playing extends BaseCreatedDeletedEntity {
         }
     }
 
-    private static void validateBpm(Integer bpm) {
-        if (bpm != null && (bpm < 50 || bpm > 200)) {
+    private static void validateBackingTrack(
+            PlayingMode mode, Long backingTrackId) {
+        if (mode == PlayingMode.BACKING_TRACK && backingTrackId == null) {
+            throw new GeneralException(PlayingErrorStatus.MISSING_BACKING_TRACK_ID);
+        }
+    }
+
+    private static int resolveBpm(Integer bpm) {
+        int resolvedBpm = bpm == null ? DEFAULT_BPM : bpm;
+
+        if (resolvedBpm < MIN_BPM || resolvedBpm > MAX_BPM) {
             throw new GeneralException(PlayingErrorStatus.INVALID_BPM_RANGE);
         }
+
+        return resolvedBpm;
     }
 
     // 자유 연주 생성
@@ -106,7 +121,7 @@ public class Playing extends BaseCreatedDeletedEntity {
                 .userId(userId)
                 .mode(PlayingMode.FREE_PLAY)
                 .status(PlayingStatus.READY)
-                .bpm( bpm != null ? bpm : 120)
+                .bpm(bpm)
                 .metronomeEnabled(metronomeEnabled)
                 .isPublic(false)
                 .build();
@@ -117,17 +132,12 @@ public class Playing extends BaseCreatedDeletedEntity {
             Long userId, Long backingTrackId,
             Integer bpm, boolean metronomeEnabled
     ) {
-
-        if ( backingTrackId == null) {
-            throw new GeneralException(PlayingErrorStatus.MISSING_BACKING_TRACK_ID);
-        }
-
         return Playing.builder()
                 .userId(userId)
                 .backingTrackId(backingTrackId)
                 .mode(PlayingMode.BACKING_TRACK)
                 .status(PlayingStatus.READY)
-                .bpm ( bpm != null ? bpm : 120 )
+                .bpm(bpm)
                 .metronomeEnabled(metronomeEnabled)
                 .isPublic(false)
                 .build();
