@@ -5,6 +5,7 @@ import com.mr.domain.backingTrack.entity.enums.Level;
 import com.mr.domain.backingTrack.entity.enums.ScaleType;
 import com.mr.domain.backingTrack.entity.enums.TrackType;
 import com.mr.global.entity.BaseTimeDeletedEntity;
+import io.swagger.v3.core.util.Json;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -60,10 +61,8 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     @Column(name = "audio_file_url", length = 255)
     private String audioFileUrl;
 
-    // 트랙 유형
-    @Enumerated(EnumType.STRING)
-    @Column(name = "track_type", nullable = false, columnDefinition = "ENUM('SYSTEM', 'USER_AUDIO') DEFAULT 'SYSTEM'")
-    private TrackType trackType;
+    @Column(name = "midi_file_url", columnDefinition = "JSON")
+    private String midiFileUrl;
 
     // 재생 수
     @Column(name = "play_count", nullable = false)

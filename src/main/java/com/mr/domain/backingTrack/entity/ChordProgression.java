@@ -9,7 +9,7 @@ import lombok.Getter;
 @Table(
         name = "chord_progression"
 )
-public class ChordProgression extends BaseCreatedEntity {
+public class ChordProgression{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

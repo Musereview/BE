@@ -11,7 +11,9 @@ import lombok.Setter;
 
 @Getter
 @Entity
-@Table(name="learning")
+@Table(
+        name = "learning"
+)
 public class Learning extends BaseTimeDeletedEntity {
 
     @Id
@@ -44,10 +46,12 @@ public class Learning extends BaseTimeDeletedEntity {
     @Column(name = "practice_tip", columnDefinition = "TEXT")
     private String practiceTip;
 
-
     // 소요 시간
     @Column(name = "estimated_minutes")
     private int estimatedMinutes = 0;
+
+    @Column(name = "instrument_type", nullable = false)
+    private String instrumentType;
 
     // 활성 여부
     @Column(name = "is_active", nullable = false)

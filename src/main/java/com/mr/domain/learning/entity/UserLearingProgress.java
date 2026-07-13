@@ -9,7 +9,9 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
-@Table(name="user_learning_progress")
+@Table(
+        name = "user_learning_progress"
+)
 public class UserLearingProgress extends BaseTimeEntity {
 
     @Id
