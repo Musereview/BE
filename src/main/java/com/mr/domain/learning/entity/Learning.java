@@ -22,10 +22,6 @@ public class Learning extends BaseTimeDeletedEntity {
     @Column(name = "title", nullable = false, length = 100)
     private String title;
 
-    // 부제목
-    @Column(name = "subtitle", nullable = true, length = 255)
-    private String subtitle;
-
     // 카테고리
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false, length = 50)
@@ -40,17 +36,18 @@ public class Learning extends BaseTimeDeletedEntity {
     @Column(name = "summary", length = 255)
     private String summary;
 
-    // 이론 내용
-    @Column(name = "content", nullable = false, columnDefinition = "LONGTEXT")
+    // 이론 설명
+    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
     // 엽습 팁
     @Column(name = "practice_tip", columnDefinition = "TEXT")
     private String practiceTip;
 
-    // 도표 이미지
-    @Column(name = "diagram_url", length = 255)
-    private String diagramUrl;
+
+    // 소요 시간
+    @Column(name = "estimated_minutes")
+    private int estimatedMinutes = 0;
 
     // 활성 여부
     @Column(name = "is_active", nullable = false)
@@ -60,13 +57,11 @@ public class Learning extends BaseTimeDeletedEntity {
     private Learning(String title, String subtitle, LearningCategory category, LearningDifficulty difficulty,
                      String summary, String content, String practiceTip, String diagramUrl, Boolean isActive) {
         this.title = title;
-        this.subtitle = subtitle;
-        this.category = category != null ? category : LearningCategory.ETC; // Default: ETC
+        this.category = category != null ? category : LearningCategory.THEORY;
         this.difficulty = difficulty != null ? difficulty : LearningDifficulty.BEGINNER; // Default: BEGINNER
         this.summary = summary;
         this.content = content;
         this.practiceTip = practiceTip;
-        this.diagramUrl = diagramUrl;
         this.isActive = isActive != null ? isActive : true;
     }
 
@@ -96,12 +91,10 @@ public class Learning extends BaseTimeDeletedEntity {
     public void updateContent(String title, String subtitle, LearningCategory category, LearningDifficulty difficulty,
                               String summary, String content, String practiceTip, String diagramUrl) {
         this.title = title;
-        this.subtitle = subtitle;
         this.category = category;
         this.difficulty = difficulty;
         this.summary = summary;
         this.content = content;
         this.practiceTip = practiceTip;
-        this.diagramUrl = diagramUrl;
     }
 }
