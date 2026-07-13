@@ -40,6 +40,10 @@ out/
 Thumbs.db
 desktop.ini
 
+### .env ###
+.env
+.env.*
+
 # 암호키 및 보안 인증서 관련 파일
 *.key
 *.pem
@@ -52,8 +56,14 @@ MR_config/local/*
 
 !MR_config/local/application.example.yml
 
+# 빌드 임시 파일 및 실행 파일 생성 방지
+app.jar
+
+### AWS CLI ###
+aws/
+awscliv2.zip
+
 # Spring Boot local config
-src/main/resources/application.yml
 src/main/resources/application-local.yml
 
 # docs
