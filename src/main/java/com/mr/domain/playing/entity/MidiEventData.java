@@ -1,20 +1,21 @@
 package com.mr.domain.playing.entity;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mr.domain.playing.entity.enums.MidiType;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MidiEventData {
 
-    private MidiType type;
-    private Integer pitch;
-    private Integer velocity;
-    private Long timestampMs;
+    private final MidiType type;
+    private final Integer pitch;
+    private final Integer velocity;
+
+    @JsonProperty("timestamp_ms")
+    private final Long timestampMs;
 
     private MidiEventData(
             MidiType type,
@@ -33,11 +34,12 @@ public class MidiEventData {
         this.timestampMs = timestampMs;
     }
 
-    public static MidiEventData create(
-            MidiType type,
-            Integer pitch,
-            Integer velocity,
-            Long timestampMs
+    @JsonCreator
+    public static MidiEventData of(
+            @JsonProperty("type") MidiType type,
+            @JsonProperty("pitch") Integer pitch,
+            @JsonProperty("velocity") Integer velocity,
+            @JsonProperty("timestamp_ms") Long timestampMs
     ) {
         return new MidiEventData(type, pitch, velocity, timestampMs);
     }
