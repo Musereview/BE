@@ -4,9 +4,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
 
-@ConfigurationProperties(prefix = "ai.server")
+@ConfigurationProperties(prefix = "external.ai")
 public record AiServerProperties(
         String baseUrl,
+        String apiKey,
+        String model,
         Duration connectTimeout,
         Duration readTimeout,
         Endpoints endpoints

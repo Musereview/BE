@@ -53,6 +53,11 @@ external:
     base-url: ${AI_BASE_URL:}
     api-key: ${AI_API_KEY:}
     model: ${AI_MODEL:}
+    connect-timeout: ${AI_CONNECT_TIMEOUT:3s}
+    read-timeout: ${AI_READ_TIMEOUT:30s}
+    endpoints:
+      analyze: ${AI_ANALYZE_ENDPOINT:/api/v1/analyze}
+      report: ${AI_REPORT_ENDPOINT:/api/v1/report}
 
 aws:
   s3:
