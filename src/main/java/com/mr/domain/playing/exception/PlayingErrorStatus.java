@@ -17,6 +17,8 @@ public enum PlayingErrorStatus implements BaseCode {
     INVALID_PITCH_RANGE(HttpStatus.BAD_REQUEST, "PLAYING_400_06", "피치 값은 0~127 사이의 값이어야 합니다."),
     INVALID_VELOCITY_RANGE(HttpStatus.BAD_REQUEST, "PLAYING_400_07", "강도는 0~127 사이의 값이어야 합니다."),
     INVALID_TIMESTAMP(HttpStatus.BAD_REQUEST, "PLAYING_400_08", "MIDI 이벤트 타임스탬프는 0 이상이어야 합니다."),
+    EMPTY_MIDI_EVENTS(HttpStatus.BAD_REQUEST, "PLAYING_400_09", "저장할 MIDI 이벤트가 없습니다."),
+    INVALID_MIDI_EVENT(HttpStatus.BAD_REQUEST,"PLAYING_400_10", "MIDI 이벤트 목록에 유효하지 않은 값이 포함되어 있습니다."),
     ;
 
     private final HttpStatus status;

@@ -5,13 +5,26 @@ import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseCreatedDeletedEntity;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(name = "playing")
@@ -67,6 +80,10 @@ public class Playing extends BaseCreatedDeletedEntity {
     @Column(name = "is_public", nullable = false)
     private boolean isPublic;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "midi_data", columnDefinition = "jsonb", nullable = false)
+    private List<MidiEventData> midiData = new ArrayList<>();
+
     @Builder(access = AccessLevel.PRIVATE)
     private Playing(
             Long userId,
@@ -88,6 +105,7 @@ public class Playing extends BaseCreatedDeletedEntity {
         this.bpm = resolveBpm(bpm);
         this.metronomeEnabled = metronomeEnabled;
         this.isPublic = isPublic;
+        this.midiData = new ArrayList<>();
     }
 
     private static void validateUserId(Long userId) {
@@ -141,5 +159,31 @@ public class Playing extends BaseCreatedDeletedEntity {
                 .metronomeEnabled(metronomeEnabled)
                 .isPublic(false)
                 .build();
+    }
+
+    public void saveMidiData(List<MidiEventData> midiData) {
+        validateMidiData(midiData);
+
+        this.midiData = new ArrayList<>(midiData);
+        this.midiData.sort(Comparator.comparingLong(MidiEventData::getTimestampMs));
+
+    }
+
+    private static void validateMidiData(List<MidiEventData> midiData) {
+        if (midiData == null || midiData.isEmpty()) {
+            throw new GeneralException(PlayingErrorStatus.EMPTY_MIDI_EVENTS);
+        }
+
+        if (midiData.stream().anyMatch(Objects::isNull)) {
+            throw new GeneralException(PlayingErrorStatus.INVALID_MIDI_EVENT);
+        }
+    }
+
+    public List<MidiEventData> getMidiData() {
+
+        if (this.midiData == null) {
+            return List.of();
+        }
+        return List.copyOf(this.midiData);
     }
 }
