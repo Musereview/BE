@@ -60,9 +60,6 @@ public class Playing extends BaseCreatedDeletedEntity {
     @Column(name = "bpm", nullable = false)
     private Integer bpm;
 
-    @Column(name = "metronome_enabled", nullable = false)
-    private boolean metronomeEnabled;
-
     // 실제 연주가 시작된 시간
     @Column(name = "started_at")
     private LocalDateTime startedAt;
@@ -91,7 +88,6 @@ public class Playing extends BaseCreatedDeletedEntity {
             PlayingMode mode,
             PlayingStatus status,
             Integer bpm,
-            boolean metronomeEnabled,
             boolean isPublic
     ) {
 
@@ -103,7 +99,6 @@ public class Playing extends BaseCreatedDeletedEntity {
         this.mode = mode;
         this.status = status;
         this.bpm = resolveBpm(bpm);
-        this.metronomeEnabled = metronomeEnabled;
         this.isPublic = isPublic;
         this.midiData = new ArrayList<>();
     }
@@ -133,22 +128,20 @@ public class Playing extends BaseCreatedDeletedEntity {
 
     // 자유 연주 생성
     public static Playing createFreePlay(
-            Long userId, Integer bpm, boolean metronomeEnabled
+            Long userId, Integer bpm
     ) {
         return Playing.builder()
                 .userId(userId)
                 .mode(PlayingMode.FREE_PLAY)
                 .status(PlayingStatus.READY)
                 .bpm(bpm)
-                .metronomeEnabled(metronomeEnabled)
                 .isPublic(false)
                 .build();
     }
 
     // 백킹트랙 연주 생성
     public static Playing createBackingTrack(
-            Long userId, Long backingTrackId,
-            Integer bpm, boolean metronomeEnabled
+            Long userId, Long backingTrackId, Integer bpm
     ) {
         return Playing.builder()
                 .userId(userId)
@@ -156,7 +149,6 @@ public class Playing extends BaseCreatedDeletedEntity {
                 .mode(PlayingMode.BACKING_TRACK)
                 .status(PlayingStatus.READY)
                 .bpm(bpm)
-                .metronomeEnabled(metronomeEnabled)
                 .isPublic(false)
                 .build();
     }
