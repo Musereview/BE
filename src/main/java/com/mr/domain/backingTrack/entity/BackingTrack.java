@@ -3,10 +3,14 @@ package com.mr.domain.backingTrack.entity;
 import com.mr.domain.backingTrack.entity.enums.AccessLevel;
 import com.mr.domain.backingTrack.entity.enums.Level;
 import com.mr.domain.backingTrack.entity.enums.ScaleType;
-import com.mr.domain.backingTrack.entity.enums.TrackType;
 import com.mr.global.entity.BaseTimeDeletedEntity;
-import io.swagger.v3.core.util.Json;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Table;
 import lombok.Getter;
 
 @Getter
