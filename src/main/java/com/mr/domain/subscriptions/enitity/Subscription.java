@@ -20,9 +20,8 @@ public class Subscription {
     private Long userId;
 
     // 구독 등급
-    @Enumerated(EnumType.STRING)
     @Column(name = "tier", nullable = false, length = 20)
-    private SubscriptionTier tier;
+    private String tier;
 
     // 구독 시작일
     @Column(name = "start_date", nullable = false)

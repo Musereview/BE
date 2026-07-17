@@ -1,0 +1,50 @@
+package com.mr.domain.learning.entity;
+
+import com.mr.global.entity.BaseCreatedEntity;
+import jakarta.persistence.*;
+import lombok.Getter;
+
+@Entity
+@Getter
+@Table(
+        name = "playing_example"
+)
+public class PlayingExample extends BaseCreatedEntity {
+
+    @Id
+    @Column(name = "learning_example_id")
+    private Long id;
+
+    // 학습 단계 엔티티와 일대일(1:1) 매핑 (외래 키 관리자)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "learning_step_id", nullable = false)
+    private LearningStep learningStep;
+
+    // 제목
+    @Column(name = "title", nullable = false, length = 100)
+    private String title;
+
+    // 미디 파일 데이터 (DB의 JSON 포맷 대응용 문자열 매핑)
+    @Column(name = "midi_file_url", nullable = false, columnDefinition = "JSON")
+    private String midiFileUrl;
+
+    // 오디오 파일
+    @Column(name = "audio_file_url", nullable = false, length = 255)
+    private String audioFileUrl;
+
+    // bpm
+    @Column(name = "bpm")
+    private Integer bpm;
+
+    // key
+    @Column(name = "key_signature", length = 20)
+    private String keySignature;
+
+    // 설명
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    // 재생 시간 (초 단위 저장)
+    @Column(name = "playing_seconds")
+    private Long playingSeconds;
+}
