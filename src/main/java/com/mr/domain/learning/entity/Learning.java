@@ -8,6 +8,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -16,7 +17,11 @@ import lombok.Getter;
 @Getter
 @Entity
 @Table(
-        name = "learning"
+        name = "learning",
+        indexes = {
+                @Index(name = "idx_learning_active",
+                        columnList = "is_active")
+        }
 )
 public class Learning extends BaseTimeDeletedEntity {
 

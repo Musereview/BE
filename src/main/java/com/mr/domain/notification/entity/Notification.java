@@ -2,6 +2,7 @@ import com.mr.global.entity.BaseTimeDeletedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import lombok.Builder;
@@ -9,7 +10,18 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "notification")
+@Table(
+        name = "notification",
+        indexes = {
+                // 1. 특정 유저의 알림 목록을 최신순(생성일순)으로 정렬해 보여줄 때
+                @Index(name = "idx_notification_user_created",
+                        columnList = "user_id, created_at"),
+
+                // 2. 유저가 읽지 않은 알림 개수를 셀 때
+                @Index(name = "idx_notification_user_read",
+                        columnList = "user_id, is_read")
+        }
+)
 @Getter
 @Setter
 public class Notification extends BaseTimeDeletedEntity{

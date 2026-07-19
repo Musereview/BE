@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -13,7 +14,11 @@ import lombok.Getter;
 @Entity
 @Getter
 @Table(
-        name = "learning_step"
+        name = "learning_step",
+        indexes = {
+                @Index(name = "idx_learning_step_course_seq",
+                        columnList = "learning_id, step_no")
+        }
 )
 public class LearningStep extends BaseCreatedEntity {
 

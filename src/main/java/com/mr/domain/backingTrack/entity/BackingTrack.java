@@ -9,6 +9,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -16,7 +17,11 @@ import lombok.Getter;
 @Getter
 @Entity
 @Table(
-        name = "backing_track"
+        name = "backing_track",
+        indexes = {
+                @Index(name = "idx_bt_genre_play",
+                        columnList = "genre, play_count"),
+        }
 )
 public class BackingTrack extends BaseTimeDeletedEntity {
 

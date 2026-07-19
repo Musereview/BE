@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -14,7 +15,11 @@ import lombok.Getter;
 @Entity
 @Getter
 @Table(
-        name = "chord_progression"
+        name = "chord_progression",
+        indexes = {
+                @Index(name = "idx_chord_progression_track_seq",
+                        columnList = "backing_track_id, sequence_no")
+        }
 )
 public class ChordProgression{
 
