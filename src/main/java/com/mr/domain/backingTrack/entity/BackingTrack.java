@@ -14,6 +14,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -91,4 +92,74 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "level", nullable = false, columnDefinition = "ENUM('BASIC', 'MED', 'ADVANCED') DEFAULT 'BASIC'")
     private Level level;
+
+    @Builder(access = lombok.AccessLevel.PRIVATE)
+    private BackingTrack(Long userId, Long academyId, String title, String genre,
+                         String keySignature, ScaleType scaleType, String time,
+                         Integer bpm, Integer playtimeSec, String audioFileUrl,
+                         String midiFileUrl, Integer playCount,
+                         AccessLevel accessLevel, Level level) {
+        this.userId = userId;
+        this.academyId = academyId;
+        this.title = title;
+        this.genre = genre;
+        this.keySignature = keySignature;
+        this.scaleType = scaleType;
+        this.time = time;
+        this.bpm = bpm;
+        this.playtimeSec = playtimeSec;
+        this.audioFileUrl = audioFileUrl;
+        this.midiFileUrl = midiFileUrl;
+        this.playCount = playCount != null ? playCount : 0;
+        this.accessLevel = accessLevel != null ? accessLevel : AccessLevel.PRIVATE;
+        this.level = level != null ? level : Level.BASIC;
+    }
+
+    public static BackingTrack create(Long userId, Long academyId, String title, String genre,
+                                      String keySignature, ScaleType scaleType, String time,
+                                      Integer bpm, Integer playtimeSec, String audioFileUrl,
+                                      String midiFileUrl, AccessLevel accessLevel, Level level) {
+        return BackingTrack.builder()
+                .userId(userId)
+                .academyId(academyId)
+                .title(title)
+                .genre(genre)
+                .keySignature(keySignature)
+                .scaleType(scaleType)
+                .time(time)
+                .bpm(bpm)
+                .playtimeSec(playtimeSec)
+                .audioFileUrl(audioFileUrl)
+                .midiFileUrl(midiFileUrl)
+                .playCount(0)
+                .accessLevel(accessLevel)
+                .level(level)
+                .build();
+    }
+
+    public void updateTrackInfo(String title, String genre, String keySignature,
+                                ScaleType scaleType, String time, Integer bpm,
+                                Integer playtimeSec, AccessLevel accessLevel, Level level) {
+        this.title = title;
+        this.genre = genre;
+        this.keySignature = keySignature;
+        this.scaleType = scaleType;
+        this.time = time;
+        this.bpm = bpm;
+        this.playtimeSec = playtimeSec;
+        if (accessLevel != null) this.accessLevel = accessLevel;
+        if (level != null) this.level = level;
+    }
+
+    // 재생 수 1 증가
+    public void incrementPlayCount() {
+        this.playCount++;
+    }
+
+    // 공개 범위 수정
+    public void changeAccessLevel(AccessLevel accessLevel) {
+        if (accessLevel != null) {
+            this.accessLevel = accessLevel;
+        }
+    }
 }

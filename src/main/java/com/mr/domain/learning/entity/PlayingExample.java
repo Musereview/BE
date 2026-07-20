@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import lombok.Builder;
 
 @Entity
 @Getter
@@ -62,4 +63,45 @@ public class PlayingExample extends BaseCreatedEntity {
     // 재생 시간 (초 단위 저장)
     @Column(name = "playing_seconds")
     private Long playingSeconds;
+
+    @Builder(access = AccessLevel.PRIVATE)
+    private PlayingExample(LearningStep learningStep, String title, String midiFileUrl,
+                           String audioFileUrl, Integer bpm, String keySignature,
+                           String description, Long playingSeconds) {
+        this.learningStep = learningStep;
+        this.title = title;
+        this.midiFileUrl = midiFileUrl;
+        this.audioFileUrl = audioFileUrl;
+        this.bpm = bpm;
+        this.keySignature = keySignature;
+        this.description = description;
+        this.playingSeconds = playingSeconds;
+    }
+
+    public static PlayingExample create(LearningStep learningStep, String title, String midiFileUrl,
+                                        String audioFileUrl, Integer bpm, String keySignature,
+                                        String description, Long playingSeconds) {
+        return PlayingExample.builder()
+                .learningStep(learningStep)
+                .title(title)
+                .midiFileUrl(midiFileUrl)
+                .audioFileUrl(audioFileUrl)
+                .bpm(bpm)
+                .keySignature(keySignature)
+                .description(description)
+                .playingSeconds(playingSeconds)
+                .build();
+    }
+
+    public void updatePlayingExample(String title, String midiFileUrl, String audioFileUrl,
+                                     Integer bpm, String keySignature, String description,
+                                     Long playingSeconds) {
+        this.title = title;
+        this.midiFileUrl = midiFileUrl;
+        this.audioFileUrl = audioFileUrl;
+        this.bpm = bpm;
+        this.keySignature = keySignature;
+        this.description = description;
+        this.playingSeconds = playingSeconds;
+    }
 }

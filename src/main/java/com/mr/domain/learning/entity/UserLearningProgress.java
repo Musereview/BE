@@ -12,6 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -32,7 +33,7 @@ import java.time.LocalDateTime;
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class UserLearingProgress extends BaseTimeEntity {
+public class UserLearningProgress extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -49,8 +50,9 @@ public class UserLearingProgress extends BaseTimeEntity {
     private Learning learning;
 
     // 학습 단계 아이디
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "learning_step_id", nullable = false)
-    private Long learningStepId;
+    private LearningStep learningStep;
 
     // 점수
     @Column(name = "score")
@@ -60,9 +62,34 @@ public class UserLearingProgress extends BaseTimeEntity {
     @Column(name = "last_studied_at")
     private LocalDateTime lastStudiedAt;
 
-    // 학습 단계 완료 시 처리
+    @Builder(access = AccessLevel.PRIVATE)
+    private UserLearningProgress(Long userId, Learning learning, LearningStep learningStep,
+                                 Integer score, LocalDateTime lastStudiedAt) {
+        this.userId = userId;
+        this.learning = learning;
+        this.learningStep = learningStep;
+        this.score = score;
+        this.lastStudiedAt = lastStudiedAt != null ? lastStudiedAt : LocalDateTime.now();
+    }
+
+    public static UserLearningProgress create(Long userId, Learning learning, LearningStep learningStep) {
+        return UserLearningProgress.builder()
+                .userId(userId)
+                .learning(learning)
+                .learningStep(learningStep)
+                .lastStudiedAt(LocalDateTime.now())
+                .build();
+    }
+
+    // 학습 완료 및 점수 갱신
     public void completeLearning(Integer score) {
         this.score = score;
         this.lastStudiedAt = LocalDateTime.now();
+    }
+
+    // 학습 시간 및 점수 업데이트
+    public void updateProgress(Integer score, LocalDateTime lastStudiedAt) {
+        this.score = score;
+        this.lastStudiedAt = lastStudiedAt != null ? lastStudiedAt : LocalDateTime.now();
     }
 }

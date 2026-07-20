@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -47,4 +48,27 @@ public class ChordProgression{
     // 코드명
     @Column(name = "chord_name", nullable = false, length = 30)
     private String chordName;
+
+    @Builder(access = AccessLevel.PRIVATE)
+    private ChordProgression(BackingTrack backingTrack, Integer sequenceNo, Integer measureNo, String chordName) {
+        this.backingTrack = backingTrack;
+        this.sequenceNo = sequenceNo;
+        this.measureNo = measureNo;
+        this.chordName = chordName;
+    }
+
+    public static ChordProgression create(BackingTrack backingTrack, Integer sequenceNo, Integer measureNo, String chordName) {
+        return ChordProgression.builder()
+                .backingTrack(backingTrack)
+                .sequenceNo(sequenceNo)
+                .measureNo(measureNo)
+                .chordName(chordName)
+                .build();
+    }
+
+    public void updateChordInfo(Integer sequenceNo, Integer measureNo, String chordName) {
+        this.sequenceNo = sequenceNo;
+        this.measureNo = measureNo;
+        this.chordName = chordName;
+    }
 }

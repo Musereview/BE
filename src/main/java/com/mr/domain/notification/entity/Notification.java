@@ -1,3 +1,5 @@
+package com.mr.domain.notification.entity;
+
 import com.mr.global.entity.BaseTimeDeletedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -5,13 +7,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(
@@ -27,7 +27,6 @@ import lombok.Setter;
         }
 )
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notification extends BaseTimeDeletedEntity{
 
@@ -52,14 +51,25 @@ public class Notification extends BaseTimeDeletedEntity{
     @Column(name = "is_read", nullable = false)
     private boolean isRead = false;
 
-    @Builder
-    public Notification(Long userId, String title, String content){
+
+    @Builder(access = AccessLevel.PRIVATE)
+    private Notification(Long userId, String title, String content) {
         this.userId = userId;
         this.title = title;
         this.content = content;
+        this.isRead = false;
     }
 
-    public void readTrue(){
+    public static Notification create(Long userId, String title, String content) {
+        return Notification.builder()
+                .userId(userId)
+                .title(title)
+                .content(content)
+                .build();
+    }
+
+    // 알림 읽음 처리
+    public void markAsRead() {
         this.isRead = true;
     }
 }

@@ -14,6 +14,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Builder;
 
 @Entity
 @Getter
@@ -60,4 +61,43 @@ public class LearningStep extends BaseCreatedEntity {
     // 소요 시간
     @Column(name = "estimated_minutes", nullable = false)
     private Integer estimatedMinutes = 10;
+
+    @Builder(access = AccessLevel.PRIVATE)
+    private LearningStep(Learning learning, Integer stepNo, String title,
+                         String summary, String content, String practiceTip,
+                         Integer estimatedMinutes) {
+        this.learning = learning;
+        this.stepNo = stepNo;
+        this.title = title;
+        this.summary = summary;
+        this.content = content;
+        this.practiceTip = practiceTip;
+        this.estimatedMinutes = estimatedMinutes != null ? estimatedMinutes : 10;
+    }
+
+    public static LearningStep create(Learning learning, Integer stepNo, String title,
+                                      String summary, String content, String practiceTip,
+                                      Integer estimatedMinutes) {
+        return LearningStep.builder()
+                .learning(learning)
+                .stepNo(stepNo)
+                .title(title)
+                .summary(summary)
+                .content(content)
+                .practiceTip(practiceTip)
+                .estimatedMinutes(estimatedMinutes)
+                .build();
+    }
+
+    public void updateStepInfo(Integer stepNo, String title, String summary,
+                               String content, String practiceTip, Integer estimatedMinutes) {
+        this.stepNo = stepNo;
+        this.title = title;
+        this.summary = summary;
+        this.content = content;
+        this.practiceTip = practiceTip;
+        if (estimatedMinutes != null) {
+            this.estimatedMinutes = estimatedMinutes;
+        }
+    }
 }

@@ -13,9 +13,11 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -29,7 +31,7 @@ public class ChordExample extends BaseCreatedEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "chord_example_id")
-    private Long chordExampleid;
+    private Long id;
 
     // 학습 단계 id
     @ManyToOne(fetch = FetchType.LAZY)
@@ -52,4 +54,31 @@ public class ChordExample extends BaseCreatedEntity {
     // 설명
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+
+    @Builder(access = AccessLevel.PRIVATE)
+    private ChordExample(LearningStep learningStep, String chordName,
+                         List<Integer> noteNumbers, String description) {
+        this.learningStep = learningStep;
+        this.chordName = chordName;
+        this.noteNumbers = noteNumbers != null ? noteNumbers : new ArrayList<>();
+        this.description = description;
+    }
+
+    public static ChordExample create(LearningStep learningStep, String chordName,
+                                      List<Integer> noteNumbers, String description) {
+        return ChordExample.builder()
+                .learningStep(learningStep)
+                .chordName(chordName)
+                .noteNumbers(noteNumbers)
+                .description(description)
+                .build();
+    }
+
+    public void updateChordExample(String chordName, List<Integer> noteNumbers, String description) {
+        this.chordName = chordName;
+        if (noteNumbers != null) {
+            this.noteNumbers = noteNumbers;
+        }
+        this.description = description;
+    }
 }

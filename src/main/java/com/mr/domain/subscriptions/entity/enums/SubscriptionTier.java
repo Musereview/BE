@@ -1,4 +1,4 @@
-package com.mr.domain.subscriptions.enitity.enums;
+package com.mr.domain.subscriptions.entity.enums;
 
 public enum SubscriptionTier {
     FREE,
