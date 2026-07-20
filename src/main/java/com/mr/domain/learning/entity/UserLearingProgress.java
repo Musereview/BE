@@ -9,7 +9,9 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
@@ -27,6 +29,7 @@ import java.time.LocalDateTime;
                         columnList = "user_id, last_studied_at")
         }
 )
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserLearingProgress extends BaseTimeEntity {
 
     @Id
@@ -34,7 +37,7 @@ public class UserLearingProgress extends BaseTimeEntity {
     private Long id;
 
     // 유저 아이디
-    @JoinColumn(name = "user_id", nullable = false)
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
     // 학습 아이디

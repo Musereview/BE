@@ -10,7 +10,9 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
@@ -21,6 +23,7 @@ import lombok.Getter;
                         columnList = "backing_track_id, sequence_no")
         }
 )
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChordProgression{
 
     @Id

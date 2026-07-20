@@ -13,6 +13,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
@@ -23,6 +24,7 @@ import lombok.Getter;
                         columnList = "genre, play_count"),
         }
 )
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 public class BackingTrack extends BaseTimeDeletedEntity {
 
     @Id
@@ -30,7 +32,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     private Long id;
 
     // 유저 아이디
-    @JoinColumn(name = "user_id", nullable = false)
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
     // 학원 아이디

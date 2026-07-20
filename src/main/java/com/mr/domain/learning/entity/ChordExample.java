@@ -6,11 +6,15 @@ import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
@@ -19,9 +23,11 @@ import java.util.List;
 @Table(
         name = "chord_example"
 )
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChordExample extends BaseCreatedEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "chord_example_id")
     private Long chordExampleid;
 
@@ -34,8 +40,7 @@ public class ChordExample extends BaseCreatedEntity {
     @Column(name = "chord_name", nullable = false, length = 100)
     private String chordName;
 
-    // 미디 노트 번호 배열 (DB의 INTEGER[] 타입 매핑)
-    // 데이터가 항상 간단한 숫자 배열 구조라면 @ElementCollection이 아주 유용해!
+    // 미디 노트 번호 목록 (chord_example_note 보조 테이블에 매핑)
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
             name = "chord_example_note",
