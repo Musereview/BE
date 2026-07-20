@@ -82,7 +82,7 @@ public class Learning extends BaseTimeDeletedEntity {
         this.summary = summary;
         this.content = content;
         this.practiceTip = practiceTip;
-        this.estimatedMinutes = estimatedMinutes;
+        this.estimatedMinutes = estimatedMinutes != null ? estimatedMinutes : 0;
         this.instrumentType = instrumentType;
         this.isActive = isActive != null ? isActive : true;
     }

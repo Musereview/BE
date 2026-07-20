@@ -74,10 +74,12 @@ public class ChordExample extends BaseCreatedEntity {
                 .build();
     }
 
+
     public void updateChordExample(String chordName, List<Integer> noteNumbers, String description) {
         this.chordName = chordName;
         if (noteNumbers != null) {
-            this.noteNumbers = noteNumbers;
+            this.noteNumbers.clear();
+            this.noteNumbers.addAll(noteNumbers);
         }
         this.description = description;
     }
