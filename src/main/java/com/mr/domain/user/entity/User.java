@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,6 +24,7 @@ public class User extends BaseTimeEntity {
     @Column(name = "user_id")
     private Long userId;
 
+    @Size(max = 10)
     @Column(name = "nickname", unique = true, length = 10)
     private String nickname;
 
