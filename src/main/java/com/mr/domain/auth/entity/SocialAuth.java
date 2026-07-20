@@ -6,6 +6,7 @@ import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseCreatedEntity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,8 +17,9 @@ import lombok.NoArgsConstructor;
 // TODO: 추후 User 도메인 완성 시 단방향/양방향 인덱스 추가
 @Table(
         name = "social_auth",
-        indexes = {
-                @Index(name = "idx_social_auth_token_hash", columnList = "refresh_token_hash")
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_social_auth_type_id", columnNames = {"social_type", "social_id"}),
+                @UniqueConstraint(name = "uk_social_auth_user_type", columnNames = {"user_id", "social_type"})
         })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SocialAuth extends BaseCreatedEntity {
@@ -53,9 +55,10 @@ public class SocialAuth extends BaseCreatedEntity {
     @Builder(access = AccessLevel.PRIVATE)
     private SocialAuth(Long userId, SocialType socialType, String socialId, String refreshToken,
                        String refreshTokenHash, LocalDateTime expiredAt, String deviceInfo) {
-        validateRequiredField(userId);
-        validateRequiredField(socialType);
-        validateRequiredField(socialId);
+        // 컴파일 에러 수정: 실제 정의된 validateUserAccount 메서드로 매핑
+        validateUserAccount(userId);
+        validateUserAccount(socialType);
+        validateUserAccount(socialId);
 
         this.userId = userId;
         this.socialType = socialType;
@@ -68,8 +71,9 @@ public class SocialAuth extends BaseCreatedEntity {
 
     public static SocialAuth create(Long userId, SocialType socialType, String socialId,
                                     String encryptedToken, String tokenHash, LocalDateTime expiredAt, String deviceInfo) {
-        validateRequiredField(encryptedToken);
-        validateRequiredField(tokenHash);
+
+        validateTokenValue(encryptedToken);
+        validateTokenValue(tokenHash);
         validateExpiryTime(expiredAt);
 
         return SocialAuth.builder()
@@ -82,20 +86,28 @@ public class SocialAuth extends BaseCreatedEntity {
                 .deviceInfo(deviceInfo)
                 .build();
     }
-    private static void validateRequiredField(Object value) {
+
+    private static void validateUserAccount(Object value) {
         if (value == null || (value instanceof String && ((String) value).trim().isEmpty())) {
             throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
         }
     }
+
+    private static void validateTokenValue(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            throw new GeneralException(AuthErrorStatus.TOKEN_MISSING);
+        }
+    }
+
     private static void validateExpiryTime(LocalDateTime expiredAt) {
-        if (expiredAt == null || expiredAt.isBefore(LocalDateTime.now())) {
+        if (expiredAt == null || !expiredAt.isAfter(LocalDateTime.now(ZoneId.of("Asia/Seoul")))) {
             throw new GeneralException(AuthErrorStatus.INVALID_TOKEN_EXPIRY);
         }
     }
 
     public void updateRefreshToken(String encryptedToken, String tokenHash, LocalDateTime newExpiredAt, String deviceInfo) {
-        validateRequiredField(encryptedToken);
-        validateRequiredField(tokenHash);
+        validateTokenValue(encryptedToken);
+        validateTokenValue(tokenHash);
         validateExpiryTime(newExpiredAt);
 
         this.refreshToken = encryptedToken;
@@ -104,9 +116,10 @@ public class SocialAuth extends BaseCreatedEntity {
         this.deviceInfo = deviceInfo;
     }
 
+    // 최신 토큰 만료 및 폐기 처리
     public void expireToken() {
         this.refreshToken = null;
         this.refreshTokenHash = null;
-        this.expiredAt = null;
+        this.expiredAt = LocalDateTime.now(ZoneId.of("Asia/Seoul")); // null 대신 현재 시각 기록
     }
 }
