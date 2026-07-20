@@ -1,5 +1,6 @@
 package com.mr.domain.user.entity;
 
+import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -15,7 +16,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "instrument")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Instrument {
+public class Instrument extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
