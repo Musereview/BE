@@ -85,12 +85,12 @@ public class BackingTrack extends BaseTimeDeletedEntity {
 
     // 공개 범위
     @Enumerated(EnumType.STRING)
-    @Column(name = "access_level", nullable = false, columnDefinition = "ENUM('PRIVATE', 'ACADEMY', 'PUBLIC') DEFAULT 'PRIVATE'")
+    @Column(name = "access_level", nullable = false)
     private AccessLevel accessLevel;
 
     // 난이도
     @Enumerated(EnumType.STRING)
-    @Column(name = "level", nullable = false, columnDefinition = "ENUM('BASIC', 'MED', 'ADVANCED') DEFAULT 'BASIC'")
+    @Column(name = "level", nullable = false)
     private Level level;
 
     @Builder(access = lombok.AccessLevel.PRIVATE)
