@@ -1,5 +1,7 @@
 package com.mr.domain.user.entity;
 
+import com.mr.domain.user.entity.enums.UserErrorStatus;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -51,10 +53,10 @@ public class User extends BaseTimeEntity {
 
     private static void validateNickname(String nickname) {
         if (nickname == null || nickname.isBlank()) {
-            throw new IllegalArgumentException("닉네임은 필수입니다.");
+            throw new GeneralException(UserErrorStatus.NICKNAME_REQUIRED);
         }
         if (nickname.length() > NICKNAME_MAX_LENGTH) {
-            throw new IllegalArgumentException("닉네임은 " + NICKNAME_MAX_LENGTH + "자를 초과할 수 없습니다.");
+            throw new GeneralException(UserErrorStatus.NICKNAME_TOO_LONG);
         }
     }
 }
