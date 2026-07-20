@@ -13,6 +13,8 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Getter
@@ -36,7 +38,8 @@ public class PlayingExample extends BaseCreatedEntity {
     @Column(name = "title", nullable = false, length = 100)
     private String title;
 
-    // 미디 파일 데이터 (DB의 JSON 포맷 대응용 문자열 매핑)
+    // 미디 파일 데이터
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "midi_file_url", nullable = false, columnDefinition = "JSON")
     private String midiFileUrl;
 

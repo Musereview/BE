@@ -64,6 +64,7 @@ public class Learning extends BaseTimeDeletedEntity {
     @Column(name = "estimated_minutes")
     private int estimatedMinutes = 0;
 
+    // 악기
     @Column(name = "instrument_type", nullable = false)
     private String instrumentType;
 
@@ -72,28 +73,32 @@ public class Learning extends BaseTimeDeletedEntity {
     private Boolean isActive = true;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private Learning(String title, String subtitle, LearningCategory category, LearningDifficulty difficulty,
-                     String summary, String content, String practiceTip, String diagramUrl, Boolean isActive) {
+    private Learning(String title, LearningCategory category, LearningDifficulty difficulty,
+                     String summary, String content, String practiceTip,
+                     Integer estimatedMinutes, String instrumentType, Boolean isActive) {
         this.title = title;
         this.category = category != null ? category : LearningCategory.THEORY;
         this.difficulty = difficulty != null ? difficulty : LearningDifficulty.BEGINNER; // Default: BEGINNER
         this.summary = summary;
         this.content = content;
         this.practiceTip = practiceTip;
+        this.estimatedMinutes = estimatedMinutes;
+        this.instrumentType = instrumentType;
         this.isActive = isActive != null ? isActive : true;
     }
 
-    public static Learning create(String title, String subtitle, LearningCategory category, LearningDifficulty difficulty,
-                                  String summary, String content, String practiceTip, String diagramUrl) {
+    public static Learning create(String title, LearningCategory category, LearningDifficulty difficulty,
+                                  String summary, String content, String practiceTip,
+                                  Integer estimatedMinutes, String instrumentType, Boolean isActive) {
         return Learning.builder()
                 .title(title)
-                .subtitle(subtitle)
                 .category(category)
                 .difficulty(difficulty)
                 .summary(summary)
                 .content(content)
                 .practiceTip(practiceTip)
-                .diagramUrl(diagramUrl)
+                .estimatedMinutes(estimatedMinutes)
+                .instrumentType(instrumentType)
                 .isActive(true)
                 .build();
     }
@@ -106,13 +111,16 @@ public class Learning extends BaseTimeDeletedEntity {
         this.isActive = false;
     }
 
-    public void updateContent(String title, String subtitle, LearningCategory category, LearningDifficulty difficulty,
-                              String summary, String content, String practiceTip, String diagramUrl) {
+    public void updateContent(String title, LearningCategory category, LearningDifficulty difficulty,
+                              String summary, String content, String practiceTip,
+                              Integer estimatedMinutes, String instrumentType) {
         this.title = title;
         this.category = category;
         this.difficulty = difficulty;
         this.summary = summary;
         this.content = content;
         this.practiceTip = practiceTip;
+        if (estimatedMinutes != null) this.estimatedMinutes = estimatedMinutes;
+        if (instrumentType != null) this.instrumentType = instrumentType;
     }
 }
