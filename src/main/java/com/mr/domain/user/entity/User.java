@@ -19,13 +19,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseTimeEntity {
 
+    private static final int NICKNAME_MAX_LENGTH = 10;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
     private Long userId;
 
-    @Size(max = 10)
-    @Column(name = "nickname", unique = true, length = 10)
+    @Size(max = NICKNAME_MAX_LENGTH)
+    @Column(name = "nickname", unique = true, length = NICKNAME_MAX_LENGTH)
     private String nickname;
 
     @Column(name = "profile_img_url", nullable = false, length = 255)
@@ -43,6 +45,16 @@ public class User extends BaseTimeEntity {
     }
 
     public void updateNickname(String nickname) {
+        validateNickname(nickname);
         this.nickname = nickname;
+    }
+
+    private static void validateNickname(String nickname) {
+        if (nickname == null || nickname.isBlank()) {
+            throw new IllegalArgumentException("닉네임은 필수입니다.");
+        }
+        if (nickname.length() > NICKNAME_MAX_LENGTH) {
+            throw new IllegalArgumentException("닉네임은 " + NICKNAME_MAX_LENGTH + "자를 초과할 수 없습니다.");
+        }
     }
 }
