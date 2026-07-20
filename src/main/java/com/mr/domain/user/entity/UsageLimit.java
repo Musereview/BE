@@ -14,13 +14,13 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
         name = "usage_limit",
-        indexes = {
-                @Index(name = "idx_usage_limit_user_date", columnList = "user_id, limit_date", unique = true)
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_usage_limit_user_date", columnNames = {"user_id", "limit_date"})
         })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UsageLimit extends BaseCreatedEntity {
 
-    private static final int DEFAULT_MAX_FREE_COUNT = 3; // Free 3회 제한
+    private static final int DEFAULT_MAX_FREE_COUNT = 3;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,12 +40,17 @@ public class UsageLimit extends BaseCreatedEntity {
     @Column(name = "max_count", nullable = false)
     private Integer maxCount;
 
+    //낙관적 락 버전
+    @Version
+    private Long version;
+
     @Builder(access = AccessLevel.PRIVATE)
     private UsageLimit(Long userId, LocalDate limitDate, Integer remainingCount, Integer maxCount) {
-        validateRequired(userId, "userId");
-        validateRequired(limitDate, "limitDate");
-        validatePositiveOrZero(remainingCount, "remainingCount");
-        validatePositiveOrZero(maxCount, "maxCount");
+        validateRequired(userId);
+        validateRequired(limitDate);
+        validatePositiveOrZero(remainingCount);
+        validatePositiveOrZero(maxCount);
+        validateCountRange(remainingCount, maxCount);
 
         this.userId = userId;
         this.limitDate = limitDate;
@@ -62,15 +67,19 @@ public class UsageLimit extends BaseCreatedEntity {
                 .build();
     }
 
-    public static void validateRequired(Object value, String fieldName) {
+    private static void validateRequired(Object value) {
         if (value == null) {
-            throw new GeneralException(UserUsageErrorStatus.INVALID_USAGE_COUNT);
+            throw new GeneralException(UserUsageErrorStatus.REQUIRED_FIELD_MISSING);
         }
     }
-
-    private static void validatePositiveOrZero(Integer value, String fieldName) {
+    private static void validatePositiveOrZero(Integer value) {
         if (value == null || value < 0) {
-            throw new GeneralException(UserUsageErrorStatus.INVALID_USAGE_COUNT);
+            throw new GeneralException(UserUsageErrorStatus.INVALID_USAGE_COUNT_RANGE);
+        }
+    }
+    private static void validateCountRange(Integer remainingCount, Integer maxCount) {
+        if (remainingCount != null && maxCount != null && remainingCount > maxCount) {
+            throw new GeneralException(UserUsageErrorStatus.EXCEEDED_MAX_COUNT);
         }
     }
 
@@ -82,12 +91,19 @@ public class UsageLimit extends BaseCreatedEntity {
         this.remainingCount--;
     }
 
-    // 관리자 기능으로 잔여 횟수 수동 조절할 때 사용
+    // 관리자 기능 - 잔여 횟수 수동 조절
     public void updateRemainingCount(Integer newCount) {
-        validatePositiveOrZero(newCount, "newCount");
-        if (newCount > this.maxCount) {
-            throw new GeneralException(UserUsageErrorStatus.INVALID_USAGE_COUNT);
-        }
+        validatePositiveOrZero(newCount);
+        validateCountRange(newCount, this.maxCount);
         this.remainingCount = newCount;
+    }
+    public void updateMaxCount(Integer newMaxCount) {
+        validatePositiveOrZero(newMaxCount);
+        this.maxCount = newMaxCount;
+
+        // 상한선이 깎여서 현재 잔여량이 상한보다 커진 경우 정정 보정 로직 포함
+        if (this.remainingCount > this.maxCount) {
+            this.remainingCount = this.maxCount;
+        }
     }
 }
