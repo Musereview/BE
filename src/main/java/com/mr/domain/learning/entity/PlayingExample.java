@@ -41,8 +41,8 @@ public class PlayingExample extends BaseCreatedEntity {
 
     // 미디 파일 데이터
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "midi_file_url", nullable = false, columnDefinition = "JSON")
-    private String midiFileUrl;
+    @Column(name = "midi_data", nullable = false, columnDefinition = "JSON")
+    private String midiData;
 
     // 오디오 파일
     @Column(name = "audio_file_url", nullable = false, length = 255)
@@ -65,12 +65,12 @@ public class PlayingExample extends BaseCreatedEntity {
     private Long playingSeconds;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private PlayingExample(LearningStep learningStep, String title, String midiFileUrl,
+    private PlayingExample(LearningStep learningStep, String title, String midiData,
                            String audioFileUrl, Integer bpm, String keySignature,
                            String description, Long playingSeconds) {
         this.learningStep = learningStep;
         this.title = title;
-        this.midiFileUrl = midiFileUrl;
+        this.midiData = midiData;
         this.audioFileUrl = audioFileUrl;
         this.bpm = bpm;
         this.keySignature = keySignature;
@@ -78,13 +78,13 @@ public class PlayingExample extends BaseCreatedEntity {
         this.playingSeconds = playingSeconds;
     }
 
-    public static PlayingExample create(LearningStep learningStep, String title, String midiFileUrl,
+    public static PlayingExample create(LearningStep learningStep, String title, String midiData,
                                         String audioFileUrl, Integer bpm, String keySignature,
                                         String description, Long playingSeconds) {
         return PlayingExample.builder()
                 .learningStep(learningStep)
                 .title(title)
-                .midiFileUrl(midiFileUrl)
+                .midiData(midiData)
                 .audioFileUrl(audioFileUrl)
                 .bpm(bpm)
                 .keySignature(keySignature)
@@ -93,11 +93,11 @@ public class PlayingExample extends BaseCreatedEntity {
                 .build();
     }
 
-    public void updatePlayingExample(String title, String midiFileUrl, String audioFileUrl,
+    public void updatePlayingExample(String title, String midiData, String audioFileUrl,
                                      Integer bpm, String keySignature, String description,
                                      Long playingSeconds) {
         this.title = title;
-        this.midiFileUrl = midiFileUrl;
+        this.midiData = midiData;
         this.audioFileUrl = audioFileUrl;
         this.bpm = bpm;
         this.keySignature = keySignature;

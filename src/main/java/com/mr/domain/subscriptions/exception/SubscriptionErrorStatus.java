@@ -1,4 +1,4 @@
-package com.mr.domain.subscriptions.entity.enums;
+package com.mr.domain.subscriptions.exception;
 
 import com.mr.global.apipayload.code.BaseCode;
 import lombok.AllArgsConstructor;

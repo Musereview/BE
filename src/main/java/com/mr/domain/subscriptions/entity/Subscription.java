@@ -1,7 +1,7 @@
 package com.mr.domain.subscriptions.entity;
 
-import com.mr.domain.subscriptions.entity.enums.SubscriptionErrorStatus;
-import com.mr.domain.subscriptions.exception.SubscriptionException;
+import com.mr.domain.subscriptions.exception.SubscriptionErrorStatus;
+import com.mr.global.apipayload.exception.GeneralException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -65,7 +65,7 @@ public class Subscription {
 
     private static void validateDates(LocalDateTime startDate, LocalDateTime endDate) {
         if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
-            throw new SubscriptionException(SubscriptionErrorStatus.INVALID_SUBSCRIPTION_DATE);
+            throw new GeneralException(SubscriptionErrorStatus.INVALID_SUBSCRIPTION_DATE);
         }
     }
 
@@ -78,7 +78,7 @@ public class Subscription {
     // 구독 기간 연장
     public void extendSubscription(LocalDateTime newEndDate) {
         if (newEndDate == null || !newEndDate.isAfter(this.endDate)) {
-            throw new SubscriptionException(SubscriptionErrorStatus.INVALID_SUBSCRIPTION_EXTENSION_DATE);
+            throw new GeneralException(SubscriptionErrorStatus.INVALID_SUBSCRIPTION_EXTENSION_DATE);
         }
         this.endDate = newEndDate;
     }

@@ -151,11 +151,6 @@ public class BackingTrack extends BaseTimeDeletedEntity {
         if (level != null) this.level = level;
     }
 
-    // 재생 수 1 증가
-    public void incrementPlayCount() {
-        this.playCount++;
-    }
-
     // 공개 범위 수정
     public void changeAccessLevel(AccessLevel accessLevel) {
         if (accessLevel != null) {
