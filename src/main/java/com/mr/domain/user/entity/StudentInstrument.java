@@ -1,5 +1,7 @@
 package com.mr.domain.user.entity;
 
+import com.mr.domain.user.entity.enums.StudentInstrumentErrorStatus;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -46,6 +48,8 @@ public class StudentInstrument extends BaseTimeEntity {
 
     @Builder(access = AccessLevel.PRIVATE)
     private StudentInstrument(Student student, Instrument instrument, boolean primary) {
+        validateStudent(student);
+        validateInstrument(instrument);
         this.student = student;
         this.instrument = instrument;
         this.primary = primary;
@@ -73,5 +77,17 @@ public class StudentInstrument extends BaseTimeEntity {
 
     public void unmarkAsPrimary() {
         this.primary = false;
+    }
+
+    private static void validateStudent(Student student) {
+        if (student == null) {
+            throw new GeneralException(StudentInstrumentErrorStatus.STUDENT_REQUIRED);
+        }
+    }
+
+    private static void validateInstrument(Instrument instrument) {
+        if (instrument == null) {
+            throw new GeneralException(StudentInstrumentErrorStatus.INSTRUMENT_REQUIRED);
+        }
     }
 }

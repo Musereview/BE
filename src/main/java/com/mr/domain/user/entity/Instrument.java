@@ -1,5 +1,7 @@
 package com.mr.domain.user.entity;
 
+import com.mr.domain.user.entity.enums.InstrumentErrorStatus;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -34,6 +36,8 @@ public class Instrument extends BaseTimeEntity {
 
     @Builder(access = AccessLevel.PRIVATE)
     private Instrument(String code, String name, boolean active) {
+        validateCode(code);
+        validateName(name);
         this.code = code;
         this.name = name;
         this.active = active;
@@ -45,5 +49,17 @@ public class Instrument extends BaseTimeEntity {
                 .name(name)
                 .active(true)
                 .build();
+    }
+
+    private static void validateCode(String code) {
+        if (code == null) {
+            throw new GeneralException(InstrumentErrorStatus.CODE_REQUIRED);
+        }
+    }
+
+    private static void validateName(String name) {
+        if (name == null) {
+            throw new GeneralException(InstrumentErrorStatus.NAME_REQUIRED);
+        }
     }
 }
