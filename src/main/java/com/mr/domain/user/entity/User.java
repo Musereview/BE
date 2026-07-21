@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Size;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,14 +22,21 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseTimeEntity {
 
+    private static final int NICKNAME_MIN_LENGTH = 2;
     private static final int NICKNAME_MAX_LENGTH = 10;
+    private static final Pattern NICKNAME_PATTERN =
+            Pattern.compile("^[가-힣a-zA-Z0-9]{" + NICKNAME_MIN_LENGTH + "," + NICKNAME_MAX_LENGTH + "}$");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
     private Long userId;
 
-    @Size(max = NICKNAME_MAX_LENGTH)
+    @Size(
+            min = NICKNAME_MIN_LENGTH,
+            max = NICKNAME_MAX_LENGTH,
+            message = "닉네임은 2자 이상 10자 이하로 입력해야 합니다."
+    )
     @Column(name = "nickname", unique = true, length = NICKNAME_MAX_LENGTH)
     private String nickname;
 
@@ -46,17 +54,22 @@ public class User extends BaseTimeEntity {
                 .build();
     }
 
+    public boolean isOnboardingCompleted() {
+        return nickname != null;
+    }
+
     public void updateNickname(String nickname) {
-        validateNickname(nickname);
-        this.nickname = nickname;
+        String trimmedNickname = nickname == null ? null : nickname.trim();
+        validateNickname(trimmedNickname);
+        this.nickname = trimmedNickname;
     }
 
     private static void validateNickname(String nickname) {
         if (nickname == null || nickname.isBlank()) {
             throw new GeneralException(UserErrorStatus.NICKNAME_REQUIRED);
         }
-        if (nickname.length() > NICKNAME_MAX_LENGTH) {
-            throw new GeneralException(UserErrorStatus.NICKNAME_TOO_LONG);
+        if (!NICKNAME_PATTERN.matcher(nickname).matches()) {
+            throw new GeneralException(UserErrorStatus.NICKNAME_INVALID_FORMAT);
         }
     }
 }
