@@ -19,6 +19,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Getter
@@ -84,7 +85,9 @@ public class UserLearningProgress extends BaseTimeEntity {
 
     private static void validateLearningAndStep(Learning learning, LearningStep learningStep) {
         if (learningStep != null && learning != null) {
-            if (!learningStep.getLearning().equals(learning)) {
+            if (learningStep.getLearning() == null ||
+                    !Objects.equals(learningStep.getLearning().getId(), learning.getId())) {
+
                 throw new GeneralException(LearningErrorStatus.INVALID_LEARNING_STEP);
             }
         }
