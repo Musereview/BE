@@ -1,6 +1,8 @@
 package com.mr.domain.user.entity;
 
+import com.mr.domain.user.entity.enums.StudentErrorStatus;
 import com.mr.domain.user.entity.enums.TheoryLevel;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -39,6 +41,8 @@ public class Student extends BaseTimeEntity {
 
     @Builder(access = AccessLevel.PRIVATE)
     private Student(User user, TheoryLevel theoryLevel) {
+        validateUser(user);
+        validateTheoryLevel(theoryLevel);
         this.user = user;
         this.theoryLevel = theoryLevel;
     }
@@ -51,6 +55,19 @@ public class Student extends BaseTimeEntity {
     }
 
     public void updateTheoryLevel(TheoryLevel theoryLevel) {
+        validateTheoryLevel(theoryLevel);
         this.theoryLevel = theoryLevel;
+    }
+
+    private static void validateUser(User user) {
+        if (user == null) {
+            throw new GeneralException(StudentErrorStatus.USER_REQUIRED);
+        }
+    }
+
+    private static void validateTheoryLevel(TheoryLevel theoryLevel) {
+        if (theoryLevel == null) {
+            throw new GeneralException(StudentErrorStatus.THEORY_LEVEL_REQUIRED);
+        }
     }
 }
