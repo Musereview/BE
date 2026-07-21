@@ -1,7 +1,7 @@
 package com.mr.domain.user.entity;
 
-import com.mr.domain.user.entity.enums.StudentErrorStatus;
 import com.mr.domain.user.entity.enums.TheoryLevel;
+import com.mr.domain.user.exception.StudentErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.Column;

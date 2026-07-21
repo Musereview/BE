@@ -1,4 +1,4 @@
-package com.mr.domain.user.entity.enums;
+package com.mr.domain.user.exception;
 
 import com.mr.global.apipayload.code.BaseCode;
 import org.springframework.http.HttpStatus;
