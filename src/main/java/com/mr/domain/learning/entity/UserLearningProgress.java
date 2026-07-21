@@ -1,5 +1,7 @@
 package com.mr.domain.learning.entity;
 
+import com.mr.domain.learning.exception.LearningErrorStatus;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -70,12 +72,22 @@ public class UserLearningProgress extends BaseTimeEntity {
     }
 
     public static UserLearningProgress create(Long userId, Learning learning, LearningStep learningStep) {
+        validateLearningAndStep(learning, learningStep);
+
         return UserLearningProgress.builder()
                 .userId(userId)
                 .learning(learning)
                 .learningStep(learningStep)
                 .lastStudiedAt(LocalDateTime.now())
                 .build();
+    }
+
+    private static void validateLearningAndStep(Learning learning, LearningStep learningStep) {
+        if (learningStep != null && learning != null) {
+            if (!learningStep.getLearning().equals(learning)) {
+                throw new GeneralException(LearningErrorStatus.INVALID_LEARNING_STEP);
+            }
+        }
     }
 
     // 학습 시간 및 점수 업데이트
