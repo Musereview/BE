@@ -23,13 +23,10 @@ import java.time.LocalDateTime;
 @Table(
         name = "user_learning_progress",
         indexes = {
-                // 1. 특정 유저가 이 학습 단계를 진행했는지 확인/조회할 때
+                // 특정 유저가 이 학습 단계를 진행했는지 확인/조회할 때
                 @Index(name = "idx_user_learning_step",
-                        columnList = "user_id, learning_step_id"),
-
-                // 2. 유저의 메인/대시보드 화면 등에서 최근 학습한 내역을 최신순으로 정렬해 보여줄 때
-                @Index(name = "idx_user_last_studied",
-                        columnList = "user_id, last_studied_at")
+                        columnList = "user_id, learning_step_id",
+                        unique = true),
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -79,12 +76,6 @@ public class UserLearningProgress extends BaseTimeEntity {
                 .learningStep(learningStep)
                 .lastStudiedAt(LocalDateTime.now())
                 .build();
-    }
-
-    // 학습 완료 및 점수 갱신
-    public void completeLearning(Integer score) {
-        this.score = score;
-        this.lastStudiedAt = LocalDateTime.now();
     }
 
     // 학습 시간 및 점수 업데이트

@@ -32,7 +32,7 @@ public class PlayingExample extends BaseCreatedEntity {
 
     // 학습 단계 엔티티와 일대일(1:1) 매핑 (외래 키 관리자)
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "learning_step_id", nullable = false)
+    @JoinColumn(name = "learning_step_id", nullable = false, unique = true)
     private LearningStep learningStep;
 
     // 제목

@@ -10,6 +10,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,9 +20,11 @@ import lombok.NoArgsConstructor;
 @Getter
 @Table(
         name = "chord_progression",
-        indexes = {
-                @Index(name = "idx_chord_progression_track_seq",
-                        columnList = "backing_track_id, sequence_no")
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_chord_progression_track_measure_seq",
+                        columnNames = {"backing_track_id", "measure_no", "sequence_no"}
+                )
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

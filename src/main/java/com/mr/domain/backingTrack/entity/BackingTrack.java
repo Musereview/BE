@@ -61,8 +61,8 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     private ScaleType scaleType;
 
     // 박자
-    @Column(name = "time", nullable = false, length = 10)
-    private String time;
+    @Column(name = "time_signature", nullable = false, length = 10)
+    private String timeSignature;
 
     // bpm
     @Column(name = "bpm", nullable = false)
@@ -95,7 +95,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
 
     @Builder(access = lombok.AccessLevel.PRIVATE)
     private BackingTrack(Long userId, Long academyId, String title, String genre,
-                         String keySignature, ScaleType scaleType, String time,
+                         String keySignature, ScaleType scaleType, String timeSignature,
                          Integer bpm, Integer playtimeSec, String audioFileUrl,
                          String midiFileUrl, Integer playCount,
                          AccessLevel accessLevel, Level level) {
@@ -105,7 +105,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
         this.genre = genre;
         this.keySignature = keySignature;
         this.scaleType = scaleType;
-        this.time = time;
+        this.timeSignature = timeSignature;
         this.bpm = bpm;
         this.playtimeSec = playtimeSec;
         this.audioFileUrl = audioFileUrl;
@@ -116,7 +116,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     }
 
     public static BackingTrack create(Long userId, Long academyId, String title, String genre,
-                                      String keySignature, ScaleType scaleType, String time,
+                                      String keySignature, ScaleType scaleType, String timeSignature,
                                       Integer bpm, Integer playtimeSec, String audioFileUrl,
                                       String midiFileUrl, AccessLevel accessLevel, Level level) {
         return BackingTrack.builder()
@@ -126,7 +126,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
                 .genre(genre)
                 .keySignature(keySignature)
                 .scaleType(scaleType)
-                .time(time)
+                .timeSignature(timeSignature)
                 .bpm(bpm)
                 .playtimeSec(playtimeSec)
                 .audioFileUrl(audioFileUrl)
@@ -138,13 +138,13 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     }
 
     public void updateTrackInfo(String title, String genre, String keySignature,
-                                ScaleType scaleType, String time, Integer bpm,
+                                ScaleType scaleType, String timeSignature, Integer bpm,
                                 Integer playtimeSec, AccessLevel accessLevel, Level level) {
         this.title = title;
         this.genre = genre;
         this.keySignature = keySignature;
         this.scaleType = scaleType;
-        this.time = time;
+        this.timeSignature = timeSignature;
         this.bpm = bpm;
         this.playtimeSec = playtimeSec;
         if (accessLevel != null) this.accessLevel = accessLevel;

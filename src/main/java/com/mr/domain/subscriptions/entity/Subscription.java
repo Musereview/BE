@@ -1,5 +1,7 @@
 package com.mr.domain.subscriptions.entity;
 
+import com.mr.domain.subscriptions.entity.enums.SubscriptionErrorStatus;
+import com.mr.domain.subscriptions.exception.SubscriptionException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -52,12 +54,19 @@ public class Subscription {
 
     // 정적 팩토리 메서드 (구독 생성)
     public static Subscription create(Long userId, String tier, LocalDateTime startDate, LocalDateTime endDate) {
+        validateDates(startDate, endDate);
         return Subscription.builder()
                 .userId(userId)
                 .tier(tier)
                 .startDate(startDate)
                 .endDate(endDate)
                 .build();
+    }
+
+    private static void validateDates(LocalDateTime startDate, LocalDateTime endDate) {
+        if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+            throw new SubscriptionException(SubscriptionErrorStatus.INVALID_SUBSCRIPTION_DATE);
+        }
     }
 
     // 현재 구독 유효 여부 확인 (현재 시간이 시작일과 종료일 사이인지)
@@ -68,9 +77,10 @@ public class Subscription {
 
     // 구독 기간 연장
     public void extendSubscription(LocalDateTime newEndDate) {
-        if (newEndDate != null && newEndDate.isAfter(this.endDate)) {
-            this.endDate = newEndDate;
+        if (newEndDate == null || !newEndDate.isAfter(this.endDate)) {
+            throw new SubscriptionException(SubscriptionErrorStatus.INVALID_SUBSCRIPTION_EXTENSION_DATE);
         }
+        this.endDate = newEndDate;
     }
 
     // 구독 티어 변경

@@ -99,7 +99,7 @@ public class Learning extends BaseTimeDeletedEntity {
                 .practiceTip(practiceTip)
                 .estimatedMinutes(estimatedMinutes)
                 .instrumentType(instrumentType)
-                .isActive(true)
+                .isActive(isActive)
                 .build();
     }
 

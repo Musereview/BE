@@ -22,7 +22,8 @@ import lombok.Builder;
         name = "learning_step",
         indexes = {
                 @Index(name = "idx_learning_step_course_seq",
-                        columnList = "learning_id, step_no")
+                        columnList = "learning_id, step_no",
+                        unique = true)
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
