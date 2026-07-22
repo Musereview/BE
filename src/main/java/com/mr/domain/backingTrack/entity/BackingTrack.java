@@ -3,20 +3,28 @@ package com.mr.domain.backingTrack.entity;
 import com.mr.domain.backingTrack.entity.enums.AccessLevel;
 import com.mr.domain.backingTrack.entity.enums.Level;
 import com.mr.domain.backingTrack.entity.enums.ScaleType;
+import com.mr.domain.user.entity.User;
 import com.mr.global.entity.BaseTimeDeletedEntity;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Entity
@@ -36,8 +44,9 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     private Long id;
 
     // 유저 아이디
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     // 학원 아이디
     @Column(name = "academy_id")
@@ -93,13 +102,17 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     @Column(name = "level", nullable = false)
     private Level level;
 
+    // 양방향 매핑 추가, 영속성 전이랑 고아 객체 제거
+    @OneToMany(mappedBy = "backingTrack", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ChordProgression> chordProgressions = new ArrayList<>();
+
     @Builder(access = lombok.AccessLevel.PRIVATE)
-    private BackingTrack(Long userId, Long academyId, String title, String genre,
+    private BackingTrack(User user, Long academyId, String title, String genre,
                          String keySignature, ScaleType scaleType, String timeSignature,
                          Integer bpm, Integer playtimeSec, String audioFileUrl,
                          String midiFileUrl, Integer playCount,
                          AccessLevel accessLevel, Level level) {
-        this.userId = userId;
+        this.user = user;
         this.academyId = academyId;
         this.title = title;
         this.genre = genre;
@@ -115,12 +128,12 @@ public class BackingTrack extends BaseTimeDeletedEntity {
         this.level = level != null ? level : Level.BASIC;
     }
 
-    public static BackingTrack create(Long userId, Long academyId, String title, String genre,
+    public static BackingTrack create(User user, Long academyId, String title, String genre,
                                       String keySignature, ScaleType scaleType, String timeSignature,
                                       Integer bpm, Integer playtimeSec, String audioFileUrl,
                                       String midiFileUrl, AccessLevel accessLevel, Level level) {
         return BackingTrack.builder()
-                .userId(userId)
+                .user(user)
                 .academyId(academyId)
                 .title(title)
                 .genre(genre)
@@ -156,5 +169,10 @@ public class BackingTrack extends BaseTimeDeletedEntity {
         if (accessLevel != null) {
             this.accessLevel = accessLevel;
         }
+    }
+
+    //  코드 진행 추가
+    public void addChordProgression(ChordProgression chordProgression) {
+        this.chordProgressions.add(chordProgression);
     }
 }
