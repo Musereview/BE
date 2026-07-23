@@ -45,6 +45,7 @@ public class User extends BaseTimeEntity {
 
     @Builder(access = AccessLevel.PRIVATE)
     private User(String profileImgUrl) {
+        validateProfileImgUrl(profileImgUrl);
         this.profileImgUrl = profileImgUrl;
     }
 
@@ -70,6 +71,12 @@ public class User extends BaseTimeEntity {
         }
         if (!NICKNAME_PATTERN.matcher(nickname).matches()) {
             throw new GeneralException(UserErrorStatus.NICKNAME_INVALID_FORMAT);
+        }
+    }
+
+    private static void validateProfileImgUrl(String profileImgUrl) {
+        if (profileImgUrl == null || profileImgUrl.isBlank()) {
+            throw new GeneralException(UserErrorStatus.PROFILE_IMAGE_REQUIRED);
         }
     }
 }
