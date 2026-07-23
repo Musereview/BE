@@ -1,9 +1,41 @@
 package com.mr.global.client.ai;
 
-// TODO: 분석 요청 생성 API 구현 시 AI 서버 실제 요청 스펙에 맞춰 필드 확정
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.List;
+
 public record AiAnalysisRequest(
-        Long playingId,
-        Integer startBar,
-        Integer endBar
+        Meta meta,
+        List<Chord> chords,
+        List<Note> notes
 ) {
+    public record Meta(
+            Double bpm,
+            @JsonProperty("time_signature") List<Integer> timeSignature,
+            Key key,
+            String genre
+    ) {
+    }
+
+    public record Key(
+            String tonic,
+            String mode
+    ) {
+    }
+
+    public record Chord(
+            Integer bar,
+            Double beat,
+            String symbol
+    ) {
+    }
+
+    public record Note(
+            Integer index,
+            Integer pitch,
+            @JsonProperty("onset_beats") Double onsetBeats,
+            @JsonProperty("duration_beats") Double durationBeats,
+            Integer velocity
+    ) {
+    }
 }

@@ -1,15 +1,18 @@
 package com.mr.global.client.ai;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.mr.global.apipayload.domain.AiServerErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.config.AiServerProperties;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AiServerClient {
@@ -17,17 +20,23 @@ public class AiServerClient {
     private final RestClient aiServerRestClient;
     private final AiServerProperties properties;
 
-    public AiAnalysisResponse requestAnalysis(AiAnalysisRequest request) {
+    public JsonNode requestAnalysis(AiAnalysisRequest request) {
         try {
-            return aiServerRestClient.post()
+            JsonNode response = aiServerRestClient.post()
                     .uri(properties.endpoints().analyze())
                     .body(request)
                     .retrieve()
-                    .body(AiAnalysisResponse.class);
+                    .body(JsonNode.class);
+
+            if (response == null) {
+                throw new GeneralException(AiServerErrorStatus.INVALID_RESPONSE);
+            }
+            return response;
         } catch (ResourceAccessException e) {
             boolean isTimeout = e.getCause() instanceof java.net.SocketTimeoutException;
             throw new GeneralException(isTimeout ? AiServerErrorStatus.TIMEOUT : AiServerErrorStatus.CONNECTION_FAILED);
         } catch (HttpStatusCodeException e) {
+            log.warn("AI 서버가 오류 응답을 반환했습니다. status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new GeneralException(AiServerErrorStatus.RESPONSE_ERROR);
         } catch (RestClientException e) {
             throw new GeneralException(AiServerErrorStatus.INVALID_RESPONSE);
