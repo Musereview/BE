@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -22,6 +23,9 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
         name = "student_instrument",
+        indexes = {
+                @Index(name = "idx_student_instrument_instrument_id", columnList = "instrument_id")
+        },
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_student_instrument_student_id_instrument_id",
                         columnNames = {"student_id", "instrument_id"})
