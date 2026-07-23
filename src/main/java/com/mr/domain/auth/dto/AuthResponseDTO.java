@@ -16,7 +16,7 @@ public class AuthResponseDTO {
             Long userId,
             String email,
             String nickname,
-            Boolean isNewUser, // 최초 가입 유저 여부 (회원가입/로그인 분기용)
+            Boolean isNewUser, // 최초 가입 여부
             TokenResponse tokenInfo
     ) {}
 }
