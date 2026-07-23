@@ -14,13 +14,13 @@ public class SecurityUtil {
         final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || authentication.getName() == null || authentication.getName().equals("anonymousUser")) {
-            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
+            throw new GeneralException(CommonStatus.UNAUTHORIZED);
         }
 
         try {
             return Long.parseLong(authentication.getName());
         } catch (NumberFormatException e) {
-            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
+            throw new GeneralException(CommonStatus.UNAUTHORIZED);
         }
     }
 }
