@@ -11,8 +11,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.List;
 
@@ -100,6 +102,30 @@ class AiServerClientTest {
         mockServer.expect(requestTo(BASE_URL + "/analyze"))
                 .andRespond(request -> {
                     throw new SocketTimeoutException("Read timed out");
+                });
+
+        assertThatThrownBy(() -> client.requestAnalysis(sampleRequest()))
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getCode()).isEqualTo(AiServerErrorStatus.TIMEOUT));
+    }
+
+    @Test
+    void JDK_HttpClient_기반_타임아웃_예외도_TIMEOUT으로_변환된다() {
+        mockServer.expect(requestTo(BASE_URL + "/analyze"))
+                .andRespond(request -> {
+                    throw new HttpTimeoutException("Request timed out");
+                });
+
+        assertThatThrownBy(() -> client.requestAnalysis(sampleRequest()))
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getCode()).isEqualTo(AiServerErrorStatus.TIMEOUT));
+    }
+
+    @Test
+    void 원인_체인_안쪽에_타임아웃_예외가_있어도_TIMEOUT으로_변환된다() {
+        mockServer.expect(requestTo(BASE_URL + "/analyze"))
+                .andRespond(request -> {
+                    throw new IOException("wrapped", new SocketTimeoutException("connect timed out"));
                 });
 
         assertThatThrownBy(() -> client.requestAnalysis(sampleRequest()))

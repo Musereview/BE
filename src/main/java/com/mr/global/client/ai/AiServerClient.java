@@ -12,6 +12,12 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import java.net.SocketTimeoutException;
+import java.net.http.HttpTimeoutException;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -33,13 +39,24 @@ public class AiServerClient {
             }
             return response;
         } catch (ResourceAccessException e) {
-            boolean isTimeout = e.getCause() instanceof java.net.SocketTimeoutException;
-            throw new GeneralException(isTimeout ? AiServerErrorStatus.TIMEOUT : AiServerErrorStatus.CONNECTION_FAILED);
+            throw new GeneralException(hasTimeoutCause(e) ? AiServerErrorStatus.TIMEOUT : AiServerErrorStatus.CONNECTION_FAILED);
         } catch (HttpStatusCodeException e) {
             log.warn("AI 서버가 오류 응답을 반환했습니다. status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new GeneralException(AiServerErrorStatus.RESPONSE_ERROR);
         } catch (RestClientException e) {
             throw new GeneralException(AiServerErrorStatus.INVALID_RESPONSE);
         }
+    }
+
+    private boolean hasTimeoutCause(Throwable throwable) {
+        Set<Throwable> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        Throwable current = throwable;
+        while (current != null && visited.add(current)) {
+            if (current instanceof SocketTimeoutException || current instanceof HttpTimeoutException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

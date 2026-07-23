@@ -36,16 +36,12 @@ class AiServerPropertiesBindingTest {
     }
 
     @Test
-    void 이전_ai_server_프리픽스로는_더이상_바인딩되지_않는다() {
+    void 이전_ai_server_프리픽스만_설정되면_바인딩되지_않는다() {
         contextRunner
-                .withPropertyValues(
-                        "ai.server.base-url=http://old-prefix-should-be-ignored:9999",
-                        "ai.internal.base-url=http://localhost:8000",
-                        "ai.internal.endpoints.analyze=/analyze"
-                )
+                .withPropertyValues("ai.server.base-url=http://old-prefix-should-be-ignored:9999")
                 .run(context -> {
                     AiServerProperties properties = context.getBean(AiServerProperties.class);
-                    assertThat(properties.baseUrl()).isEqualTo("http://localhost:8000");
+                    assertThat(properties.baseUrl()).isNull();
                 });
     }
 }
