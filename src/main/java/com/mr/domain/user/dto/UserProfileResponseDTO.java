@@ -21,4 +21,14 @@ public class UserProfileResponseDTO {
             Long totalPracticeMinutes,
             Long completedLearningCount
     ) {}
+
+    @Builder
+    public record OnboardingResponse(
+            Long userId,
+            String nickname,
+            TheoryLevel skillLevel,
+            String instrumentType,
+            String subscriptionTier,
+            String profileImgUrl
+    ) {}
 }
