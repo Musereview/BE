@@ -65,3 +65,8 @@ awscliv2.zip
 
 # Spring Boot local config
 src/main/resources/application-local.yml
+
+# docs
+docs/*
+.claude/*
+CLAUDE.md
