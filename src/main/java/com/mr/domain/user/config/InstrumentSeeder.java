@@ -8,7 +8,6 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
@@ -20,8 +19,11 @@ public class InstrumentSeeder implements ApplicationRunner {
 
     private final InstrumentRepository instrumentRepository;
 
+    // NOTE: run() 자체엔 @Transactional을 걸지 않음 — PostgreSQL은 트랜잭션 내 한 문장이라도
+    // 제약 위반으로 실패하면 그 트랜잭션 전체가 abort 상태가 되어, 이후 catch로 예외를 소비해도
+    // 커밋 시점에 다시 실패함. save() 각각이 Spring Data JPA의 자체 트랜잭션으로 독립 처리되도록
+    // run() 레벨 트랜잭션을 없애서, 중복 저장 실패가 그 save() 호출 안에서 깔끔하게 끝나게 함.
     @Override
-    @Transactional
     public void run(ApplicationArguments args) {
         if (instrumentRepository.findByCode(PIANO_CODE).isPresent()) {
             return;
