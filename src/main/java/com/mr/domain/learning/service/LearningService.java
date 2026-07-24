@@ -108,8 +108,8 @@ public class LearningService {
 
     // 학습 주제(THEORY) 전체보기
     public LearningTheoryListResponseDTO.TheoryListResultDTO getTheoryList(Long userId, String difficulty) {
-        ensureUserExists(userId);
         LearningDifficulty parsedDifficulty = parseDifficulty(difficulty);
+        ensureUserExists(userId);
 
         List<Learning> learnings = learningRepository
                 .findByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(LearningCategory.THEORY, parsedDifficulty);
