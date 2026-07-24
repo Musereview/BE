@@ -24,8 +24,9 @@ spring:
 
 # 3. Spring Security 및 JWT 인증 설정
 jwt:
-  # [입력] HS256 알고리즘을 충족하는 256비트(32바이트) 이상의 임의의 비밀키를 채워주세요.
-  # 기입 예시: "your-local-custom-secret-key-must-be-very-long-and-secure-32bytes"
+  # [입력] Base64로 인코딩된 256비트(32바이트) 이상의 Secret Key를 채워주세요.
+  # (주의: Decoders.BASE64.decode를 사용하므로 Plain Text가 아닌 Base64 인코딩 문자열이어야 합니다.)
+  # 기입 예시: "c29tZS1zZWNyZXQta2V5LW11c3QtYmUtYXQtbGVhc3QtMzItYmF5dGVzLWxvbmc="
   secret: ""
   access-token-validity-in-seconds: 1800     # Access Token 만료 시간 (30분)
   refresh-token-validity-in-seconds: 604800  # Refresh Token 만료 시간 (7일)
