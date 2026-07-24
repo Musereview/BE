@@ -23,10 +23,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @Entity
 @Table(name = "playing")
@@ -181,13 +178,14 @@ public class Playing extends BaseCreatedDeletedEntity {
         LocalDateTime completedAt = LocalDateTime.now();
         long savedDurationMs = calculateDurationMs(this.startedAt, completedAt);
 
-        // 실제 연주 허용 시간 = min(실제 연주 시간, 10분) + 오차 범위(500ms)
+        // 실제 연주 시간에 500ms의 오차를 허용하되, 최대 10분까지만 저장
         long allowedTimestampMs = Math.min(savedDurationMs + MIDI_TIMESTAMP_TOLERANCE_MS,
                 MAX_DURATION_MS);
 
         List<MidiEventData> sortedMidiData = midiData.stream()
                 .filter(event -> event.getTimestampMs() <= allowedTimestampMs)
-                .sorted(Comparator.comparingLong(MidiEventData::getTimestampMs))
+                .sorted(Comparator.comparingLong(MidiEventData::getTimestampMs)
+                        .thenComparingInt(MidiEventData::getSequence))
                 .toList();
 
         validateMidiData(sortedMidiData);
@@ -222,6 +220,27 @@ public class Playing extends BaseCreatedDeletedEntity {
         if (midiData.stream().anyMatch(Objects::isNull)) {
             throw new GeneralException(PlayingErrorStatus.INVALID_MIDI_EVENT);
         }
+
+        Set<MidiEventOrder> seenOrders = new HashSet<>();
+
+        for (MidiEventData event : midiData) {
+            MidiEventOrder order = new MidiEventOrder(
+                    event.getTimestampMs(),
+                    event.getSequence()
+            );
+
+            if (!seenOrders.add(order)) {
+                throw new GeneralException(
+                        PlayingErrorStatus.DUPLICATE_MIDI_SEQUENCE
+                );
+            }
+        }
+    }
+
+    private record MidiEventOrder(
+            Long timestampMs,
+            Integer sequence
+    ) {
     }
 
     private static long calculateDurationMs(

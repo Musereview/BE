@@ -10,6 +10,10 @@ import lombok.Getter;
 @Getter
 public class MidiEventData {
 
+    // 동일 timestamp 내 순서 값
+    @JsonProperty("sequence")
+    private final Integer sequence;
+
     private final MidiType type;
     private final Integer pitch;
     private final Integer velocity;
@@ -18,16 +22,19 @@ public class MidiEventData {
     private final Long timestampMs;
 
     private MidiEventData(
+            Integer sequence,
             MidiType type,
             Integer pitch,
             Integer velocity,
             Long timestampMs
     ) {
+        validateSequence(sequence);
         validateMidiType(type);
         validatePitch(pitch);
         validateVelocity(velocity);
         validateTimestampMs(timestampMs);
 
+        this.sequence = sequence;
         this.type = type;
         this.pitch = pitch;
         this.velocity = velocity;
@@ -36,12 +43,19 @@ public class MidiEventData {
 
     @JsonCreator
     public static MidiEventData of(
+            @JsonProperty("sequence") Integer sequence,
             @JsonProperty("type") MidiType type,
             @JsonProperty("pitch") Integer pitch,
             @JsonProperty("velocity") Integer velocity,
             @JsonProperty("timestamp_ms") Long timestampMs
     ) {
-        return new MidiEventData(type, pitch, velocity, timestampMs);
+        return new MidiEventData(sequence, type, pitch, velocity, timestampMs);
+    }
+
+    private static void validateSequence(Integer sequence) {
+        if (sequence == null || sequence < 0) {
+            throw new GeneralException(PlayingErrorStatus.INVALID_MIDI_SEQUENCE);
+        }
     }
 
     private static void validateMidiType(MidiType type) {

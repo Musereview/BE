@@ -23,6 +23,8 @@ public enum PlayingErrorStatus implements BaseCode {
     MISSING_PLAYING_STATUS(HttpStatus.BAD_REQUEST, "PLAYING_400_12", "연주 상태는 필수 입력값입니다."),
     UNSUPPORTED_PLAYING_MODE(HttpStatus.BAD_REQUEST, "PLAYING_400_13", "현재 지원하지 않는 연주 모드입니다."),
     EXCEEDED_MIDI_EVENT_COUNT(HttpStatus.BAD_REQUEST, "PLAYING_400_14", "MIDI 이벤트 개수가 허용 범위를 초과했습니다."),
+    INVALID_MIDI_SEQUENCE(HttpStatus.BAD_REQUEST, "PLAYING_400_15", "MIDI 이벤트 순서(sequence) 값이 유효하지 않습니다."),
+    DUPLICATE_MIDI_SEQUENCE(HttpStatus.BAD_REQUEST, "PLAYING_400_16", "중복된 MIDI sequence 값이 존재합니다."),
 
     INVALID_PLAYING_STATUS(HttpStatus.CONFLICT, "PLAYING_409_01", "현재 연주 상태에서는 요청한 작업을 수행할 수 없습니다."),
     MISSING_PLAYING_START_TIME(HttpStatus.CONFLICT, "PLAYING_409_02", "연주 시작 시간이 기록되지 않았습니다."),
