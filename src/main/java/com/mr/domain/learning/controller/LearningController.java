@@ -4,10 +4,12 @@ import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
 import com.mr.domain.learning.dto.res.LearningResultResponseDTO;
+import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
 import com.mr.domain.learning.service.LearningService;
 import com.mr.global.apipayload.ApiResponse;
 import com.mr.global.security.principal.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -61,6 +64,21 @@ public class LearningController {
     ) {
         LearningPracticeDataResponseDTO.PracticeDataResultDTO result =
                 learningService.getPracticeData(learningId, learningStepId);
+        return ApiResponse.onSuccess(result);
+    }
+
+    @Operation(
+            summary = "학습 주제(THEORY) 전체보기",
+            description = "난이도(difficulty) 탭별로 학습 주제 목록을 조회합니다. difficulty는 필수입니다."
+    )
+    @GetMapping("/theory")
+    public ApiResponse<LearningTheoryListResponseDTO.TheoryListResultDTO> getTheoryList(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Parameter(description = "BEGINNER | INTERMEDIATE | ADVANCED", required = true)
+            @RequestParam(required = false) String difficulty
+    ) {
+        LearningTheoryListResponseDTO.TheoryListResultDTO result =
+                learningService.getTheoryList(userDetails.getUserId(), difficulty);
         return ApiResponse.onSuccess(result);
     }
 }

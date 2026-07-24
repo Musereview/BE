@@ -1,9 +1,11 @@
 package com.mr.domain.learning.controller;
 
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
+import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
 import com.mr.domain.learning.exception.LearningErrorStatus;
 import com.mr.domain.learning.service.LearningService;
 import com.mr.domain.user.entity.enums.UserRole;
+import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.apipayload.handler.GlobalExceptionHandler;
 import com.mr.global.security.principal.CustomUserDetails;
@@ -19,7 +21,10 @@ import org.springframework.security.web.method.annotation.AuthenticationPrincipa
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -91,5 +96,38 @@ class LearningControllerTest {
         mockMvc.perform(get("/api/learnings/1/steps/12/practice-data"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("LEARNING_404_03"));
+    }
+
+    @Test
+    void 학습_주제_목록_조회_성공() throws Exception {
+        when(learningService.getTheoryList(anyLong(), anyString()))
+                .thenReturn(new LearningTheoryListResponseDTO.TheoryListResultDTO(List.of(
+                        new LearningTheoryListResponseDTO.TheoryItem(2L, "Diatonic Chords", "BEGINNER", "요약")
+                )));
+
+        mockMvc.perform(get("/api/learnings/theory").param("difficulty", "BEGINNER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].learningId").value(2))
+                .andExpect(jsonPath("$.data.items[0].difficulty").value("BEGINNER"));
+    }
+
+    @Test
+    void 학습_주제_목록_조회_실패_difficulty_누락() throws Exception {
+        when(learningService.getTheoryList(anyLong(), org.mockito.ArgumentMatchers.isNull()))
+                .thenThrow(new GeneralException(LearningErrorStatus.INVALID_DIFFICULTY));
+
+        mockMvc.perform(get("/api/learnings/theory"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("LEARNING_400_02"));
+    }
+
+    @Test
+    void 학습_주제_목록_조회_실패_유저_없음() throws Exception {
+        when(learningService.getTheoryList(anyLong(), anyString()))
+                .thenThrow(new GeneralException(UserErrorStatus.USER_NOT_FOUND));
+
+        mockMvc.perform(get("/api/learnings/theory").param("difficulty", "BEGINNER"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("USER_404_01"));
     }
 }

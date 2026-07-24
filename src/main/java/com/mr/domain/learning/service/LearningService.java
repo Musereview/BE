@@ -4,10 +4,13 @@ import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
 import com.mr.domain.learning.dto.res.LearningResultResponseDTO;
+import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
 import com.mr.domain.learning.entity.Learning;
 import com.mr.domain.learning.entity.LearningStep;
 import com.mr.domain.learning.entity.PlayingExample;
 import com.mr.domain.learning.entity.UserLearningProgress;
+import com.mr.domain.learning.entity.enums.LearningCategory;
+import com.mr.domain.learning.entity.enums.LearningDifficulty;
 import com.mr.domain.learning.exception.LearningErrorStatus;
 import com.mr.domain.learning.repository.LearningRepository;
 import com.mr.domain.learning.repository.LearningStepRepository;
@@ -22,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -100,6 +104,34 @@ public class LearningService {
                 .orElseThrow(() -> new GeneralException(LearningErrorStatus.PLAYING_EXAMPLE_NOT_FOUND));
 
         return LearningPracticeDataResponseDTO.PracticeDataResultDTO.from(playingExample);
+    }
+
+    // 학습 주제(THEORY) 전체보기
+    public LearningTheoryListResponseDTO.TheoryListResultDTO getTheoryList(Long userId, String difficulty) {
+        ensureUserExists(userId);
+        LearningDifficulty parsedDifficulty = parseDifficulty(difficulty);
+
+        List<Learning> learnings = learningRepository
+                .findByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(LearningCategory.THEORY, parsedDifficulty);
+
+        return LearningTheoryListResponseDTO.TheoryListResultDTO.from(learnings);
+    }
+
+    private void ensureUserExists(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new GeneralException(UserErrorStatus.USER_NOT_FOUND);
+        }
+    }
+
+    private LearningDifficulty parseDifficulty(String difficulty) {
+        if (difficulty == null) {
+            throw new GeneralException(LearningErrorStatus.INVALID_DIFFICULTY);
+        }
+        try {
+            return LearningDifficulty.valueOf(difficulty);
+        } catch (IllegalArgumentException e) {
+            throw new GeneralException(LearningErrorStatus.INVALID_DIFFICULTY);
+        }
     }
 
     private Learning getActiveLearningOrThrow(Long learningId) {
