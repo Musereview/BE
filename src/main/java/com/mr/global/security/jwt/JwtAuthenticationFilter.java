@@ -5,13 +5,16 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+@Slf4j
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -27,8 +30,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String jwt = resolveToken(request);
 
         if (StringUtils.hasText(jwt) && tokenProvider.validateAccessToken(jwt)) {
-            Authentication authentication = tokenProvider.getAuthentication(jwt);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            try {
+                Authentication authentication = tokenProvider.getAuthentication(jwt);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            } catch (UsernameNotFoundException | NumberFormatException e) {
+                log.error("Security Context에 인증 정보를 저장할 수 없습니다. Token: {}, Error: {}", jwt, e.getMessage());
+                SecurityContextHolder.clearContext();
+                // EntryPoint에서 예외 정보를 파악할 수 있도록 request에 attribute 설정
+                request.setAttribute("exception", e);
+            } catch (Exception e) {
+                log.error("JWT 인증 처리 중 알 수 없는 에러 발생: {}", e.getMessage());
+                SecurityContextHolder.clearContext();
+                request.setAttribute("exception", e);
+            }
         }
 
         filterChain.doFilter(request, response);
