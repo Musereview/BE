@@ -27,9 +27,8 @@ public class LearningController {
             @PathVariable Long learningId,  // 임시
             @Valid @RequestBody LearningResultSaveRequestDTO.SaveResultDTO request
     ){
-        Long userId = 1L;   // 임시
         LearningResultResponseDTO.SaveResultResultDTO response =
-                learningService.saveResult(userId, learningId, request);
+                learningService.saveResult(learningId, request);
 
         return ApiResponse.onSuccess(response);
     }

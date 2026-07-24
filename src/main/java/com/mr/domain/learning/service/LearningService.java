@@ -27,17 +27,17 @@ public class LearningService {
 
     private final UserLearningProgressRepository userLearningProgressRepository;
     private final LearningStepRepository learningStepRepository;
-    private final UserLearningProgressRepository progressRepository;
     private final LearningRepository learningRepository;
     // 임시 작명
     private final UserRepository userRepository;
 
     // 학습 결과 저장
     public LearningResultResponseDTO.SaveResultResultDTO saveResult(
-            Long userId,
             Long learningId,
             LearningResultSaveRequestDTO.SaveResultDTO request
     ){
+        Long userId = SecurityUtil.getCurrentUserId();
+
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
@@ -72,7 +72,7 @@ public class LearningService {
         long totalStepCount = learningStepRepository.countByLearningId(learningId);
 
         // 완료한 학습 단계 수 조회
-        long completedStepCount = progressRepository.countCompletedStepsByUserIdAndLearningId(userId, learningId);
+        long completedStepCount = userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, learningId);
 
         // 진행률 계산 (0으로 나누기 예외 방지)
         int progressRate = totalStepCount == 0 ? 0 : (int) Math.round((double) completedStepCount / totalStepCount * 100);
