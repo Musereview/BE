@@ -10,7 +10,7 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,6 +21,7 @@ import java.util.Date;
 
 @Component
 @RequiredArgsConstructor
+@EnableConfigurationProperties(JwtProperties.class)
 public class JwtTokenProvider {
 
     private static final String TOKEN_TYPE_CLAIM = "type";
@@ -28,26 +29,14 @@ public class JwtTokenProvider {
     private static final String REFRESH_TYPE = "refresh";
 
     private final CustomUserDetailsService userDetailsService;
-
-    @Value("${jwt.secret}")
-    private String secretKey;
-
-    @Value("${jwt.access-token-validity-in-seconds}")
-    private long accessTokenValidityInSeconds;
-
-    @Value("${jwt.refresh-token-validity-in-seconds}")
-    private long refreshTokenValidityInSeconds;
+    private final JwtProperties jwtProperties;
 
     private Key key;
 
     @PostConstruct
     protected void init() {
-        if (secretKey == null || secretKey.trim().isEmpty()) {
-            throw new IllegalArgumentException("[ERROR] JWT Secret Key가 설정되지 않았습니다. application.yml의 jwt.secret을 확인해주세요.");
-        }
-
         try {
-            byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+            byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.secret());
             this.key = Keys.hmacShaKeyFor(keyBytes);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("[ERROR] JWT Secret Key는 올바른 Base64 인코딩 포맷이어야 합니다.", e);
@@ -58,7 +47,7 @@ public class JwtTokenProvider {
         Claims claims = Jwts.claims().setSubject(String.valueOf(userId));
         claims.put(TOKEN_TYPE_CLAIM, ACCESS_TYPE);
         Date now = new Date();
-        Date validity = new Date(now.getTime() + accessTokenValidityInSeconds * 1000);
+        Date validity = new Date(now.getTime() + jwtProperties.accessTokenValidityInSeconds() * 1000);
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -72,7 +61,7 @@ public class JwtTokenProvider {
         Claims claims = Jwts.claims().setSubject(String.valueOf(userId));
         claims.put(TOKEN_TYPE_CLAIM, REFRESH_TYPE);
         Date now = new Date();
-        Date validity = new Date(now.getTime() + refreshTokenValidityInSeconds * 1000);
+        Date validity = new Date(now.getTime() + jwtProperties.refreshTokenValidityInSeconds() * 1000);
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -98,15 +87,6 @@ public class JwtTokenProvider {
         return validateTokenWithType(token, REFRESH_TYPE);
     }
 
-    public boolean validateToken(String token) {
-        try {
-            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
-        }
-    }
-
     private boolean validateTokenWithType(String token, String expectedType) {
         try {
             Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
@@ -121,7 +101,7 @@ public class JwtTokenProvider {
         try {
             return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
         } catch (ExpiredJwtException e) {
-            throw new JwtException("만료된 토큰입니다.");
+            throw new JwtException("만료된 토큰입니다.", e);
         }
     }
 }
