@@ -4,6 +4,7 @@ import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
 import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
 import com.mr.domain.learning.dto.res.LearningResultResponseDTO;
 import com.mr.domain.learning.entity.Learning;
+import com.mr.domain.learning.entity.LearningStep;
 import com.mr.domain.learning.entity.UserLearningProgress;
 import com.mr.domain.learning.exception.LearningErrorStatus;
 import com.mr.domain.learning.repository.LearningRepository;
@@ -44,14 +45,17 @@ public class LearningService {
         Learning learning = learningRepository.findById(learningId)
                 .orElseThrow(() -> new GeneralException(LearningErrorStatus.LEARNING_NOT_FOUND));
 
+        LearningStep learningStep = learningStepRepository.findById(request.learningStepId())
+                .orElseThrow(() -> new GeneralException(LearningErrorStatus.LEARNING_STEP_NOT_FOUND));
+
         UserLearningProgress progress = userLearningProgressRepository
-                .findByUserIdAndLearningId(userId, learning.getId())
+                .findByUser_UserIdAndLearningId(userId, learning.getId())
                 .map(p -> {
                     p.updateProgress(request.score(), LocalDateTime.now());
                     return p;
                 })
                 .orElseGet(() -> {
-                    UserLearningProgress newProgress = UserLearningProgress.create(user, learning, null);
+                    UserLearningProgress newProgress = UserLearningProgress.create(user, learning, learningStep);
                     newProgress.updateProgress(request.score(), LocalDateTime.now());
                     return userLearningProgressRepository.save(newProgress);
                 });
