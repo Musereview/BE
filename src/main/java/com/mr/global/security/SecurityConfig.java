@@ -31,14 +31,13 @@ public class SecurityConfig {
     private static final String[] PUBLIC_URLS = {
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/api/v1/auth/login/**",
-            "/api/v1/auth/reissue"
+            "/api/auth/login/**",
+            "/api/auth/refactor"
     };
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 1. CORS 설정 적용
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
