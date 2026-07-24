@@ -14,7 +14,6 @@ public class AuthResponseDTO {
     @Builder
     public record LoginResponse(
             Long userId,
-            String email,
             String nickname,
             Boolean isNewUser, // 최초 가입 여부
             TokenResponse tokenInfo
