@@ -35,7 +35,7 @@ public class AuthService {
         AuthResponseDTO.TokenResponse tokenResponse = AuthResponseDTO.TokenResponse.builder()
                 .accessToken(appAccessToken)
                 .refreshToken(appRefreshToken)
-                .tokenExpirationTime(3600L)
+                .accessTokenExpiresInSeconds(3600L)
                 .build();
         return AuthResponseDTO.LoginResponse.builder()
                 .userId(mockUserId)
