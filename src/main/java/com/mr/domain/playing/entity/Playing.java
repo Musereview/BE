@@ -79,8 +79,8 @@ public class Playing extends BaseCreatedDeletedEntity {
     @Column(name = "recording_file_url", length = 255)
     private String recordingFileUrl;
 
-    @Column(name = "duration")
-    private Integer duration;
+    @Column(name = "duration_sec")
+    private Integer durationSec;
 
     @Column(name = "is_public", nullable = false)
     private boolean isPublic;
@@ -194,7 +194,7 @@ public class Playing extends BaseCreatedDeletedEntity {
 
         this.midiData = new ArrayList<>(sortedMidiData);
         this.endedAt = completedAt.isAfter(maxEndedAt) ? maxEndedAt : completedAt;
-        this.duration = Math.toIntExact(savedDurationMs / 1_000L);
+        this.durationSec = Math.toIntExact(savedDurationMs / 1_000L);
         this.status = PlayingStatus.COMPLETED;
     }
 
