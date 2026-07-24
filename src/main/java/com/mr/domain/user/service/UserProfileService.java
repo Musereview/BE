@@ -20,6 +20,7 @@ import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.SecurityUtil;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,7 +77,13 @@ public class UserProfileService {
         ensureNicknameNotTaken(user.getUserId(), request.nickname());
         user.updateNickname(request.nickname());
 
-        Student student = studentRepository.save(Student.create(user, request.skillLevel()));
+        Student student;
+        try {
+            student = studentRepository.save(Student.create(user, request.skillLevel()));
+        } catch (DataIntegrityViolationException e) {
+            // 동시에 들어온 다른 요청이 먼저 온보딩을 완료한 경우(Student.user_id unique 제약 위반)
+            throw new GeneralException(UserErrorStatus.ONBOARDING_ALREADY_COMPLETED);
+        }
 
         Instrument piano = instrumentRepository.findByCode(PIANO_CODE)
                 .orElseThrow(() -> new IllegalStateException("PIANO 악기 시드 데이터가 존재하지 않습니다."));
