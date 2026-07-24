@@ -1,9 +1,12 @@
 package com.mr.global.security.principal;
 
+import com.mr.global.apipayload.code.CommonStatus;
+import com.mr.global.apipayload.exception.GeneralException;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.util.StringUtils;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -12,13 +15,17 @@ import java.util.Collections;
 public class CustomUserDetails implements UserDetails {
 
     private final Long userId;
-    private final String email;
     private final String role;
 
-    public CustomUserDetails(Long userId, String email, String role) {
+    public CustomUserDetails(Long userId, String role) {
+        if (userId == null) {
+            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
+        }
+        if (!StringUtils.hasText(role)) {
+            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
+        }
         this.userId = userId;
-        this.email = email;
-        this.role = role != null ? role : "ROLE_USER";
+        this.role = role;
     }
 
     @Override

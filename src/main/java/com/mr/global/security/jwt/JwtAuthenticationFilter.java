@@ -36,7 +36,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             } catch (UsernameNotFoundException | NumberFormatException e) {
                 log.error("Security Context에 인증 정보를 저장할 수 없습니다. Token: {}, Error: {}", jwt, e.getMessage());
                 SecurityContextHolder.clearContext();
-                // EntryPoint에서 예외 정보를 파악할 수 있도록 request에 attribute 설정
                 request.setAttribute("exception", e);
             } catch (Exception e) {
                 log.error("JWT 인증 처리 중 알 수 없는 에러 발생: {}", e.getMessage());
