@@ -42,8 +42,16 @@ public class JwtTokenProvider {
 
     @PostConstruct
     protected void init() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        this.key = Keys.hmacShaKeyFor(keyBytes);
+        if (secretKey == null || secretKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("[ERROR] JWT Secret Key가 설정되지 않았습니다. application.yml의 jwt.secret을 확인해주세요.");
+        }
+
+        try {
+            byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+            this.key = Keys.hmacShaKeyFor(keyBytes);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("[ERROR] JWT Secret Key는 올바른 Base64 인코딩 포맷이어야 합니다.", e);
+        }
     }
 
     public String createAccessToken(Long userId) {
