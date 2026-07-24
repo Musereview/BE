@@ -10,7 +10,7 @@ import lombok.Getter;
 public enum UserErrorStatus implements BaseCode {
 
     NICKNAME_REQUIRED(HttpStatus.BAD_REQUEST, "USER_400_01", "닉네임은 필수입니다."),
-    NICKNAME_INVALID_FORMAT(HttpStatus.BAD_REQUEST, "USER_400_02", "닉네임은 한글, 영어, 숫자 2~10자로 입력해야 합니다."),
+    NICKNAME_INVALID_FORMAT(HttpStatus.BAD_REQUEST, "USER_400_02", "닉네임은 한글, 영어, 숫자 2~10자로 입력해야 합니다.");
 
 
     private final HttpStatus status;
