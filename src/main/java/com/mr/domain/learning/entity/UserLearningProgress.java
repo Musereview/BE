@@ -104,8 +104,8 @@ public class UserLearningProgress extends BaseTimeEntity {
     // 점수 기준 학습 진행 상태 파악
     public String getLearningStatus() {
         if (this.score == null) {
-            return "BEFORE_START";
+            return "NOT_STARTED";
         }
-        return this.score >= 90 ? "COMPLETED" : "IN_PROGRESS";
+        return this.score >= 90 ? "COMPLETED" : "RETRY";
     }
 }
