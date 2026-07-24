@@ -13,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,6 +21,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -35,11 +37,20 @@ public class Playing extends BaseCreatedDeletedEntity {
     private static final int DEFAULT_BPM = 120;
     private static final int MIN_BPM = 50;
     private static final int MAX_BPM = 200;
+    private static final int MAX_DURATION_SEC = 600;
+    private static final long MAX_DURATION_MS = MAX_DURATION_SEC * 1000L;
+
+    private static final long MIDI_TIMESTAMP_TOLERANCE_MS = 500L;       // 실제 연주 시간과 MIDI 이벤트 수집 종료 시점 간 허용 오차
+    private static final int MAX_MIDI_EVENT_COUNT = 100_000;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "playing_id")
     private Long id;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 
     // TODO: 유저 ID 연관 관계 설정 예정
     @Column(name = "user_id", nullable = false)
@@ -92,6 +103,8 @@ public class Playing extends BaseCreatedDeletedEntity {
     ) {
 
         validateUserId(userId);
+        validateMode(mode);
+        validateStatus(status);
         validateBackingTrack(mode, backingTrackId);
 
         this.userId = userId;
@@ -111,8 +124,26 @@ public class Playing extends BaseCreatedDeletedEntity {
 
     private static void validateBackingTrack(
             PlayingMode mode, Long backingTrackId) {
-        if (mode == PlayingMode.BACKING_TRACK && backingTrackId == null) {
+
+        // 자유 연주 미지원 (BACKING_TRACK이 포함된 연주만 가능)
+        if (mode != PlayingMode.BACKING_TRACK) {
+            throw new GeneralException(PlayingErrorStatus.UNSUPPORTED_PLAYING_MODE);
+        }
+
+        if (backingTrackId == null) {
             throw new GeneralException(PlayingErrorStatus.MISSING_BACKING_TRACK_ID);
+        }
+    }
+
+    private static void validateMode(PlayingMode mode) {
+        if (mode == null) {
+            throw new GeneralException(PlayingErrorStatus.MISSING_PLAYING_MODE);
+        }
+    }
+
+    private static void validateStatus(PlayingStatus status) {
+        if (status == null) {
+            throw new GeneralException(PlayingErrorStatus.MISSING_PLAYING_STATUS);
         }
     }
 
@@ -124,19 +155,6 @@ public class Playing extends BaseCreatedDeletedEntity {
         }
 
         return resolvedBpm;
-    }
-
-    // 자유 연주 생성
-    public static Playing createFreePlay(
-            Long userId, Integer bpm
-    ) {
-        return Playing.builder()
-                .userId(userId)
-                .mode(PlayingMode.FREE_PLAY)
-                .status(PlayingStatus.READY)
-                .bpm(bpm)
-                .isPublic(false)
-                .build();
     }
 
     // 백킹트랙 연주 생성
@@ -153,12 +171,43 @@ public class Playing extends BaseCreatedDeletedEntity {
                 .build();
     }
 
-    public void saveMidiData(List<MidiEventData> midiData) {
+    // 연주 완료 시 전체 MIDI 데이터를 저장하고 완료 상태로 전환
+    public void completeWithMidiData(
+            List<MidiEventData> midiData
+    ) {
+        validateCompletableStatus();
         validateMidiData(midiData);
 
-        this.midiData = new ArrayList<>(midiData);
-        this.midiData.sort(Comparator.comparingLong(MidiEventData::getTimestampMs));
+        LocalDateTime completedAt = LocalDateTime.now();
+        long savedDurationMs = calculateDurationMs(this.startedAt, completedAt);
 
+        // 실제 연주 허용 시간 = min(실제 연주 시간, 10분) + 오차 범위(500ms)
+        long allowedTimestampMs = Math.min(savedDurationMs + MIDI_TIMESTAMP_TOLERANCE_MS,
+                MAX_DURATION_MS);
+
+        List<MidiEventData> sortedMidiData = midiData.stream()
+                .filter(event -> event.getTimestampMs() <= allowedTimestampMs)
+                .sorted(Comparator.comparingLong(MidiEventData::getTimestampMs))
+                .toList();
+
+        validateMidiData(sortedMidiData);
+
+        LocalDateTime maxEndedAt = this.startedAt.plusSeconds(MAX_DURATION_SEC);
+
+        this.midiData = new ArrayList<>(sortedMidiData);
+        this.endedAt = completedAt.isAfter(maxEndedAt) ? maxEndedAt : completedAt;
+        this.duration = Math.toIntExact(savedDurationMs / 1_000L);
+        this.status = PlayingStatus.COMPLETED;
+    }
+
+    private void validateCompletableStatus() {
+        if (this.status != PlayingStatus.IN_PROGRESS) {
+            throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_STATUS);
+        }
+
+        if (startedAt == null) {
+            throw new GeneralException(PlayingErrorStatus.MISSING_PLAYING_START_TIME);
+        }
     }
 
     private static void validateMidiData(List<MidiEventData> midiData) {
@@ -166,9 +215,25 @@ public class Playing extends BaseCreatedDeletedEntity {
             throw new GeneralException(PlayingErrorStatus.EMPTY_MIDI_EVENTS);
         }
 
+        if (midiData.size() > MAX_MIDI_EVENT_COUNT) {
+            throw new GeneralException(PlayingErrorStatus.EXCEEDED_MIDI_EVENT_COUNT);
+        }
+
         if (midiData.stream().anyMatch(Objects::isNull)) {
             throw new GeneralException(PlayingErrorStatus.INVALID_MIDI_EVENT);
         }
+    }
+
+    private static long calculateDurationMs(
+            LocalDateTime startedAt, LocalDateTime completedAt
+    ) {
+        long durationMs = Duration.between(startedAt, completedAt).toMillis();
+
+        if (durationMs < 0) {
+            throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_DURATION);
+        }
+
+        return Math.min(durationMs, MAX_DURATION_MS);
     }
 
     public List<MidiEventData> getMidiData() {
@@ -177,5 +242,18 @@ public class Playing extends BaseCreatedDeletedEntity {
             return List.of();
         }
         return List.copyOf(this.midiData);
+    }
+
+    public void start() {
+        validateStartableStatus();
+
+        this.status = PlayingStatus.IN_PROGRESS;
+        this.startedAt = LocalDateTime.now();
+    }
+
+    private void validateStartableStatus() {
+        if (status != PlayingStatus.READY) {
+            throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_STATUS);
+        }
     }
 }
