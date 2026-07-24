@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mr.domain.subscriptions.entity.enums.SubscriptionTier;
 import com.mr.domain.user.dto.UserProfileRequestDTO;
 import com.mr.domain.user.dto.UserProfileResponseDTO;
 import com.mr.domain.user.entity.enums.TheoryLevel;
@@ -112,7 +111,7 @@ class UserProfileControllerTest {
         mockMvc = setUp();
 
         UserProfileRequestDTO.OnboardingRequest request = new UserProfileRequestDTO.OnboardingRequest(
-                "김뮤즈", TheoryLevel.INTERMEDIATE, SubscriptionTier.PRO
+                "김뮤즈", TheoryLevel.INTERMEDIATE, "PRO"
         );
         UserProfileResponseDTO.OnboardingResponse response = UserProfileResponseDTO.OnboardingResponse.builder()
                 .userId(1L)
@@ -140,7 +139,7 @@ class UserProfileControllerTest {
         mockMvc = setUp();
 
         UserProfileRequestDTO.OnboardingRequest request = new UserProfileRequestDTO.OnboardingRequest(
-                "김뮤즈", TheoryLevel.INTERMEDIATE, SubscriptionTier.PRO
+                "김뮤즈", TheoryLevel.INTERMEDIATE, "PRO"
         );
         willThrow(new GeneralException(UserErrorStatus.ONBOARDING_ALREADY_COMPLETED))
                 .given(userProfileService).registerProfile(any());
@@ -158,7 +157,7 @@ class UserProfileControllerTest {
         mockMvc = setUp();
 
         UserProfileRequestDTO.OnboardingRequest request = new UserProfileRequestDTO.OnboardingRequest(
-                "김뮤즈", TheoryLevel.INTERMEDIATE, SubscriptionTier.PRO
+                "김뮤즈", TheoryLevel.INTERMEDIATE, "PRO"
         );
         willThrow(new GeneralException(UserErrorStatus.NICKNAME_DUPLICATED))
                 .given(userProfileService).registerProfile(any());

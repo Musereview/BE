@@ -1,6 +1,7 @@
 package com.mr.domain.user.service;
 
 import com.mr.domain.subscriptions.entity.Subscription;
+import com.mr.domain.subscriptions.entity.enums.SubscriptionTier;
 import com.mr.domain.subscriptions.repository.SubscriptionRepository;
 import com.mr.domain.statistics.entity.UserStatistics;
 import com.mr.domain.statistics.repository.UserStatisticsRepository;
@@ -16,9 +17,11 @@ import com.mr.domain.user.repository.InstrumentRepository;
 import com.mr.domain.user.repository.StudentInstrumentRepository;
 import com.mr.domain.user.repository.StudentRepository;
 import com.mr.domain.user.repository.UserRepository;
+import com.mr.global.apipayload.code.CommonStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.SecurityUtil;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -89,7 +92,7 @@ public class UserProfileService {
                 .orElseThrow(() -> new IllegalStateException("PIANO 악기 시드 데이터가 존재하지 않습니다."));
         studentInstrumentRepository.save(StudentInstrument.createPrimary(student, piano));
 
-        String tier = request.subscriptionTier() == null ? null : request.subscriptionTier().name();
+        String tier = validateSubscriptionTier(request.subscriptionTier());
         LocalDateTime now = LocalDateTime.now();
         Subscription subscription = subscriptionRepository.save(
                 Subscription.create(user, tier, now, now.plusDays(SUBSCRIPTION_PERIOD_DAYS)));
@@ -130,6 +133,18 @@ public class UserProfileService {
     private Student getStudent(User user) {
         return studentRepository.findByUser(user)
                 .orElseThrow(() -> new GeneralException(StudentErrorStatus.STUDENT_NOT_FOUND));
+    }
+
+    private String validateSubscriptionTier(String subscriptionTier) {
+        if (subscriptionTier == null) {
+            return null;
+        }
+        boolean isValidTier = Arrays.stream(SubscriptionTier.values())
+                .anyMatch(tier -> tier.name().equals(subscriptionTier));
+        if (!isValidTier) {
+            throw new GeneralException(CommonStatus.HTTP_MESSAGE_NOT_READABLE);
+        }
+        return subscriptionTier;
     }
 
     private void ensureNicknameNotTaken(Long userId, String requestedNickname) {
