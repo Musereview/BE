@@ -14,7 +14,6 @@ import com.mr.domain.user.entity.User;
 import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
-import com.mr.global.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,11 +34,10 @@ public class LearningService {
     // 학습 결과 저장
     @Transactional
     public LearningResultResponseDTO.SaveResultResultDTO saveResult(
+            Long userId,
             Long learningId,
             LearningResultSaveRequestDTO.SaveResultDTO request
     ){
-        Long userId = SecurityUtil.getCurrentUserId();
-
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
@@ -66,15 +64,14 @@ public class LearningService {
     }
 
     // 학습 진행률 조회 로직
-    public LearningProgressResponseDTO.ProgressResultDTO getLearningProgress(Long learningId) {
+    public LearningProgressResponseDTO.ProgressResultDTO getLearningProgress(
+            Long userId,
+            Long learningId
+    ) {
         // 학습 존재 여부 확인
         if (!learningRepository.existsById(learningId)) {
             throw new GeneralException(LearningErrorStatus.LEARNING_NOT_FOUND);
         }
-
-        // 현재 로그인한 유저 ID 획득 (SecurityUtil 활용)
-        Long userId = SecurityUtil.getCurrentUserId();
-
         // 전체 학습 단계 수 조회
         long totalStepCount = learningStepRepository.countByLearningId(learningId);
 

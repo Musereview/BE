@@ -5,8 +5,10 @@ import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
 import com.mr.domain.learning.dto.res.LearningResultResponseDTO;
 import com.mr.domain.learning.service.LearningService;
 import com.mr.global.apipayload.ApiResponse;
+import com.mr.global.security.principal.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,11 +26,11 @@ public class LearningController {
     // 학습 결과 저장
     @PostMapping("/{learningId}/result")
     public ApiResponse<LearningResultResponseDTO.SaveResultResultDTO> saveLearningResult(
-            @PathVariable Long learningId,  // 임시
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long learningId,
             @Valid @RequestBody LearningResultSaveRequestDTO.SaveResultDTO request
     ){
-        LearningResultResponseDTO.SaveResultResultDTO response =
-                learningService.saveResult(learningId, request);
+        LearningResultResponseDTO.SaveResultResultDTO response = learningService.saveResult(userDetails.getUserId(), learningId, request);
 
         return ApiResponse.onSuccess(response);
     }
@@ -36,9 +38,10 @@ public class LearningController {
     // 학습 진행률 조회
     @GetMapping("/{learningId}/progress")
     public ApiResponse<LearningProgressResponseDTO.ProgressResultDTO> getLearningProgress(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long learningId
     ) {
-        LearningProgressResponseDTO.ProgressResultDTO result = learningService.getLearningProgress(learningId);
+        LearningProgressResponseDTO.ProgressResultDTO result = learningService.getLearningProgress(userDetails.getUserId(), learningId);
         return ApiResponse.onSuccess(result);
     }
 }
