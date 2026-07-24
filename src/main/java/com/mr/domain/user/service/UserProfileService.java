@@ -80,12 +80,14 @@ public class UserProfileService {
             throw new GeneralException(UserErrorStatus.ONBOARDING_ALREADY_COMPLETED);
         }
 
+        String tier = validateSubscriptionTier(request.subscriptionTier());
+
         ensureNicknameNotTaken(user.getUserId(), request.nickname());
         user.updateNickname(request.nickname());
 
         Student student;
         try {
-            student = studentRepository.save(Student.create(user, request.skillLevel()));
+            student = studentRepository.saveAndFlush(Student.create(user, request.skillLevel()));
         } catch (DataIntegrityViolationException e) {
             // 동시에 들어온 다른 요청이 먼저 온보딩을 완료한 경우(Student.user_id unique 제약 위반)
             throw new GeneralException(UserErrorStatus.ONBOARDING_ALREADY_COMPLETED);
@@ -95,7 +97,6 @@ public class UserProfileService {
                 .orElseThrow(() -> new GeneralException(InstrumentErrorStatus.INSTRUMENT_NOT_SEEDED));
         studentInstrumentRepository.save(StudentInstrument.createPrimary(student, piano));
 
-        String tier = validateSubscriptionTier(request.subscriptionTier());
         LocalDateTime now = LocalDateTime.now();
         Subscription subscription = subscriptionRepository.save(
                 Subscription.create(user, tier, now, now.plusDays(SUBSCRIPTION_PERIOD_DAYS)));
