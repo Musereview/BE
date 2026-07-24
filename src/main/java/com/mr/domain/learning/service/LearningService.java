@@ -1,14 +1,17 @@
 package com.mr.domain.learning.service;
 
 import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
+import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
 import com.mr.domain.learning.dto.res.LearningResultResponseDTO;
 import com.mr.domain.learning.entity.Learning;
 import com.mr.domain.learning.entity.LearningStep;
+import com.mr.domain.learning.entity.PlayingExample;
 import com.mr.domain.learning.entity.UserLearningProgress;
 import com.mr.domain.learning.exception.LearningErrorStatus;
 import com.mr.domain.learning.repository.LearningRepository;
 import com.mr.domain.learning.repository.LearningStepRepository;
+import com.mr.domain.learning.repository.PlayingExampleRepository;
 import com.mr.domain.learning.repository.UserLearningProgressRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.domain.user.exception.UserErrorStatus;
@@ -28,6 +31,7 @@ public class LearningService {
     private final UserLearningProgressRepository userLearningProgressRepository;
     private final LearningStepRepository learningStepRepository;
     private final LearningRepository learningRepository;
+    private final PlayingExampleRepository playingExampleRepository;
     // 임시 작명
     private final UserRepository userRepository;
 
@@ -82,5 +86,34 @@ public class LearningService {
         int progressRate = totalStepCount == 0 ? 0 : (int) Math.round((double) completedStepCount / totalStepCount * 100);
 
         return LearningProgressResponseDTO.ProgressResultDTO.of(learningId, progressRate);
+    }
+
+    // 학습 단계별 연습 실행 정보 조회
+    public LearningPracticeDataResponseDTO.PracticeDataResultDTO getPracticeData(
+            Long learningId,
+            Long learningStepId
+    ) {
+        Learning learning = getActiveLearningOrThrow(learningId);
+        LearningStep learningStep = getLearningStepOrThrow(learning, learningStepId);
+
+        PlayingExample playingExample = playingExampleRepository.findByLearningStep_Id(learningStep.getId())
+                .orElseThrow(() -> new GeneralException(LearningErrorStatus.PLAYING_EXAMPLE_NOT_FOUND));
+
+        return LearningPracticeDataResponseDTO.PracticeDataResultDTO.from(playingExample);
+    }
+
+    private Learning getActiveLearningOrThrow(Long learningId) {
+        return learningRepository.findByIdAndIsActiveTrue(learningId)
+                .orElseThrow(() -> new GeneralException(LearningErrorStatus.LEARNING_NOT_FOUND));
+    }
+
+    private LearningStep getLearningStepOrThrow(Learning learning, Long learningStepId) {
+        LearningStep learningStep = learningStepRepository.findById(learningStepId)
+                .orElseThrow(() -> new GeneralException(LearningErrorStatus.LEARNING_STEP_NOT_FOUND));
+
+        if (!learningStep.getLearning().getId().equals(learning.getId())) {
+            throw new GeneralException(LearningErrorStatus.LEARNING_STEP_NOT_FOUND);
+        }
+        return learningStep;
     }
 }
