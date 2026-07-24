@@ -73,8 +73,8 @@ public class UserProfileService {
             throw new GeneralException(UserErrorStatus.ONBOARDING_ALREADY_COMPLETED);
         }
 
+        ensureNicknameNotTaken(user.getUserId(), request.nickname());
         user.updateNickname(request.nickname());
-        ensureNicknameNotTaken(user);
 
         Student student = studentRepository.save(Student.create(user, request.skillLevel()));
 
@@ -103,8 +103,8 @@ public class UserProfileService {
         User user = getUser(userId);
         Student student = getStudent(user);
 
+        ensureNicknameNotTaken(user.getUserId(), request.nickname());
         user.updateNickname(request.nickname());
-        ensureNicknameNotTaken(user);
         student.updateTheoryLevel(request.skillLevel());
 
         return UserProfileResponseDTO.UpdateResponse.builder()
@@ -125,8 +125,9 @@ public class UserProfileService {
                 .orElseThrow(() -> new GeneralException(StudentErrorStatus.STUDENT_NOT_FOUND));
     }
 
-    private void ensureNicknameNotTaken(User user) {
-        if (userRepository.existsByNicknameAndUserIdNot(user.getNickname(), user.getUserId())) {
+    private void ensureNicknameNotTaken(Long userId, String requestedNickname) {
+        String trimmedNickname = requestedNickname == null ? null : requestedNickname.trim();
+        if (userRepository.existsByNicknameAndUserIdNot(trimmedNickname, userId)) {
             throw new GeneralException(UserErrorStatus.NICKNAME_DUPLICATED);
         }
     }
