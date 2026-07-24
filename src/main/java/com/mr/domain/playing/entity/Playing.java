@@ -1,17 +1,22 @@
 package com.mr.domain.playing.entity;
 
+import com.mr.domain.backingTrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.enums.PlayingMode;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
+import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseCreatedDeletedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import lombok.AccessLevel;
@@ -54,13 +59,13 @@ public class Playing extends BaseCreatedDeletedEntity {
     @Column(name = "version", nullable = false)
     private Long version;
 
-    // TODO: 유저 ID 연관 관계 설정 예정
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    // TODO: 백킹트랙 ID 연관 관계 설정 예정
-    @Column(name = "backing_track_id")
-    private Long backingTrackId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "backing_track_id")
+    private BackingTrack backingTrack;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "mode", nullable = false)
@@ -96,21 +101,21 @@ public class Playing extends BaseCreatedDeletedEntity {
 
     @Builder(access = AccessLevel.PRIVATE)
     private Playing(
-            Long userId,
-            Long backingTrackId,
+            User user,
+            BackingTrack backingTrack,
             PlayingMode mode,
             PlayingStatus status,
             Integer bpm,
             boolean isPublic
     ) {
 
-        validateUserId(userId);
+        validateUser(user);
         validateMode(mode);
         validateStatus(status);
-        validateBackingTrack(mode, backingTrackId);
+        validateBackingTrack(mode, backingTrack);
 
-        this.userId = userId;
-        this.backingTrackId = backingTrackId;
+        this.user = user;
+        this.backingTrack = backingTrack;
         this.mode = mode;
         this.status = status;
         this.bpm = resolveBpm(bpm);
@@ -118,21 +123,21 @@ public class Playing extends BaseCreatedDeletedEntity {
         this.midiData = new ArrayList<>();
     }
 
-    private static void validateUserId(Long userId) {
-        if (userId == null) {
+    private static void validateUser(User user) {
+        if (user == null) {
             throw new GeneralException(PlayingErrorStatus.MISSING_USER_ID);
         }
     }
 
     private static void validateBackingTrack(
-            PlayingMode mode, Long backingTrackId) {
+            PlayingMode mode, BackingTrack backingTrack) {
 
         // 자유 연주 미지원 (BACKING_TRACK이 포함된 연주만 가능)
         if (mode != PlayingMode.BACKING_TRACK) {
             throw new GeneralException(PlayingErrorStatus.UNSUPPORTED_PLAYING_MODE);
         }
 
-        if (backingTrackId == null) {
+        if (backingTrack == null) {
             throw new GeneralException(PlayingErrorStatus.MISSING_BACKING_TRACK_ID);
         }
     }
@@ -161,11 +166,11 @@ public class Playing extends BaseCreatedDeletedEntity {
 
     // 백킹트랙 연주 생성
     public static Playing createBackingTrack(
-            Long userId, Long backingTrackId, Integer bpm
+            User user, BackingTrack backingTrack, Integer bpm
     ) {
         return Playing.builder()
-                .userId(userId)
-                .backingTrackId(backingTrackId)
+                .user(user)
+                .backingTrack(backingTrack)
                 .mode(PlayingMode.BACKING_TRACK)
                 .status(PlayingStatus.READY)
                 .bpm(bpm)
