@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: musereview
       POSTGRES_PASSWORD: musereview1234
     volumes:
-      - musereview-postgres-data:/var/lib/postgresql/data
+      - musereview-postgres-data:/var/lib/postgresql
 
 volumes:
   musereview-postgres-data:
