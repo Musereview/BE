@@ -209,7 +209,7 @@ public class Playing extends BaseCreatedDeletedEntity {
 
         this.midiData = new ArrayList<>(sortedMidiData);
         this.endedAt = completedAt.isAfter(maxEndedAt) ? maxEndedAt : completedAt;
-        this.durationSec = Math.toIntExact(savedDurationMs / 1_000L);
+        this.durationSec = Math.toIntExact(Duration.ofMillis(savedDurationMs).toSeconds());
         this.status = PlayingStatus.COMPLETED;
     }
 
