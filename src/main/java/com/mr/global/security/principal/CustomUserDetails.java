@@ -1,12 +1,12 @@
 package com.mr.global.security.principal;
 
+import com.mr.domain.user.entity.enums.UserRole;
 import com.mr.global.apipayload.code.CommonStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.util.StringUtils;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -15,13 +15,10 @@ import java.util.Collections;
 public class CustomUserDetails implements UserDetails {
 
     private final Long userId;
-    private final String role;
+    private final UserRole role;
 
-    public CustomUserDetails(Long userId, String role) {
-        if (userId == null) {
-            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
-        }
-        if (!StringUtils.hasText(role)) {
+    public CustomUserDetails(Long userId, UserRole role) {
+        if (userId == null || role == null) {
             throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
         }
         this.userId = userId;
@@ -30,7 +27,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singletonList(new SimpleGrantedAuthority(role));
+        return Collections.singletonList(new SimpleGrantedAuthority(role.getKey()));
     }
 
     @Override
