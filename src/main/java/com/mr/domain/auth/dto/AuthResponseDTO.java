@@ -8,14 +8,14 @@ public class AuthResponseDTO {
     public record TokenResponse(
             String accessToken,
             String refreshToken,
-            Long tokenExpirationTime
+            Long accessTokenExpiresInSeconds
     ) {}
 
     @Builder
     public record LoginResponse(
             Long userId,
             String nickname,
-            Boolean isNewUser, // 최초 가입 여부
+            boolean isNewUser,
             TokenResponse tokenInfo
     ) {}
 }
