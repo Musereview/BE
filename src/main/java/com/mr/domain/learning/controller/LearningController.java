@@ -30,7 +30,10 @@ public class LearningController {
 
     private final LearningService learningService;
 
-    // 학습 결과 저장
+    @Operation(
+            summary = "학습 결과 저장",
+            description = "학습 단계(learningStepId)의 채점 점수를 저장합니다. 기존 진행 기록이 있으면 갱신하고, 없으면 새로 생성합니다."
+    )
     @PostMapping("/{learningId}/result")
     public ApiResponse<LearningResultResponseDTO.SaveResultResultDTO> saveLearningResult(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -42,7 +45,10 @@ public class LearningController {
         return ApiResponse.onSuccess(response);
     }
 
-    // 학습 진행률 조회
+    @Operation(
+            summary = "학습 진행률 조회",
+            description = "완료(score>=90) 단계 수 / 전체 단계 수 기준으로 패키지 단위 진행률(progressRate, 0~100)을 조회합니다."
+    )
     @GetMapping("/{learningId}/progress")
     public ApiResponse<LearningProgressResponseDTO.ProgressResultDTO> getLearningProgress(
             @AuthenticationPrincipal CustomUserDetails userDetails,
