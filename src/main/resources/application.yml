@@ -60,3 +60,8 @@ aws:
   s3:
     bucket: ${AWS_S3_BUCKET:}
     region: ${AWS_REGION:ap-northeast-2}
+
+# 프로필 관련 공통 설정
+app:
+  profile:
+    default-image-url: ${DEFAULT_PROFILE_IMAGE_URL:}
