@@ -1,17 +1,20 @@
 package com.mr.domain.user.service;
 
-import com.mr.domain.subscriptions.entity.Subscription;
-import com.mr.domain.subscriptions.entity.enums.SubscriptionTier;
-import com.mr.domain.subscriptions.repository.SubscriptionRepository;
 import com.mr.domain.statistics.entity.UserStatistics;
 import com.mr.domain.statistics.repository.UserStatisticsRepository;
+import com.mr.domain.subscriptions.entity.Subscription;
+import com.mr.domain.subscriptions.entity.enums.SubscriptionTier;
+import com.mr.domain.subscriptions.exception.SubscriptionErrorStatus;
+import com.mr.domain.subscriptions.repository.SubscriptionRepository;
 import com.mr.domain.user.dto.UserProfileRequestDTO;
 import com.mr.domain.user.dto.UserProfileResponseDTO;
 import com.mr.domain.user.entity.Instrument;
 import com.mr.domain.user.entity.Student;
 import com.mr.domain.user.entity.StudentInstrument;
 import com.mr.domain.user.entity.User;
+import com.mr.domain.user.exception.InstrumentErrorStatus;
 import com.mr.domain.user.exception.StudentErrorStatus;
+import com.mr.domain.user.exception.StudentInstrumentErrorStatus;
 import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.InstrumentRepository;
 import com.mr.domain.user.repository.StudentInstrumentRepository;
@@ -50,13 +53,13 @@ public class UserProfileService {
         String instrumentType = studentInstrumentRepository.findByStudentAndPrimaryTrue(student)
                 .map(StudentInstrument::getInstrument)
                 .map(Instrument::getCode)
-                .orElseThrow(() -> new IllegalStateException("대표 악기 정보가 존재하지 않습니다."));
+                .orElseThrow(() -> new GeneralException(StudentInstrumentErrorStatus.PRIMARY_INSTRUMENT_NOT_FOUND));
 
         LocalDateTime now = LocalDateTime.now();
         String subscriptionTier = subscriptionRepository
                 .findFirstByUserAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(user, now, now)
                 .map(Subscription::getTier)
-                .orElseThrow(() -> new IllegalStateException("유효한 구독 정보가 존재하지 않습니다."));
+                .orElseThrow(() -> new GeneralException(SubscriptionErrorStatus.ACTIVE_SUBSCRIPTION_NOT_FOUND));
 
         return UserProfileResponseDTO.ProfileResponse.builder()
                 .nickname(user.getNickname())
@@ -89,7 +92,7 @@ public class UserProfileService {
         }
 
         Instrument piano = instrumentRepository.findByCode(PIANO_CODE)
-                .orElseThrow(() -> new IllegalStateException("PIANO 악기 시드 데이터가 존재하지 않습니다."));
+                .orElseThrow(() -> new GeneralException(InstrumentErrorStatus.INSTRUMENT_NOT_SEEDED));
         studentInstrumentRepository.save(StudentInstrument.createPrimary(student, piano));
 
         String tier = validateSubscriptionTier(request.subscriptionTier());
