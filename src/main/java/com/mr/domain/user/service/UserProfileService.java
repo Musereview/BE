@@ -48,9 +48,11 @@ public class UserProfileService {
                 .map(Instrument::getCode)
                 .orElseThrow(() -> new IllegalStateException("대표 악기 정보가 존재하지 않습니다."));
 
-        String subscriptionTier = subscriptionRepository.findFirstByUserOrderByStartDateDesc(user)
+        LocalDateTime now = LocalDateTime.now();
+        String subscriptionTier = subscriptionRepository
+                .findFirstByUserAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(user, now, now)
                 .map(Subscription::getTier)
-                .orElseThrow(() -> new IllegalStateException("구독 정보가 존재하지 않습니다."));
+                .orElseThrow(() -> new IllegalStateException("유효한 구독 정보가 존재하지 않습니다."));
 
         return UserProfileResponseDTO.ProfileResponse.builder()
                 .nickname(user.getNickname())
