@@ -49,8 +49,10 @@ public class LearningService {
         LearningStep learningStep = learningStepRepository.findById(request.learningStepId())
                 .orElseThrow(() -> new GeneralException(LearningErrorStatus.LEARNING_STEP_NOT_FOUND));
 
+        learningStep.validateBelongsTo(learning);
+
         UserLearningProgress progress = userLearningProgressRepository
-                .findByUser_UserIdAndLearningId(userId, learning.getId())
+                .findByUser_UserIdAndLearningStep_Id(userId, request.learningStepId())
                 .map(p -> {
                     p.updateProgress(request.score(), LocalDateTime.now());
                     return p;

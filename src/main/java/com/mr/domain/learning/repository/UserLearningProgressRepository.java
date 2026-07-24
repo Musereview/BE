@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface UserLearningProgressRepository extends JpaRepository<UserLearningProgress, Long> {
 
-    Optional<UserLearningProgress> findByUser_UserIdAndLearningId(Long userId, Long learningId);
+    Optional<UserLearningProgress> findByUser_UserIdAndLearningStep_Id(Long userId, Long learningStepId);
     // 유저가 완료한(점수 90점 이상) 학습 단계 수 조회
     @Query("SELECT COUNT(ulp) FROM UserLearningProgress ulp " +
             "JOIN ulp.learningStep ls " +
