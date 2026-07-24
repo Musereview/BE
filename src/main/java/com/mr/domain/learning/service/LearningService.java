@@ -33,6 +33,7 @@ public class LearningService {
     private final UserRepository userRepository;
 
     // 학습 결과 저장
+    @Transactional
     public LearningResultResponseDTO.SaveResultResultDTO saveResult(
             Long learningId,
             LearningResultSaveRequestDTO.SaveResultDTO request

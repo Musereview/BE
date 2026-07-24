@@ -20,7 +20,7 @@ public class LearningResultResponseDTO {
                     progress.getLearning().getId(),
                     progress.getLearningStatus(),
                     progress.getScore(),
-                    progress.getUpdatedAt()
+                    progress.getLastStudiedAt()
             );
         }
     }
