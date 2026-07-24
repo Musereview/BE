@@ -184,11 +184,16 @@ public class Playing extends BaseCreatedDeletedEntity {
 
         List<MidiEventData> sortedMidiData = midiData.stream()
                 .filter(event -> event.getTimestampMs() <= allowedTimestampMs)
-                .sorted(Comparator.comparingLong(MidiEventData::getTimestampMs)
+                .sorted(
+                        Comparator.comparingLong(MidiEventData::getTimestampMs)
                         .thenComparingInt(MidiEventData::getSequence))
                 .toList();
 
-        validateMidiData(sortedMidiData);
+        if (sortedMidiData.isEmpty()) {
+            throw new GeneralException(
+                    PlayingErrorStatus.EMPTY_MIDI_EVENTS
+            );
+        }
 
         LocalDateTime maxEndedAt = this.startedAt.plusSeconds(MAX_DURATION_SEC);
 
