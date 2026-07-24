@@ -1,60 +1,42 @@
+# ================================================================= #
+# 🔒 [NOTICE] 본 파일은 로컬 환경 세팅용 '공통 예시 파일'입니다.
+# 각자 로컬 PC 사양에 맞게 정보를 입력한 후, 파일 이름을
+# 'application.yml'로 변경하여 동일한 경로에 위치시켜 주세요!
+# ================================================================= #
+
 spring:
-  config:
-    import:
-      - optional:file:.env[.properties]      #.env 파일 자동 로드
-
-  application:
-    name: musereview-backend
-
-  # 공통 데이터베이스 접속 규칙 (실제 정보는 각자 .env나 application-prod에서 오버라이딩)
+  # 1. 로컬 데이터베이스 커넥션 설정 (PostgreSQL 18)
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/mr_db}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:}
+    url: jdbc:postgresql://localhost:5433/mr_db # [체크] 로컬에 mr_db 빈 데이터베이스를 먼저 생성
+    username: musereview                          # [입력] PostgreSQL 계정명
+    password: musereview1234                                # [입력] PostgreSQL 비밀번호 (빈값 입력 가능)
 
-  # 공통 JPA 및 하이버네이트 구동 설정
+  # 2. JPA 및 하이버네이트 구동 설정
   jpa:
     hibernate:
-      ddl-auto: ${SPRING_JPA_DDL_AUTO:update} # 배포 환경(prod)에선 validate로 덮어씌워짐
-    show-sql: true
+      ddl-auto: update # 엔티티 매핑 정보 변경 시 DB 테이블 자동 반영
+    show-sql: true     # 콘솔에 실행 SQL 포맷 출력
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  # 파일 업로드 용량 제한
-  servlet:
-    multipart:
-      max-file-size: 20MB
-      max-request-size: 20MB
-
-# Spring Security 및 JWT 인증 설정
+# 3. Spring Security 및 JWT 인증 설정
 jwt:
-  secret: ${JWT_SECRET_KEY}
+  # [입력] HS256 알고리즘을 충족하는 256비트(32바이트) 이상의 임의의 비밀키를 채워주세요.
+  # 기입 예시: "your-local-custom-secret-key-must-be-very-long-and-secure-32bytes"
+  secret: ""
   access-token-validity-in-seconds: 1800     # Access Token 만료 시간 (30분)
   refresh-token-validity-in-seconds: 604800  # Refresh Token 만료 시간 (7일)
 
-# 소셜 로그인 API 연동
+# 4. 외부 소셜 로그인 API 연동 정보 (OAuth용)
 oauth:
   kakao:
-    client-id: ${KAKAO_CLIENT_ID:}
-    client-secret: ${KAKAO_CLIENT_SECRET:}
-    redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:8080/login/oauth2/code/kakao}
-
+    client-id: ""     # [입력] 카카오 디벨로퍼스 REST API 키
+    client-secret: "" # [입력] 카카오 보안 Client Secret 키
+    redirect-uri: http://localhost:8080/login/oauth2/code/kakao
   google:
-    client-id: ${GOOGLE_CLIENT_ID:}
-    client-secret: ${GOOGLE_CLIENT_SECRET:}
-    redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/login/oauth2/code/google}
-
-# AI 도입 및 AWS S3 공통 구조
-external:
-  ai:
-    base-url: ${AI_BASE_URL:}
-    api-key: ${AI_API_KEY:}
-    model: ${AI_MODEL:}
-
-aws:
-  s3:
-    bucket: ${AWS_S3_BUCKET:}
-    region: ${AWS_REGION:ap-northeast-2}
+    client-id: ""     # [입력] 구글 클라우드 콘솔 OAuth 클라이언트 ID
+    client-secret: "" # [입력] 구글 클라우드 콘솔 보안 비밀번호
+    redirect-uri: http://localhost:8080/login/oauth2/code/google

@@ -1,7 +1,9 @@
 package com.mr.domain.analysis.dto.res;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.mr.domain.analysis.entity.enums.AnalysisStatus;
+import com.mr.domain.analysis.entity.Analysis;
+import com.mr.domain.analysis.entity.AnalysisReport;
+import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.ContentFormat;
 import com.mr.domain.analysis.entity.enums.LlmStatus;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
@@ -11,30 +13,54 @@ import java.time.LocalDateTime;
 public record AnalysisResultResponseDTO(
         Long analysisId,
         Long playingId,
-        String title,
-        String genre,
-        String key,
-        Integer bpm,
-        LocalDateTime playedAt,
-        AnalysisStatus status,
         Integer startBar,
         Integer endBar,
-        BigDecimal totalScore,
-        String grade,
+        Integer totalScore,
+        AnalysisGrade grade,
         String summary,
         DomainScores domainScores,
         Report report,
-        JsonNode result,
+        JsonNode rawResult,
         LocalDateTime createdAt,
         LocalDateTime completedAt
 ) {
 
-    public record DomainScores(
-            BigDecimal scale,
-            BigDecimal tension,
-            BigDecimal progression,
-            BigDecimal voiceLeading
+    public static AnalysisResultResponseDTO from(
+            Analysis analysis,
+            AnalysisReport analysisReport,
+            JsonNode rawResult
     ) {
+        return new AnalysisResultResponseDTO(
+                analysis.getId(),
+                analysis.getPlayingId(),
+                analysis.getStartBar(),
+                analysis.getEndBar(),
+                analysis.getTotalScore(),
+                analysis.getGrade(),
+                analysis.getSummary(),
+                DomainScores.from(analysis),
+                Report.fromNullable(analysisReport),
+                rawResult,
+                analysis.getCreatedAt(),
+                analysis.getCompletedAt()
+        );
+    }
+
+    public record DomainScores(
+            BigDecimal scaleScore,
+            BigDecimal tensionScore,
+            BigDecimal progressionScore,
+            BigDecimal voiceLeadingScore
+    ) {
+
+        private static DomainScores from(Analysis analysis) {
+            return new DomainScores(
+                    analysis.getScaleScore(),
+                    analysis.getTensionScore(),
+                    analysis.getProgressionScore(),
+                    analysis.getVoiceLeadingScore()
+            );
+        }
     }
 
     public record Report(
@@ -45,7 +71,26 @@ public record AnalysisResultResponseDTO(
             String content,
             String modelName,
             String promptVersion,
-            LocalDateTime createdAt
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
     ) {
+
+        private static Report fromNullable(AnalysisReport analysisReport) {
+            if (analysisReport == null) {
+                return null;
+            }
+
+            return new Report(
+                    analysisReport.getId(),
+                    analysisReport.getGenerationType(),
+                    analysisReport.getLlmStatus(),
+                    analysisReport.getContentFormat(),
+                    analysisReport.getContent(),
+                    analysisReport.getModelName(),
+                    analysisReport.getPromptVersion(),
+                    analysisReport.getCreatedAt(),
+                    analysisReport.getUpdatedAt()
+            );
+        }
     }
 }
