@@ -1,5 +1,6 @@
 package com.mr.global.security.jwt;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,24 +30,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String jwt = resolveToken(request);
 
-        if (StringUtils.hasText(jwt) && tokenProvider.validateAccessToken(jwt)) {
-            try {
-                Authentication authentication = tokenProvider.getAuthentication(jwt);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            } catch (UsernameNotFoundException | NumberFormatException e) {
-                log.error("Security Context에 인증 정보를 저장할 수 없습니다. Token: {}, Error: {}", jwt, e.getMessage());
+        if (StringUtils.hasText(jwt)) {
+            if (!tokenProvider.validateAccessToken(jwt)) {
+                log.warn("유효하지 않은 JWT 토큰입니다. Token: {}", jwt);
                 SecurityContextHolder.clearContext();
-                request.setAttribute("exception", e);
-            } catch (Exception e) {
-                log.error("JWT 인증 처리 중 알 수 없는 에러 발생: {}", e.getMessage());
-                SecurityContextHolder.clearContext();
-                request.setAttribute("exception", e);
+                request.setAttribute("exception", new JwtException("유효하지 않거나 만료된 토큰입니다."));
+            } else {
+                try {
+                    Authentication authentication = tokenProvider.getAuthentication(jwt);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                } catch (UsernameNotFoundException | NumberFormatException e) {
+                    log.error("Security Context에 인증 정보를 저장할 수 없습니다. Token: {}, Error: {}", jwt, e.getMessage());
+                    SecurityContextHolder.clearContext();
+                    request.setAttribute("exception", e);
+                } catch (Exception e) {
+                    log.error("JWT 인증 처리 중 알 수 없는 에러 발생: {}", e.getMessage());
+                    SecurityContextHolder.clearContext();
+                    request.setAttribute("exception", e);
+                }
             }
         }
 
         filterChain.doFilter(request, response);
     }
-
     private String resolveToken(HttpServletRequest request) {
         String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
