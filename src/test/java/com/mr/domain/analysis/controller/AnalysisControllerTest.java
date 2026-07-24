@@ -17,10 +17,13 @@ import com.mr.domain.analysis.entity.enums.LlmStatus;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.analysis.service.AnalysisService;
+import com.mr.domain.user.entity.enums.UserRole;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.apipayload.handler.GlobalExceptionHandler;
+import com.mr.global.security.principal.CustomUserDetails;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,6 +32,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -50,6 +55,16 @@ class AnalysisControllerTest {
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .build();
+
+        CustomUserDetails userDetails = new CustomUserDetails(1L, UserRole.ROLE_STUDENT);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities())
+        );
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
