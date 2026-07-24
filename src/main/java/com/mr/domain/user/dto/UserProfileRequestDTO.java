@@ -10,4 +10,9 @@ public class UserProfileRequestDTO {
             TheoryLevel skillLevel,
             SubscriptionTier subscriptionTier
     ) {}
+
+    public record UpdateRequest(
+            String nickname,
+            TheoryLevel skillLevel
+    ) {}
 }

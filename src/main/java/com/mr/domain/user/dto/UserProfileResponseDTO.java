@@ -1,6 +1,7 @@
 package com.mr.domain.user.dto;
 
 import com.mr.domain.user.entity.enums.TheoryLevel;
+import java.time.LocalDateTime;
 import lombok.Builder;
 
 public class UserProfileResponseDTO {
@@ -30,5 +31,13 @@ public class UserProfileResponseDTO {
             String instrumentType,
             String subscriptionTier,
             String profileImgUrl
+    ) {}
+
+    @Builder
+    public record UpdateResponse(
+            Long userId,
+            String nickname,
+            TheoryLevel skillLevel,
+            LocalDateTime updatedAt
     ) {}
 }

@@ -95,6 +95,24 @@ public class UserProfileService {
                 .build();
     }
 
+    @Transactional
+    public UserProfileResponseDTO.UpdateResponse updateProfile(UserProfileRequestDTO.UpdateRequest request) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        User user = getUser(userId);
+        Student student = getStudent(user);
+
+        user.updateNickname(request.nickname());
+        ensureNicknameNotTaken(user);
+        student.updateTheoryLevel(request.skillLevel());
+
+        return UserProfileResponseDTO.UpdateResponse.builder()
+                .userId(user.getUserId())
+                .nickname(user.getNickname())
+                .skillLevel(student.getTheoryLevel())
+                .updatedAt(LocalDateTime.now())
+                .build();
+    }
+
     private User getUser(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
