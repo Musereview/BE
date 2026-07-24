@@ -30,7 +30,7 @@ public class InstrumentSeeder implements ApplicationRunner {
         }
 
         try {
-            instrumentRepository.save(Instrument.create(PIANO_CODE, PIANO_NAME));
+            instrumentRepository.saveAndFlush(Instrument.create(PIANO_CODE, PIANO_NAME));
         } catch (DataIntegrityViolationException e) {
             // 여러 인스턴스가 동시에 기동해 경쟁 상태로 중복 저장을 시도한 경우
             // code unique 제약으로 한쪽만 성공하므로, 나머지는 무시하고 넘어감
