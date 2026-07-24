@@ -16,6 +16,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         Long userId = Long.parseLong(username);
         // TODO: User user = userRepository.findById(userId).orElseThrow(...);
 
-        return new CustomUserDetails(userId, "user@example.com", "ROLE_USER");
+        return new CustomUserDetails(userId, "ROLE_USER");
     }
 }
