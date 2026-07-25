@@ -1,5 +1,6 @@
 package com.mr.domain.backingTrack.entity;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.mr.domain.backingTrack.entity.enums.AccessLevel;
 import com.mr.domain.backingTrack.entity.enums.Level;
 import com.mr.domain.backingTrack.entity.enums.ScaleType;
@@ -22,6 +23,8 @@ import jakarta.persistence.Table;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +52,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     private User user;
 
     // 학원 아이디
-    @Column(name = "academy_id")
+    @Column(name = "academy_id", nullable = false)
     private Long academyId;
 
     // 트랙 이름
@@ -85,8 +88,9 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     @Column(name = "audio_file_url", length = 255)
     private String audioFileUrl;
 
-    @Column(name = "midi_file_url", columnDefinition = "JSON")
-    private String midiFileUrl;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "midi_data", columnDefinition = "jsonb")
+    private JsonNode midiData;
 
     // 재생 수
     @Column(name = "play_count", nullable = false)
@@ -110,7 +114,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     private BackingTrack(User user, Long academyId, String title, String genre,
                          String keySignature, ScaleType scaleType, String timeSignature,
                          Integer bpm, Integer playtimeSec, String audioFileUrl,
-                         String midiFileUrl, Integer playCount,
+                         JsonNode midiData, Integer playCount,
                          AccessLevel accessLevel, Level level) {
         this.user = user;
         this.academyId = academyId;
@@ -122,7 +126,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
         this.bpm = bpm;
         this.playtimeSec = playtimeSec;
         this.audioFileUrl = audioFileUrl;
-        this.midiFileUrl = midiFileUrl;
+        this.midiData = midiData;
         this.playCount = playCount != null ? playCount : 0;
         this.accessLevel = accessLevel != null ? accessLevel : AccessLevel.PRIVATE;
         this.level = level != null ? level : Level.BASIC;
@@ -131,7 +135,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     public static BackingTrack create(User user, Long academyId, String title, String genre,
                                       String keySignature, ScaleType scaleType, String timeSignature,
                                       Integer bpm, Integer playtimeSec, String audioFileUrl,
-                                      String midiFileUrl, AccessLevel accessLevel, Level level) {
+                                      JsonNode midiData, AccessLevel accessLevel, Level level) {
         return BackingTrack.builder()
                 .user(user)
                 .academyId(academyId)
@@ -143,7 +147,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
                 .bpm(bpm)
                 .playtimeSec(playtimeSec)
                 .audioFileUrl(audioFileUrl)
-                .midiFileUrl(midiFileUrl)
+                .midiData(midiData)
                 .playCount(0)
                 .accessLevel(accessLevel)
                 .level(level)

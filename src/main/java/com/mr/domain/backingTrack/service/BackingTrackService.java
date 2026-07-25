@@ -1,5 +1,7 @@
 package com.mr.domain.backingTrack.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.domain.backingTrack.dto.req.BackingTrackCreateRequestDTO;
 import com.mr.domain.backingTrack.dto.res.BackingTrackCreateResponseDTO;
 import com.mr.domain.backingTrack.entity.BackingTrack;
@@ -20,6 +22,7 @@ public class BackingTrackService {
 
     private final BackingTrackRepository backingTrackRepository;
     private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public BackingTrackCreateResponseDTO.CreateResultDTO createBackingTrack(
@@ -29,9 +32,13 @@ public class BackingTrackService {
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
+        Long defaultAcademyId = 1L; // MVP 기준 관리자 학원 ID 기본값 세팅
+
+        JsonNode midiNode = request.midiData() != null ? objectMapper.valueToTree(request.midiData()) : null;
+
         BackingTrack backingTrack = BackingTrack.create(
                 user,
-                null,   // mvp에서는 일단 null로
+                defaultAcademyId,
                 request.title(),
                 request.genre(),
                 request.keySignature(),
@@ -40,7 +47,7 @@ public class BackingTrackService {
                 request.bpm(),
                 request.playtimeSec(),
                 request.audioFileUrl(),
-                request.midiFileUrl(),
+                midiNode,
                 request.accessLevel(),
                 request.level()
         );

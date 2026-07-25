@@ -13,6 +13,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
+import java.util.Map;
 
 public class BackingTrackCreateRequestDTO {
 
@@ -49,7 +50,7 @@ public class BackingTrackCreateRequestDTO {
             @Size(max = 255, message = "오디오 파일 URL은 255자 이내여야 합니다.")
             String audioFileUrl,
 
-            String midiFileUrl,
+            Map<String, Object> midiData,
 
             @NotNull(message = "공개 범위는 필수입니다.")
             AccessLevel accessLevel,
