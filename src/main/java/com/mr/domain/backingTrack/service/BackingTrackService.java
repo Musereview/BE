@@ -6,6 +6,7 @@ import com.mr.domain.backingTrack.dto.req.BackingTrackCreateRequestDTO;
 import com.mr.domain.backingTrack.dto.res.BackingTrackCreateResponseDTO;
 import com.mr.domain.backingTrack.entity.BackingTrack;
 import com.mr.domain.backingTrack.entity.ChordProgression;
+import com.mr.domain.backingTrack.exception.BackingTrackErrorStatus;
 import com.mr.domain.backingTrack.repository.BackingTrackRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.domain.user.exception.UserErrorStatus;
@@ -31,6 +32,15 @@ public class BackingTrackService {
     ){
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
+
+        boolean hasDuplicates = request.chordProgression().stream()
+                .map(chord -> chord.measureNo() + "-" + chord.sequenceNo())
+                .distinct() // 중복 제거
+                .count() != request.chordProgression().size();
+
+        if (hasDuplicates) {
+            throw new GeneralException(BackingTrackErrorStatus.DUPLICATE_CHORD_POSITION);
+        }
 
         Long defaultAcademyId = 1L; // MVP 기준 관리자 학원 ID 기본값 세팅
 

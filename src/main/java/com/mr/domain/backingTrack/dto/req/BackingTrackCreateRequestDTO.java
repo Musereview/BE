@@ -34,7 +34,7 @@ public class BackingTrackCreateRequestDTO {
             ScaleType scaleType,
 
             @NotBlank(message = "박자는 필수입니다.")
-            @Pattern(regexp = "^\\d+/\\d+$", message = "박자 형식이 올바르지 않습니다. (예: 4/4, 3/4)")
+            @Pattern(regexp = "^([1-9]|1[0-6])/(2|4|8|16)$", message = "음악적으로 유효한 박자 형식이어야 합니다. (예: 4/4, 3/4, 6/8)")
             String timeSignature,
 
             @NotNull(message = "BPM은 필수입니다.")
@@ -65,9 +65,11 @@ public class BackingTrackCreateRequestDTO {
 
     public record ChordProgressionDTO(
             @NotNull(message = "마디 번호는 필수입니다.")
+            @Min(value = 1, message = "마디 번호는 1 이상이어야 합니다.")
             Integer measureNo,
 
             @NotNull(message = "코드 순서는 필수입니다.")
+            @Min(value = 1, message = "코드 순서는 1 이상이어야 합니다.")
             Integer sequenceNo,
 
             @NotBlank(message = "코드명은 필수입니다.")

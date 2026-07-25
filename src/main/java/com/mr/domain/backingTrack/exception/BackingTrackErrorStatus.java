@@ -11,7 +11,7 @@ public enum BackingTrackErrorStatus implements BaseCode {
 
     // [400] Validation Errors
     TITLE_REQUIRED(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_01", "백킹트랙 제목은 필수입니다."),
-    TITLE_TOO_LONG(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_02", "백킹트랙 제목은 100자 이내여야 합니다."),
+    TITLE_TOO_LONG(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_02", "백킹트랙 제목은 50자 이내여야 합니다."),
     GENRE_REQUIRED(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_03", "장르는 필수입니다."),
     UNSUPPORTED_GENRE(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_04", "지원하지 않는 장르입니다."),
     KEY_REQUIRED(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_05", "Key 정보는 필수입니다."),
@@ -28,6 +28,7 @@ public enum BackingTrackErrorStatus implements BaseCode {
     INVALID_ACCESS_LEVEL(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_18", "공개 범위 값이 올바르지 않습니다."),
     LEVEL_REQUIRED(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_19", "난이도는 필수입니다."),
     INVALID_LEVEL(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_20", "난이도 값이 올바르지 않습니다."),
+    DUPLICATE_CHORD_POSITION(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_21", "동일한 마디(measureNo)와 순서(sequenceNo)를 가진 코드 진행이 중복으로 존재합니다."),
 
     // [403] 권한 에러
     FORBIDDEN_CREATE(HttpStatus.FORBIDDEN, "BACKING_TRACK_403_01", "백킹트랙 생성 권한이 없습니다."),
