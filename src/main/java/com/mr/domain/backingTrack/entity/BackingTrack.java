@@ -156,7 +156,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
 
     public void updateTrackInfo(String title, String genre, String keySignature,
                                 ScaleType scaleType, String timeSignature, Integer bpm,
-                                Integer playtimeSec, AccessLevel accessLevel, Level level) {
+                                Integer playtimeSec, String audioFileUrl, AccessLevel accessLevel, Level level) {
         this.title = title;
         this.genre = genre;
         this.keySignature = keySignature;
@@ -164,6 +164,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
         this.timeSignature = timeSignature;
         this.bpm = bpm;
         this.playtimeSec = playtimeSec;
+        this.audioFileUrl = audioFileUrl;
         if (accessLevel != null) this.accessLevel = accessLevel;
         if (level != null) this.level = level;
     }

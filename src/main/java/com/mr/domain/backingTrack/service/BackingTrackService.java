@@ -25,7 +25,6 @@ public class BackingTrackService {
 
     private final BackingTrackRepository backingTrackRepository;
     private final UserRepository userRepository;
-    private final ObjectMapper objectMapper;
 
     private static final Long TEMP_DEFAULT_ACADEMY_ID = 1L; // MVP 임시 학원 ID
 
@@ -40,9 +39,6 @@ public class BackingTrackService {
 
         validateChordDuplicates(request.chordProgression());
 
-
-        JsonNode midiNode = request.midiData() != null ? objectMapper.valueToTree(request.midiData()) : null;
-
         BackingTrack backingTrack = BackingTrack.create(
                 user,
                 TEMP_DEFAULT_ACADEMY_ID,
@@ -54,7 +50,7 @@ public class BackingTrackService {
                 request.bpm(),
                 request.playtimeSec(),
                 request.audioFileUrl(),
-                midiNode,
+                null,   // midi 데이터는 생성 시 null로 초기화 (mvp후 별도 API나 이벤트로 업데이트)
                 request.accessLevel(),
                 request.level()
         );
@@ -94,8 +90,6 @@ public class BackingTrackService {
             throw new GeneralException(BackingTrackErrorStatus.FORBIDDEN_UPDATE);
         }
 
-        JsonNode midiNode = request.midiData() != null ? objectMapper.valueToTree(request.midiData()) : null;
-
         // 엔티티 데이터 업데이트
         backingTrack.updateTrackInfo(
                 request.title(),
@@ -105,6 +99,7 @@ public class BackingTrackService {
                 request.timeSignature(),
                 request.bpm(),
                 request.playtimeSec(),
+                request.audioFileUrl(),
                 request.accessLevel(),
                 request.level()
         );
@@ -123,7 +118,7 @@ public class BackingTrackService {
         return BackingTrackSaveResponseDTO.SaveResultDTO.of(
                 backingTrack.getId(),
                 backingTrack.getTitle(),
-                backingTrack.getUpdatedAt()
+                backingTrack.getCreatedAt()
         );
     }
 
