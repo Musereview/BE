@@ -59,13 +59,14 @@ class LearningControllerTest {
     void 연습_실행_정보_조회_성공() throws Exception {
         when(learningService.getPracticeData(anyLong(), anyLong()))
                 .thenReturn(new LearningPracticeDataResponseDTO.PracticeDataResultDTO(
-                        90, "C", "{ \"notes\": [] }"));
+                        90, "C", "{\"notes\":[60,64,67]}"));
 
         mockMvc.perform(get("/api/learnings/1/steps/12/practice-data"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.data.bpm").value(90))
-                .andExpect(jsonPath("$.data.keySignature").value("C"));
+                .andExpect(jsonPath("$.data.keySignature").value("C"))
+                .andExpect(jsonPath("$.data.midiData.notes[0]").value(60));
     }
 
     @Test
