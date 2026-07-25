@@ -53,7 +53,6 @@ public class AnalysisService {
         validateOwner(analysis, userId);
         validateCompleted(analysis);
 
-        // 정상 생성된 리포트만 반환한다. 실패/처리 중 리포트를 노출할지는 별도 정책 결정 필요 (#TODO).
         AnalysisReport analysisReport = analysisReportRepository
                 .findFirstByAnalysisIdAndLlmStatusOrderByCreatedAtDesc(analysisId, LlmStatus.SUCCESS)
                 .orElse(null);
