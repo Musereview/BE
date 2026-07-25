@@ -42,13 +42,14 @@ public class BackingTrackService {
             throw new GeneralException(BackingTrackErrorStatus.DUPLICATE_CHORD_POSITION);
         }
 
-        Long defaultAcademyId = 1L; // MVP 기준 관리자 학원 ID 기본값 세팅
+        // TODO: [MVP 이후 리팩토링] 추후 로그인한 유저의 실제 소속 학원 ID를 조회하도록 변경 필요
+        Long tempAcademyId = 1L; // MVP 기준 관리자 학원 ID 기본값 세팅
 
         JsonNode midiNode = request.midiData() != null ? objectMapper.valueToTree(request.midiData()) : null;
 
         BackingTrack backingTrack = BackingTrack.create(
                 user,
-                defaultAcademyId,
+                tempAcademyId,
                 request.title(),
                 request.genre(),
                 request.keySignature(),
