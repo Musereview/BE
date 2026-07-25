@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16
+    image: postgres:18
     container_name: musereview-postgres
     ports:
       - "127.0.0.1:5433:5432"
@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: musereview
       POSTGRES_PASSWORD: musereview1234
     volumes:
-      - musereview-postgres-data:/var/lib/postgresql/data
+      - musereview-postgres-data:/var/lib/postgresql
 
 volumes:
   musereview-postgres-data:

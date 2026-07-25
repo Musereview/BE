@@ -67,6 +67,10 @@ awscliv2.zip
 src/main/resources/application-local.yml
 src/main/resources/application.yml
 
+# copyPrivateConfig 태스크가 MR_config/local에서 복사해 오는 빌드 산출물 (실제 비밀키 포함 가능)
+src/main/resources/application.yml
+src/main/resources/application.example.yml
+
 # docs
 docs/*
 .claude/*
