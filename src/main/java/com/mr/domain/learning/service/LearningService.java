@@ -5,7 +5,9 @@ import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
 import com.mr.domain.learning.dto.res.LearningResultResponseDTO;
+import com.mr.domain.learning.dto.res.LearningStepDetailResponseDTO;
 import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
+import com.mr.domain.learning.entity.ChordExample;
 import com.mr.domain.learning.entity.Learning;
 import com.mr.domain.learning.entity.LearningStep;
 import com.mr.domain.learning.entity.PlayingExample;
@@ -13,6 +15,7 @@ import com.mr.domain.learning.entity.UserLearningProgress;
 import com.mr.domain.learning.entity.enums.LearningCategory;
 import com.mr.domain.learning.entity.enums.LearningDifficulty;
 import com.mr.domain.learning.exception.LearningErrorStatus;
+import com.mr.domain.learning.repository.ChordExampleRepository;
 import com.mr.domain.learning.repository.LearningRepository;
 import com.mr.domain.learning.repository.LearningStepRepository;
 import com.mr.domain.learning.repository.PlayingExampleRepository;
@@ -41,6 +44,7 @@ public class LearningService {
     private final LearningStepRepository learningStepRepository;
     private final LearningRepository learningRepository;
     private final PlayingExampleRepository playingExampleRepository;
+    private final ChordExampleRepository chordExampleRepository;
     // 임시 작명
     private final UserRepository userRepository;
 
@@ -149,6 +153,17 @@ public class LearningService {
         String status = progress != null ? progress.getLearningStatus() : "NOT_STARTED";
         Integer score = progress != null ? progress.getScore() : null;
         return LearningCurriculumResponseDTO.StepItem.of(step, status, score);
+    }
+
+    // 학습 단계별 조회
+    public LearningStepDetailResponseDTO.StepDetailResultDTO getStepDetail(Long learningId, Long learningStepId) {
+        Learning learning = getActiveLearningOrThrow(learningId);
+        LearningStep learningStep = getLearningStepOrThrow(learning, learningStepId);
+
+        PlayingExample playingExample = playingExampleRepository.findByLearningStep_Id(learningStepId).orElse(null);
+        List<ChordExample> chordExamples = chordExampleRepository.findByLearningStep_Id(learningStepId);
+
+        return LearningStepDetailResponseDTO.StepDetailResultDTO.of(learning, learningStep, playingExample, chordExamples);
     }
 
     private void ensureUserExists(Long userId) {

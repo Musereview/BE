@@ -5,6 +5,7 @@ import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
 import com.mr.domain.learning.dto.res.LearningResultResponseDTO;
+import com.mr.domain.learning.dto.res.LearningStepDetailResponseDTO;
 import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
 import com.mr.domain.learning.service.LearningService;
 import com.mr.global.apipayload.ApiResponse;
@@ -70,6 +71,20 @@ public class LearningController {
     ) {
         LearningCurriculumResponseDTO.CurriculumResultDTO result =
                 learningService.getCurriculum(userDetails.getUserId(), learningId);
+        return ApiResponse.onSuccess(result);
+    }
+
+    @Operation(
+            summary = "학습 단계별 조회",
+            description = "단계별 이론 설명, 연습 팁, 모범 연주 예시(있으면), 코드 예시를 조회합니다."
+    )
+    @GetMapping("/{learningId}/steps/{learningStepId}")
+    public ApiResponse<LearningStepDetailResponseDTO.StepDetailResultDTO> getStepDetail(
+            @PathVariable Long learningId,
+            @PathVariable Long learningStepId
+    ) {
+        LearningStepDetailResponseDTO.StepDetailResultDTO result =
+                learningService.getStepDetail(learningId, learningStepId);
         return ApiResponse.onSuccess(result);
     }
 

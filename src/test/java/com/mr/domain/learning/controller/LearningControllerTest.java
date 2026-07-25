@@ -2,6 +2,7 @@ package com.mr.domain.learning.controller;
 
 import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
+import com.mr.domain.learning.dto.res.LearningStepDetailResponseDTO;
 import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
 import com.mr.domain.learning.exception.LearningErrorStatus;
 import com.mr.domain.learning.service.LearningService;
@@ -82,6 +83,45 @@ class LearningControllerTest {
         mockMvc.perform(get("/api/learnings/999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("LEARNING_404_01"));
+    }
+
+    @Test
+    void 단계별_조회_성공() throws Exception {
+        LearningStepDetailResponseDTO.ModelPerformance modelPerformance =
+                new LearningStepDetailResponseDTO.ModelPerformance("제목", "설명", "https://audio.url", 154);
+        LearningStepDetailResponseDTO.ChordExampleItem chordExample =
+                new LearningStepDetailResponseDTO.ChordExampleItem("Cmaj7", "설명", List.of(60, 64, 67));
+        LearningStepDetailResponseDTO.StepDetailResultDTO response = new LearningStepDetailResponseDTO.StepDetailResultDTO(
+                1L, 12L, "Tension Notes", "ADVANCED", 2, "11th 텐션 노트 활용하기",
+                "이론", "팁", modelPerformance, List.of(chordExample));
+
+        when(learningService.getStepDetail(anyLong(), anyLong())).thenReturn(response);
+
+        mockMvc.perform(get("/api/learnings/1/steps/12"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.stepTitle").value("11th 텐션 노트 활용하기"))
+                .andExpect(jsonPath("$.data.modelPerformance.durationSeconds").value(154))
+                .andExpect(jsonPath("$.data.chordExamples[0].chordName").value("Cmaj7"));
+    }
+
+    @Test
+    void 단계별_조회_실패_학습_없음() throws Exception {
+        when(learningService.getStepDetail(anyLong(), anyLong()))
+                .thenThrow(new GeneralException(LearningErrorStatus.LEARNING_NOT_FOUND));
+
+        mockMvc.perform(get("/api/learnings/999/steps/12"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("LEARNING_404_01"));
+    }
+
+    @Test
+    void 단계별_조회_실패_단계_불일치() throws Exception {
+        when(learningService.getStepDetail(anyLong(), anyLong()))
+                .thenThrow(new GeneralException(LearningErrorStatus.LEARNING_STEP_NOT_FOUND));
+
+        mockMvc.perform(get("/api/learnings/1/steps/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("LEARNING_404_02"));
     }
 
     @Test

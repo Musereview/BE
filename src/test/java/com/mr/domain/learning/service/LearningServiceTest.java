@@ -1,13 +1,17 @@
 package com.mr.domain.learning.service;
 
 import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
+import com.mr.domain.learning.dto.res.LearningStepDetailResponseDTO;
 import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
+import com.mr.domain.learning.entity.ChordExample;
 import com.mr.domain.learning.entity.Learning;
 import com.mr.domain.learning.entity.LearningStep;
+import com.mr.domain.learning.entity.PlayingExample;
 import com.mr.domain.learning.entity.UserLearningProgress;
 import com.mr.domain.learning.entity.enums.LearningCategory;
 import com.mr.domain.learning.entity.enums.LearningDifficulty;
 import com.mr.domain.learning.exception.LearningErrorStatus;
+import com.mr.domain.learning.repository.ChordExampleRepository;
 import com.mr.domain.learning.repository.LearningRepository;
 import com.mr.domain.learning.repository.LearningStepRepository;
 import com.mr.domain.learning.repository.PlayingExampleRepository;
@@ -41,6 +45,8 @@ class LearningServiceTest {
     private LearningRepository learningRepository;
     @Mock
     private PlayingExampleRepository playingExampleRepository;
+    @Mock
+    private ChordExampleRepository chordExampleRepository;
     @Mock
     private UserRepository userRepository;
 
@@ -129,5 +135,97 @@ class LearningServiceTest {
                 .isInstanceOf(GeneralException.class)
                 .satisfies(e -> assertThat(((GeneralException) e).getCode())
                         .isEqualTo(LearningErrorStatus.LEARNING_NOT_FOUND));
+    }
+
+    @Test
+    void 단계별_조회_성공_모범연주와_코드예시_포함() {
+        Long learningId = 1L;
+        Long learningStepId = 12L;
+
+        Learning learning = mock(Learning.class);
+        when(learning.getId()).thenReturn(learningId);
+        when(learning.getTitle()).thenReturn("Tension Notes");
+        when(learning.getDifficulty()).thenReturn(LearningDifficulty.ADVANCED);
+
+        LearningStep step = mock(LearningStep.class);
+        when(step.getId()).thenReturn(learningStepId);
+        when(step.getLearning()).thenReturn(learning);
+        when(step.getStepNo()).thenReturn(2);
+        when(step.getTitle()).thenReturn("11th 텐션 노트 활용하기");
+        when(step.getContent()).thenReturn("이론 설명");
+        when(step.getPracticeTip()).thenReturn("연습 팁");
+
+        PlayingExample playingExample = mock(PlayingExample.class);
+        when(playingExample.getTitle()).thenReturn("11th Tension Notes Practice");
+        when(playingExample.getDescription()).thenReturn("프로 연주자의 응용 사례");
+        when(playingExample.getAudioFileUrl()).thenReturn("https://cdn.example.com/audio/11th.mp3");
+        when(playingExample.getPlayingSeconds()).thenReturn(154L);
+
+        ChordExample chordExample = mock(ChordExample.class);
+        when(chordExample.getChordName()).thenReturn("Cmaj7");
+        when(chordExample.getDescription()).thenReturn("F(11th) 주의 - E(3rd)와 충돌");
+        when(chordExample.getNoteNumbers()).thenReturn(List.of(60, 64, 67, 70, 77));
+
+        when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
+        when(learningStepRepository.findById(learningStepId)).thenReturn(Optional.of(step));
+        when(playingExampleRepository.findByLearningStep_Id(learningStepId)).thenReturn(Optional.of(playingExample));
+        when(chordExampleRepository.findByLearningStep_Id(learningStepId)).thenReturn(List.of(chordExample));
+
+        LearningStepDetailResponseDTO.StepDetailResultDTO result =
+                learningService.getStepDetail(learningId, learningStepId);
+
+        assertThat(result.stepTitle()).isEqualTo("11th 텐션 노트 활용하기");
+        assertThat(result.modelPerformance()).isNotNull();
+        assertThat(result.modelPerformance().durationSeconds()).isEqualTo(154);
+        assertThat(result.chordExamples()).hasSize(1);
+        assertThat(result.chordExamples().get(0).chordName()).isEqualTo("Cmaj7");
+    }
+
+    @Test
+    void 단계별_조회_성공_모범연주_없으면_null() {
+        Long learningId = 1L;
+        Long learningStepId = 13L;
+
+        Learning learning = mock(Learning.class);
+        when(learning.getId()).thenReturn(learningId);
+        when(learning.getDifficulty()).thenReturn(LearningDifficulty.ADVANCED);
+
+        LearningStep step = mock(LearningStep.class);
+        when(step.getId()).thenReturn(learningStepId);
+        when(step.getLearning()).thenReturn(learning);
+
+        when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
+        when(learningStepRepository.findById(learningStepId)).thenReturn(Optional.of(step));
+        when(playingExampleRepository.findByLearningStep_Id(learningStepId)).thenReturn(Optional.empty());
+        when(chordExampleRepository.findByLearningStep_Id(learningStepId)).thenReturn(Collections.emptyList());
+
+        LearningStepDetailResponseDTO.StepDetailResultDTO result =
+                learningService.getStepDetail(learningId, learningStepId);
+
+        assertThat(result.modelPerformance()).isNull();
+        assertThat(result.chordExamples()).isEmpty();
+    }
+
+    @Test
+    void 단계별_조회_실패_step이_다른_learning_소속() {
+        Long learningId = 1L;
+        Long learningStepId = 99L;
+
+        Learning learning = mock(Learning.class);
+        when(learning.getId()).thenReturn(learningId);
+
+        Learning otherLearning = mock(Learning.class);
+        when(otherLearning.getId()).thenReturn(2L);
+
+        LearningStep step = mock(LearningStep.class);
+        when(step.getLearning()).thenReturn(otherLearning);
+
+        when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
+        when(learningStepRepository.findById(learningStepId)).thenReturn(Optional.of(step));
+
+        assertThatThrownBy(() -> learningService.getStepDetail(learningId, learningStepId))
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getCode())
+                        .isEqualTo(LearningErrorStatus.LEARNING_STEP_NOT_FOUND));
     }
 }
