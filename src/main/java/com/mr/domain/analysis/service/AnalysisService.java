@@ -8,6 +8,7 @@ import com.mr.domain.analysis.dto.res.AnalysisStatusResponseDTO;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.AnalysisReport;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
+import com.mr.domain.analysis.entity.enums.LlmStatus;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.analysis.repository.AnalysisReportRepository;
 import com.mr.domain.analysis.repository.AnalysisRepository;
@@ -52,8 +53,9 @@ public class AnalysisService {
         validateOwner(analysis, userId);
         validateCompleted(analysis);
 
+        // 정상 생성된 리포트만 반환한다. 실패/처리 중 리포트를 노출할지는 별도 정책 결정 필요 (#TODO).
         AnalysisReport analysisReport = analysisReportRepository
-                .findFirstByAnalysisIdOrderByCreatedAtDesc(analysisId)
+                .findFirstByAnalysisIdAndLlmStatusOrderByCreatedAtDesc(analysisId, LlmStatus.SUCCESS)
                 .orElse(null);
 
         JsonNode rawResult = parseRawResult(
