@@ -32,6 +32,10 @@ public enum BackingTrackErrorStatus implements BaseCode {
 
     // [403] 권한 에러
     FORBIDDEN_CREATE(HttpStatus.FORBIDDEN, "BACKING_TRACK_403_01", "백킹트랙 생성 권한이 없습니다."),
+    FORBIDDEN_UPDATE(HttpStatus.FORBIDDEN, "BACKING_TRACK_403_02", "백킹트랙 수정 권한이 없습니다."),
+
+    // [404] 리소스 없음
+    BACKING_TRACK_NOT_FOUND(HttpStatus.NOT_FOUND, "BACKING_TRACK_404_01", "존재하지 않는 백킹트랙입니다."),
 
     // [500] 서버 에러
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "BACKING_TRACK_500_01", "백킹트랙 생성 중 서버 오류가 발생했습니다.");

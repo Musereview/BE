@@ -15,9 +15,9 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.Map;
 
-public class BackingTrackCreateRequestDTO {
+public class BackingTrackSaveRequestDTO {
 
-    public record CreateDTO(
+    public record SaveDTO(
             @NotBlank(message = "백킹트랙 제목은 필수입니다.")
             @Size(max = 50, message = "백킹트랙 제목은 50자 이내여야 합니다.")
             String title,
