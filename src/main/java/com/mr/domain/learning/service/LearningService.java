@@ -130,6 +130,8 @@ public class LearningService {
 
     // 학습 커리큘럼 조회
     public LearningCurriculumResponseDTO.CurriculumResultDTO getCurriculum(Long userId, Long learningId) {
+        ensureUserExists(userId);
+
         Learning learning = getActiveLearningOrThrow(learningId);
 
         long totalStepCount = learningStepRepository.countByLearningId(learningId);

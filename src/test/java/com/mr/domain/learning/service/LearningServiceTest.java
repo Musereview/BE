@@ -120,6 +120,7 @@ class LearningServiceTest {
         when(progress1.getScore()).thenReturn(93);
         when(progress1.getLearningStatus()).thenReturn("COMPLETED");
 
+        when(userRepository.existsById(userId)).thenReturn(true);
         when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
         when(learningStepRepository.countByLearningId(learningId)).thenReturn(2L);
         when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, learningId)).thenReturn(1L);
@@ -142,12 +143,24 @@ class LearningServiceTest {
     @Test
     @DisplayName("getCurriculum - 학습이 없으면 404")
     void getCurriculum_learningNotFound_throws404() {
+        when(userRepository.existsById(1L)).thenReturn(true);
         when(learningRepository.findByIdAndIsActiveTrue(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> learningService.getCurriculum(1L, 999L))
                 .isInstanceOf(GeneralException.class)
                 .satisfies(e -> assertThat(((GeneralException) e).getCode())
                         .isEqualTo(LearningErrorStatus.LEARNING_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("getCurriculum - 유저가 없으면 404")
+    void getCurriculum_userNotFound_throws404() {
+        when(userRepository.existsById(1L)).thenReturn(false);
+
+        assertThatThrownBy(() -> learningService.getCurriculum(1L, 10L))
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getCode())
+                        .isEqualTo(UserErrorStatus.USER_NOT_FOUND));
     }
 
     @Test
