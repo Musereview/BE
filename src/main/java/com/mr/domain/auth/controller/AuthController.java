@@ -5,6 +5,7 @@ import com.mr.domain.auth.dto.AuthResponseDTO;
 import com.mr.domain.auth.entity.enums.SocialType;
 import com.mr.domain.auth.service.AuthService;
 import com.mr.global.apipayload.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
@@ -22,6 +23,7 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @SecurityRequirements
     @PostMapping("/login/{socialType}")
     public ApiResponse<AuthResponseDTO.LoginResponse> socialLogin(
             @PathVariable(name = "socialType") SocialType socialType,
