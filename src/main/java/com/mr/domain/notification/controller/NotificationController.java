@@ -1,6 +1,6 @@
 package com.mr.domain.notification.controller;
 
-import com.mr.domain.notification.dto.res.NotificationListDTO;
+import com.mr.domain.notification.dto.res.NotificationListResponseDTO;
 import com.mr.domain.notification.service.NotificationService;
 import com.mr.global.apipayload.ApiResponse;
 import com.mr.global.security.principal.CustomUserDetails;
@@ -23,12 +23,12 @@ public class NotificationController {
     private final NotificationService notificationService;
 
     @GetMapping
-    public ApiResponse<NotificationListDTO> getNotifications(
+    public ApiResponse<NotificationListResponseDTO> getNotifications(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ){
         Long userId = userDetails.getUserId();
-        NotificationListDTO result = notificationService.getNotificationList(userId, pageable);
+        NotificationListResponseDTO result = notificationService.getNotificationList(userId, pageable);
         return ApiResponse.onSuccess(result);
     }
 

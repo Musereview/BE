@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Slice;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -14,26 +15,24 @@ import java.util.stream.Collectors;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class NotificationListDTO {
-    private List<NotificationDTO> notificationList;
+public class NotificationListResponseDTO {
+    private List<NotificationResponseDTO> notificationList;
     private Integer listSize;
-    private Integer totalPage;
-    private Long totalElements;
+    private Boolean hasNext;
     private Boolean isFirst;
     private Boolean isLast;
 
-    public static NotificationListDTO of(Page<Notification> notificationPage) {
-        List<NotificationDTO> notificationDTOList = notificationPage.getContent().stream()
-                .map(NotificationDTO::from)
+    public static NotificationListResponseDTO of(Slice<Notification> notificationSlice) {
+        List<NotificationResponseDTO> notificationDTOList = notificationSlice.getContent().stream()
+                .map(NotificationResponseDTO::from)
                 .collect(Collectors.toList());
 
-        return NotificationListDTO.builder()
+        return NotificationListResponseDTO.builder()
                 .notificationList(notificationDTOList)
                 .listSize(notificationDTOList.size())
-                .totalPage(notificationPage.getTotalPages())
-                .totalElements(notificationPage.getTotalElements())
-                .isFirst(notificationPage.isFirst())
-                .isLast(notificationPage.isLast())
+                .hasNext(notificationSlice.hasNext())
+                .isFirst(notificationSlice.isFirst())
+                .isLast(notificationSlice.isLast())
                 .build();
     }
 }

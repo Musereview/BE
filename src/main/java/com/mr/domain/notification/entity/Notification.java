@@ -59,6 +59,10 @@ public class Notification extends BaseTimeDeletedEntity{
 
     @Builder(access = AccessLevel.PRIVATE)
     private Notification(User user, String title, String content) {
+        validateUser(user);
+        validateTitle(title);
+        validateContent(content);
+
         this.user = user;
         this.title = title;
         this.content = content;
@@ -76,5 +80,23 @@ public class Notification extends BaseTimeDeletedEntity{
     // 알림 읽음 처리
     public void markAsRead() {
         this.isRead = true;
+    }
+
+    private void validateUser(User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("User는 필수입니다.");
+        }
+    }
+
+    private void validateTitle(String title) {
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Title은 필수입니다.");
+        }
+    }
+
+    private void validateContent(String content) {
+        if (content == null || content.trim().isEmpty()) {
+            throw new IllegalArgumentException("Content는 필수입니다.");
+        }
     }
 }

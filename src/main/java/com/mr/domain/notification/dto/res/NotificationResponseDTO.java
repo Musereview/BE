@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class NotificationDTO {
+public class NotificationResponseDTO {
 
     private Long notificationId;
     private String title;
@@ -20,8 +20,8 @@ public class NotificationDTO {
     private Boolean isRead;
     private LocalDateTime createdAt;
 
-    public static NotificationDTO from(Notification notification) {
-        return NotificationDTO.builder()
+    public static NotificationResponseDTO from(Notification notification) {
+        return NotificationResponseDTO.builder()
                 .notificationId(notification.getId())
                 .title(notification.getTitle())
                 .content(notification.getContent())

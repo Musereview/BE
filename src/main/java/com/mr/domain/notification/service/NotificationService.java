@@ -1,6 +1,6 @@
 package com.mr.domain.notification.service;
 
-import com.mr.domain.notification.dto.res.NotificationListDTO;
+import com.mr.domain.notification.dto.res.NotificationListResponseDTO;
 import com.mr.domain.notification.entity.Notification;
 import com.mr.domain.notification.exception.NotificationErrorStatus;
 import com.mr.domain.notification.repository.NotificationRepository;
@@ -18,9 +18,9 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
 
-    public NotificationListDTO getNotificationList(Long userId, Pageable pageable){
+    public NotificationListResponseDTO getNotificationList(Long userId, Pageable pageable){
         Page<Notification> notificationPage = notificationRepository.findAllByUser_UserIdAndDeletedAtIsNull(userId, pageable);
-        return  NotificationListDTO.of(notificationPage);
+        return  NotificationListResponseDTO.of(notificationPage);
     }
 
     // 알림 읽음 처리
