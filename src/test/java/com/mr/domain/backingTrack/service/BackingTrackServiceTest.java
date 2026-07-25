@@ -89,7 +89,7 @@ class BackingTrackServiceTest {
 
         BackingTrack capturedTrack = captor.getValue();
         assertThat(capturedTrack.getTitle()).isEqualTo("새로운 트랙");
-        assertThat(capturedTrack.getChordProgressions()).hasSize(2);
+        assertThat(capturedTrack.getChordProgressions()).hasSize(1);
 
         assertThat(response.backingTrackId()).isEqualTo(100L);
         assertThat(response.title()).isEqualTo("새로운 트랙");
@@ -117,7 +117,7 @@ class BackingTrackServiceTest {
         // then
         assertThat(existingTrack.getTitle()).isEqualTo("새로운 트랙");
 
-        assertThat(existingTrack.getChordProgressions()).hasSize(2);
+        assertThat(existingTrack.getChordProgressions()).hasSize(1);
 
         assertThat(response.backingTrackId()).isEqualTo(trackId);
         assertThat(response.title()).isEqualTo("새로운 트랙");

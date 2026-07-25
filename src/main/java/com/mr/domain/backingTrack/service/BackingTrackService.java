@@ -62,7 +62,6 @@ public class BackingTrackService {
                     chordDTO.measureNo(),
                     chordDTO.chordName()
             );
-            backingTrack.addChordProgression(chord);
         });
 
         BackingTrack savedTrack = backingTrackRepository.save(backingTrack);
@@ -116,7 +115,6 @@ public class BackingTrackService {
                     chordDTO.measureNo(),
                     chordDTO.chordName()
             );
-            backingTrack.addChordProgression(chord);
         });
 
         return BackingTrackUpdateResponseDTO.UpdateResultDTO.of(
