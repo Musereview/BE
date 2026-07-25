@@ -32,8 +32,7 @@ public enum BackingTrackErrorStatus implements BaseCode {
     INVALID_CHORD_SEQUENCE(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_22", "마디의 허용된 코드 순서 범위를 초과했습니다."),
 
     // [403] 권한 에러
-    FORBIDDEN_CREATE(HttpStatus.FORBIDDEN, "BACKING_TRACK_403_01", "백킹트랙 생성 권한이 없습니다."),
-    FORBIDDEN_UPDATE(HttpStatus.FORBIDDEN, "BACKING_TRACK_403_02", "백킹트랙 수정 권한이 없습니다."),
+    FORBIDDEN_UPDATE(HttpStatus.FORBIDDEN, "BACKING_TRACK_403_01", "백킹트랙 수정 권한이 없습니다."),
 
     // [404] 리소스 없음
     BACKING_TRACK_NOT_FOUND(HttpStatus.NOT_FOUND, "BACKING_TRACK_404_01", "존재하지 않는 백킹트랙입니다."),
