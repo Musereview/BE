@@ -21,6 +21,7 @@ import com.mr.domain.learning.repository.UserLearningProgressRepository;
 import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -62,7 +63,8 @@ class LearningServiceTest {
     private LearningService learningService;
 
     @Test
-    void 소문자와_공백이_포함된_difficulty도_정상_변환() {
+    @DisplayName("getTheoryList - 소문자와 공백이 포함된 difficulty도 정상 변환된다")
+    void getTheoryList_lowercaseAndWhitespaceDifficulty_normalizedSuccessfully() {
         when(userRepository.existsById(1L)).thenReturn(true);
         when(learningRepository.findByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
                 LearningCategory.THEORY, LearningDifficulty.BEGINNER))
@@ -77,7 +79,8 @@ class LearningServiceTest {
     }
 
     @Test
-    void 존재하지_않는_difficulty값은_400() {
+    @DisplayName("getTheoryList - 존재하지 않는 difficulty 값이면 400")
+    void getTheoryList_invalidDifficulty_throws400() {
         assertThatThrownBy(() -> learningService.getTheoryList(1L, "invalid"))
                 .isInstanceOf(GeneralException.class)
                 .satisfies(e -> assertThat(((GeneralException) e).getCode())
@@ -85,7 +88,8 @@ class LearningServiceTest {
     }
 
     @Test
-    void 커리큘럼_조회_성공_진행률과_단계별_상태_계산() {
+    @DisplayName("getCurriculum - 진행률과 단계별 상태를 계산해 반환한다")
+    void getCurriculum_success_calculatesProgressAndStepStatus() {
         Long userId = 1L;
         Long learningId = 10L;
 
@@ -136,7 +140,8 @@ class LearningServiceTest {
     }
 
     @Test
-    void 커리큘럼_조회_실패_학습_없음() {
+    @DisplayName("getCurriculum - 학습이 없으면 404")
+    void getCurriculum_learningNotFound_throws404() {
         when(learningRepository.findByIdAndIsActiveTrue(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> learningService.getCurriculum(1L, 999L))
@@ -146,7 +151,8 @@ class LearningServiceTest {
     }
 
     @Test
-    void 단계별_조회_성공_모범연주와_코드예시_포함() {
+    @DisplayName("getStepDetail - 모범연주와 코드예시를 포함해 반환한다")
+    void getStepDetail_success_includesModelPerformanceAndChordExamples() {
         Long learningId = 1L;
         Long learningStepId = 12L;
 
@@ -190,7 +196,8 @@ class LearningServiceTest {
     }
 
     @Test
-    void 단계별_조회_성공_모범연주_없으면_null() {
+    @DisplayName("getStepDetail - 모범연주가 없으면 null을 반환한다")
+    void getStepDetail_noModelPerformance_returnsNull() {
         Long learningId = 1L;
         Long learningStepId = 13L;
 
@@ -215,7 +222,8 @@ class LearningServiceTest {
     }
 
     @Test
-    void 단계별_조회_실패_step이_다른_learning_소속() {
+    @DisplayName("getStepDetail - step이 다른 learning 소속이면 404")
+    void getStepDetail_stepBelongsToOtherLearning_throws404() {
         Long learningId = 1L;
         Long learningStepId = 99L;
 
@@ -238,7 +246,8 @@ class LearningServiceTest {
     }
 
     @Test
-    void 반주법_목록_조회_성공_패키지별_진행률_계산() {
+    @DisplayName("getAccompanimentList - 패키지별 진행률을 계산해 반환한다")
+    void getAccompanimentList_success_calculatesProgressPerPackage() {
         Long userId = 1L;
 
         Learning chapter1 = mock(Learning.class);
@@ -283,7 +292,8 @@ class LearningServiceTest {
     }
 
     @Test
-    void 반주법_목록_조회_결과_없으면_집계_쿼리_안_탐() {
+    @DisplayName("getAccompanimentList - 결과가 없으면 집계 쿼리를 하지 않는다")
+    void getAccompanimentList_empty_doesNotQueryAggregation() {
         when(userRepository.existsById(1L)).thenReturn(true);
         when(learningRepository.findByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory.ACCOMPANIMENT))
                 .thenReturn(Collections.emptyList());
@@ -298,7 +308,8 @@ class LearningServiceTest {
     }
 
     @Test
-    void 반주법_목록_조회_실패_유저_없음() {
+    @DisplayName("getAccompanimentList - 유저가 없으면 404")
+    void getAccompanimentList_userNotFound_throws404() {
         when(userRepository.existsById(1L)).thenReturn(false);
 
         assertThatThrownBy(() -> learningService.getAccompanimentList(1L))
@@ -308,7 +319,8 @@ class LearningServiceTest {
     }
 
     @Test
-    void 학습_홈_조회_성공_최근_학습_포함() {
+    @DisplayName("getHome - 최근 학습을 포함해 반환한다")
+    void getHome_success_includesRecentLearning() {
         Long userId = 1L;
 
         Learning currentPackage = mock(Learning.class);
@@ -352,7 +364,8 @@ class LearningServiceTest {
     }
 
     @Test
-    void 학습_홈_조회_최근_학습_기록_없으면_currentLearning_null() {
+    @DisplayName("getHome - 최근 학습 기록이 없으면 currentLearning은 null이다")
+    void getHome_noRecentLearning_currentLearningIsNull() {
         Long userId = 1L;
 
         when(userRepository.existsById(userId)).thenReturn(true);
@@ -370,7 +383,8 @@ class LearningServiceTest {
     }
 
     @Test
-    void 학습_홈_조회_실패_유저_없음() {
+    @DisplayName("getHome - 유저가 없으면 404")
+    void getHome_userNotFound_throws404() {
         when(userRepository.existsById(1L)).thenReturn(false);
 
         assertThatThrownBy(() -> learningService.getHome(1L))
