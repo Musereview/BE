@@ -1,6 +1,7 @@
 package com.mr.domain.learning.entity;
 
 import com.mr.domain.learning.exception.LearningErrorStatus;
+import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
@@ -41,8 +42,9 @@ public class UserLearningProgress extends BaseTimeEntity {
     private Long id;
 
     // 유저 아이디
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     // 학습 아이디
     @ManyToOne(fetch = FetchType.LAZY)
@@ -63,20 +65,20 @@ public class UserLearningProgress extends BaseTimeEntity {
     private LocalDateTime lastStudiedAt;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private UserLearningProgress(Long userId, Learning learning, LearningStep learningStep,
+    private UserLearningProgress(User user, Learning learning, LearningStep learningStep,
                                  Integer score, LocalDateTime lastStudiedAt) {
-        this.userId = userId;
+        this.user = user;
         this.learning = learning;
         this.learningStep = learningStep;
         this.score = score;
         this.lastStudiedAt = lastStudiedAt != null ? lastStudiedAt : LocalDateTime.now();
     }
 
-    public static UserLearningProgress create(Long userId, Learning learning, LearningStep learningStep) {
+    public static UserLearningProgress create(User user, Learning learning, LearningStep learningStep) {
         validateLearningAndStep(learning, learningStep);
 
         return UserLearningProgress.builder()
-                .userId(userId)
+                .user(user)
                 .learning(learning)
                 .learningStep(learningStep)
                 .lastStudiedAt(LocalDateTime.now())
@@ -97,5 +99,13 @@ public class UserLearningProgress extends BaseTimeEntity {
     public void updateProgress(Integer score, LocalDateTime lastStudiedAt) {
         this.score = score;
         this.lastStudiedAt = lastStudiedAt != null ? lastStudiedAt : LocalDateTime.now();
+    }
+
+    // 점수 기준 학습 진행 상태 파악
+    public String getLearningStatus() {
+        if (this.score == null) {
+            return "NOT_STARTED";
+        }
+        return this.score >= 90 ? "COMPLETED" : "RETRY";
     }
 }
