@@ -1,9 +1,8 @@
 package com.mr.domain.backingTrack.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.domain.backingTrack.dto.req.BackingTrackSaveRequestDTO;
-import com.mr.domain.backingTrack.dto.res.BackingTrackSaveResponseDTO;
+import com.mr.domain.backingTrack.dto.res.BackingTrackCreateResponseDTO;
+import com.mr.domain.backingTrack.dto.res.BackingTrackUpdateResponseDTO;
 import com.mr.domain.backingTrack.entity.BackingTrack;
 import com.mr.domain.backingTrack.entity.ChordProgression;
 import com.mr.domain.backingTrack.exception.BackingTrackErrorStatus;
@@ -30,7 +29,7 @@ public class BackingTrackService {
 
     // 백킹트랙 생성
     @Transactional
-    public BackingTrackSaveResponseDTO.SaveResultDTO createBackingTrack(
+    public BackingTrackCreateResponseDTO.CreateResultDTO createBackingTrack(
             Long userId,
             BackingTrackSaveRequestDTO.SaveDTO request
     ){
@@ -55,18 +54,19 @@ public class BackingTrackService {
                 request.level()
         );
 
-        request.chordProgression().forEach(chordDTO ->
-                ChordProgression.create(
-                        backingTrack,
-                        chordDTO.sequenceNo(),
-                        chordDTO.measureNo(),
-                        chordDTO.chordName()
-                )
-        );
+        request.chordProgression().forEach(chordDTO -> {
+            ChordProgression chord = ChordProgression.create(
+                    backingTrack,
+                    chordDTO.sequenceNo(),
+                    chordDTO.measureNo(),
+                    chordDTO.chordName()
+            );
+            backingTrack.addChordProgression(chord);
+        });
 
         BackingTrack savedTrack = backingTrackRepository.save(backingTrack);
 
-        return BackingTrackSaveResponseDTO.SaveResultDTO.of(
+        return BackingTrackCreateResponseDTO.CreateResultDTO.of(
                 savedTrack.getId(),
                 savedTrack.getTitle(),
                 savedTrack.getCreatedAt()
@@ -75,14 +75,14 @@ public class BackingTrackService {
 
     // 백킹트랙 수정
     @Transactional
-    public BackingTrackSaveResponseDTO.SaveResultDTO updateBackingTrack(
+    public BackingTrackUpdateResponseDTO.UpdateResultDTO updateBackingTrack(
             Long userId,
             Long backingTrackId,
             BackingTrackSaveRequestDTO.SaveDTO request
     ) {
         validateChordDuplicates(request.chordProgression());
 
-        BackingTrack backingTrack = backingTrackRepository.findById(backingTrackId)
+        BackingTrack backingTrack = backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId)
                 .orElseThrow(() -> new GeneralException(BackingTrackErrorStatus.BACKING_TRACK_NOT_FOUND));
 
         // 수정 권한 검증 (작성자 본인 확인)
@@ -106,19 +106,21 @@ public class BackingTrackService {
 
         // 기존 코드 진행 비우고 새로운 리스트로 교체
         backingTrack.getChordProgressions().clear();
-        request.chordProgression().forEach(chordDTO ->
-                ChordProgression.create(
-                        backingTrack,
-                        chordDTO.sequenceNo(),
-                        chordDTO.measureNo(),
-                        chordDTO.chordName()
-                )
-        );
 
-        return BackingTrackSaveResponseDTO.SaveResultDTO.of(
+        request.chordProgression().forEach(chordDTO -> {
+            ChordProgression chord = ChordProgression.create(
+                    backingTrack,
+                    chordDTO.sequenceNo(),
+                    chordDTO.measureNo(),
+                    chordDTO.chordName()
+            );
+            backingTrack.addChordProgression(chord);
+        });
+
+        return BackingTrackUpdateResponseDTO.UpdateResultDTO.of(
                 backingTrack.getId(),
                 backingTrack.getTitle(),
-                backingTrack.getCreatedAt()
+                backingTrack.getUpdatedAt()
         );
     }
 

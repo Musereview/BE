@@ -4,9 +4,9 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
 
-public class BackingTrackSaveResponseDTO {
+public class BackingTrackCreateResponseDTO {
 
-    public record SaveResultDTO(
+    public record CreateResultDTO(
             Long backingTrackId,
             String title,
 
@@ -14,8 +14,8 @@ public class BackingTrackSaveResponseDTO {
             @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
             LocalDateTime createdAt
     ) {
-        public static SaveResultDTO of(Long backingTrackId, String title, LocalDateTime createdAt) {
-            return new SaveResultDTO(backingTrackId, title, createdAt);
+        public static CreateResultDTO of(Long backingTrackId, String title, LocalDateTime createdAt) {
+            return new CreateResultDTO(backingTrackId, title, createdAt);
         }
     }
 }
