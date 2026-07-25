@@ -13,4 +13,6 @@ public interface LearningRepository extends JpaRepository<Learning, Long> {
 
     List<Learning> findByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
             LearningCategory category, LearningDifficulty difficulty);
+
+    List<Learning> findByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory category);
 }

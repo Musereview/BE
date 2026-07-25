@@ -1,5 +1,6 @@
 package com.mr.domain.learning.controller;
 
+import com.mr.domain.learning.dto.res.LearningAccompanimentListResponseDTO;
 import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningStepDetailResponseDTO;
@@ -197,6 +198,29 @@ class LearningControllerTest {
                 .thenThrow(new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
         mockMvc.perform(get("/api/learnings/theory").param("difficulty", "BEGINNER"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("USER_404_01"));
+    }
+
+    @Test
+    void 반주법_목록_조회_성공() throws Exception {
+        LearningAccompanimentListResponseDTO.AccompanimentItem item =
+                new LearningAccompanimentListResponseDTO.AccompanimentItem(5L, "Chapter 1", "설명", 10, 100);
+        when(learningService.getAccompanimentList(anyLong()))
+                .thenReturn(LearningAccompanimentListResponseDTO.AccompanimentListResultDTO.of(List.of(item)));
+
+        mockMvc.perform(get("/api/learnings/accompaniment"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalCount").value(1))
+                .andExpect(jsonPath("$.data.items[0].progressRate").value(100));
+    }
+
+    @Test
+    void 반주법_목록_조회_실패_유저_없음() throws Exception {
+        when(learningService.getAccompanimentList(anyLong()))
+                .thenThrow(new GeneralException(UserErrorStatus.USER_NOT_FOUND));
+
+        mockMvc.perform(get("/api/learnings/accompaniment"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("USER_404_01"));
     }

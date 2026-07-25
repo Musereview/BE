@@ -1,6 +1,7 @@
 package com.mr.domain.learning.service;
 
 import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
+import com.mr.domain.learning.dto.res.LearningAccompanimentListResponseDTO;
 import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
@@ -164,6 +165,45 @@ public class LearningService {
         List<ChordExample> chordExamples = chordExampleRepository.findByLearningStep_Id(learningStepId);
 
         return LearningStepDetailResponseDTO.StepDetailResultDTO.of(learning, learningStep, playingExample, chordExamples);
+    }
+
+    // 실전 반주법 패키지(ACCOMPANIMENT) 전체보기
+    public LearningAccompanimentListResponseDTO.AccompanimentListResultDTO getAccompanimentList(Long userId) {
+        ensureUserExists(userId);
+
+        List<Learning> learnings = learningRepository
+                .findByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory.ACCOMPANIMENT);
+        if (learnings.isEmpty()) {
+            return LearningAccompanimentListResponseDTO.AccompanimentListResultDTO.of(List.of());
+        }
+
+        List<Long> learningIds = learnings.stream().map(Learning::getId).toList();
+
+        Map<Long, Long> totalStepCountByLearningId = learningStepRepository.countByLearningIdIn(learningIds).stream()
+                .collect(Collectors.toMap(
+                        LearningStepRepository.LearningIdCount::getLearningId,
+                        LearningStepRepository.LearningIdCount::getStepCount));
+
+        Map<Long, Long> completedStepCountByLearningId = userLearningProgressRepository
+                .countCompletedStepsByUserIdAndLearningIdIn(userId, learningIds).stream()
+                .collect(Collectors.toMap(
+                        UserLearningProgressRepository.CompletedStepCount::getLearningId,
+                        UserLearningProgressRepository.CompletedStepCount::getCompletedStepCount));
+
+        List<LearningAccompanimentListResponseDTO.AccompanimentItem> items = learnings.stream()
+                .map(learning -> {
+                    long total = totalStepCountByLearningId.getOrDefault(learning.getId(), 0L);
+                    long completed = completedStepCountByLearningId.getOrDefault(learning.getId(), 0L);
+                    return LearningAccompanimentListResponseDTO.AccompanimentItem.of(
+                            learning, resolveProgressRate(completed, total));
+                })
+                .toList();
+
+        return LearningAccompanimentListResponseDTO.AccompanimentListResultDTO.of(items);
+    }
+
+    private int resolveProgressRate(long completedStepCount, long totalStepCount) {
+        return totalStepCount == 0 ? 0 : (int) Math.round((double) completedStepCount / totalStepCount * 100);
     }
 
     private void ensureUserExists(Long userId) {

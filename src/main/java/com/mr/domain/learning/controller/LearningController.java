@@ -1,6 +1,7 @@
 package com.mr.domain.learning.controller;
 
 import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
+import com.mr.domain.learning.dto.res.LearningAccompanimentListResponseDTO;
 import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
@@ -115,6 +116,19 @@ public class LearningController {
     ) {
         LearningTheoryListResponseDTO.TheoryListResultDTO result =
                 learningService.getTheoryList(userDetails.getUserId(), difficulty);
+        return ApiResponse.onSuccess(result);
+    }
+
+    @Operation(
+            summary = "실전 반주법 패키지(ACCOMPANIMENT) 전체보기",
+            description = "난이도 구분 없이 전체 목록을 제목 기준 이름순으로 조회합니다. 각 항목의 progressRate는 진행률(%)만 반환합니다."
+    )
+    @GetMapping("/accompaniment")
+    public ApiResponse<LearningAccompanimentListResponseDTO.AccompanimentListResultDTO> getAccompanimentList(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        LearningAccompanimentListResponseDTO.AccompanimentListResultDTO result =
+                learningService.getAccompanimentList(userDetails.getUserId());
         return ApiResponse.onSuccess(result);
     }
 }

@@ -1,5 +1,6 @@
 package com.mr.domain.learning.service;
 
+import com.mr.domain.learning.dto.res.LearningAccompanimentListResponseDTO;
 import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
 import com.mr.domain.learning.dto.res.LearningStepDetailResponseDTO;
 import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
@@ -16,6 +17,7 @@ import com.mr.domain.learning.repository.LearningRepository;
 import com.mr.domain.learning.repository.LearningStepRepository;
 import com.mr.domain.learning.repository.PlayingExampleRepository;
 import com.mr.domain.learning.repository.UserLearningProgressRepository;
+import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import org.junit.jupiter.api.Test;
@@ -30,7 +32,10 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -227,5 +232,75 @@ class LearningServiceTest {
                 .isInstanceOf(GeneralException.class)
                 .satisfies(e -> assertThat(((GeneralException) e).getCode())
                         .isEqualTo(LearningErrorStatus.LEARNING_STEP_NOT_FOUND));
+    }
+
+    @Test
+    void 반주법_목록_조회_성공_패키지별_진행률_계산() {
+        Long userId = 1L;
+
+        Learning chapter1 = mock(Learning.class);
+        when(chapter1.getId()).thenReturn(5L);
+        when(chapter1.getTitle()).thenReturn("Chapter 1");
+        when(chapter1.getSummary()).thenReturn("설명1");
+        when(chapter1.getEstimatedMinutes()).thenReturn(10);
+
+        Learning chapter2 = mock(Learning.class);
+        when(chapter2.getId()).thenReturn(6L);
+        when(chapter2.getTitle()).thenReturn("Chapter 2");
+        when(chapter2.getSummary()).thenReturn("설명2");
+        when(chapter2.getEstimatedMinutes()).thenReturn(10);
+
+        LearningStepRepository.LearningIdCount totalCh1 = mock(LearningStepRepository.LearningIdCount.class);
+        when(totalCh1.getLearningId()).thenReturn(5L);
+        when(totalCh1.getStepCount()).thenReturn(4L);
+        LearningStepRepository.LearningIdCount totalCh2 = mock(LearningStepRepository.LearningIdCount.class);
+        when(totalCh2.getLearningId()).thenReturn(6L);
+        when(totalCh2.getStepCount()).thenReturn(5L);
+
+        UserLearningProgressRepository.CompletedStepCount completedCh1 =
+                mock(UserLearningProgressRepository.CompletedStepCount.class);
+        when(completedCh1.getLearningId()).thenReturn(5L);
+        when(completedCh1.getCompletedStepCount()).thenReturn(4L);
+        // chapter2는 진행 기록 없음 → completed map에 아예 없음(0으로 처리돼야 함)
+
+        when(userRepository.existsById(userId)).thenReturn(true);
+        when(learningRepository.findByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory.ACCOMPANIMENT))
+                .thenReturn(List.of(chapter1, chapter2));
+        when(learningStepRepository.countByLearningIdIn(List.of(5L, 6L)))
+                .thenReturn(List.of(totalCh1, totalCh2));
+        when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningIdIn(userId, List.of(5L, 6L)))
+                .thenReturn(List.of(completedCh1));
+
+        LearningAccompanimentListResponseDTO.AccompanimentListResultDTO result =
+                learningService.getAccompanimentList(userId);
+
+        assertThat(result.totalCount()).isEqualTo(2);
+        assertThat(result.items().get(0).progressRate()).isEqualTo(100);
+        assertThat(result.items().get(1).progressRate()).isEqualTo(0);
+    }
+
+    @Test
+    void 반주법_목록_조회_결과_없으면_집계_쿼리_안_탐() {
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(learningRepository.findByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory.ACCOMPANIMENT))
+                .thenReturn(Collections.emptyList());
+
+        LearningAccompanimentListResponseDTO.AccompanimentListResultDTO result =
+                learningService.getAccompanimentList(1L);
+
+        assertThat(result.totalCount()).isZero();
+        assertThat(result.items()).isEmpty();
+        verify(learningStepRepository, never()).countByLearningIdIn(anyList());
+        verify(userLearningProgressRepository, never()).countCompletedStepsByUserIdAndLearningIdIn(anyLong(), anyList());
+    }
+
+    @Test
+    void 반주법_목록_조회_실패_유저_없음() {
+        when(userRepository.existsById(1L)).thenReturn(false);
+
+        assertThatThrownBy(() -> learningService.getAccompanimentList(1L))
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getCode())
+                        .isEqualTo(UserErrorStatus.USER_NOT_FOUND));
     }
 }
