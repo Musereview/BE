@@ -1,4 +1,4 @@
-package com.mr.domain.user.dto;
+package com.mr.domain.user.dto.res;
 
 import com.mr.domain.user.entity.enums.TheoryLevel;
 import io.swagger.v3.oas.annotations.media.Schema;

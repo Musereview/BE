@@ -10,8 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mr.domain.user.dto.UserProfileRequestDTO;
-import com.mr.domain.user.dto.UserProfileResponseDTO;
+import com.mr.domain.user.dto.req.UserProfileRequestDTO;
+import com.mr.domain.user.dto.res.UserProfileResponseDTO;
 import com.mr.domain.user.entity.enums.TheoryLevel;
 import com.mr.domain.user.exception.StudentErrorStatus;
 import com.mr.domain.user.exception.UserErrorStatus;

@@ -1,7 +1,7 @@
 package com.mr.domain.user.controller;
 
-import com.mr.domain.user.dto.UserProfileRequestDTO;
-import com.mr.domain.user.dto.UserProfileResponseDTO;
+import com.mr.domain.user.dto.req.UserProfileRequestDTO;
+import com.mr.domain.user.dto.res.UserProfileResponseDTO;
 import com.mr.domain.user.service.UserProfileService;
 import com.mr.global.apipayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
