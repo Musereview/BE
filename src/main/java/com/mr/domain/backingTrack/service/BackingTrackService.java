@@ -108,6 +108,8 @@ public class BackingTrackService {
         // 기존 코드 진행 비우고 새로운 리스트로 교체
         backingTrack.getChordProgressions().clear();
 
+        backingTrackRepository.flush(); // 완전히 비우도록
+
         request.chordProgression().forEach(chordDTO -> {
             ChordProgression chord = ChordProgression.create(
                     backingTrack,
