@@ -3,6 +3,7 @@ package com.mr.domain.learning.controller;
 import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
 import com.mr.domain.learning.dto.res.LearningAccompanimentListResponseDTO;
 import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
+import com.mr.domain.learning.dto.res.LearningHomeResponseDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
 import com.mr.domain.learning.dto.res.LearningResultResponseDTO;
@@ -32,6 +33,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class LearningController {
 
     private final LearningService learningService;
+
+    @Operation(
+            summary = "학습 홈 조회",
+            description = "최근 학습 이어서 하기(currentLearning), 학습 주제 대표 3개(난이도별), 실전 반주법 대표 3개를 조회합니다."
+    )
+    @GetMapping("/home")
+    public ApiResponse<LearningHomeResponseDTO.HomeResultDTO> getHome(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        LearningHomeResponseDTO.HomeResultDTO result = learningService.getHome(userDetails.getUserId());
+        return ApiResponse.onSuccess(result);
+    }
 
     @Operation(
             summary = "학습 결과 저장",

@@ -2,6 +2,7 @@ package com.mr.domain.learning.service;
 
 import com.mr.domain.learning.dto.res.LearningAccompanimentListResponseDTO;
 import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
+import com.mr.domain.learning.dto.res.LearningHomeResponseDTO;
 import com.mr.domain.learning.dto.res.LearningStepDetailResponseDTO;
 import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
 import com.mr.domain.learning.entity.ChordExample;
@@ -32,8 +33,10 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -299,6 +302,78 @@ class LearningServiceTest {
         when(userRepository.existsById(1L)).thenReturn(false);
 
         assertThatThrownBy(() -> learningService.getAccompanimentList(1L))
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getCode())
+                        .isEqualTo(UserErrorStatus.USER_NOT_FOUND));
+    }
+
+    @Test
+    void 학습_홈_조회_성공_최근_학습_포함() {
+        Long userId = 1L;
+
+        Learning currentPackage = mock(Learning.class);
+        when(currentPackage.getId()).thenReturn(1L);
+        when(currentPackage.getTitle()).thenReturn("Tension Notes");
+        when(currentPackage.getDifficulty()).thenReturn(LearningDifficulty.ADVANCED);
+
+        LearningStep lastStep = mock(LearningStep.class);
+        when(lastStep.getTitle()).thenReturn("11th 텐션 노트 활용하기");
+
+        UserLearningProgress latest = mock(UserLearningProgress.class);
+        when(latest.getLearning()).thenReturn(currentPackage);
+        when(latest.getLearningStep()).thenReturn(lastStep);
+
+        when(userRepository.existsById(userId)).thenReturn(true);
+        when(userLearningProgressRepository.findFirstByUser_UserIdOrderByLastStudiedAtDesc(userId))
+                .thenReturn(Optional.of(latest));
+        when(learningStepRepository.countByLearningId(1L)).thenReturn(4L);
+        when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, 1L)).thenReturn(1L);
+
+        Learning beginnerTheory = mock(Learning.class);
+        when(beginnerTheory.getId()).thenReturn(2L);
+        when(beginnerTheory.getDifficulty()).thenReturn(LearningDifficulty.BEGINNER);
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                LearningCategory.THEORY, LearningDifficulty.BEGINNER)).thenReturn(Optional.of(beginnerTheory));
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                LearningCategory.THEORY, LearningDifficulty.INTERMEDIATE)).thenReturn(Optional.empty());
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                LearningCategory.THEORY, LearningDifficulty.ADVANCED)).thenReturn(Optional.empty());
+
+        when(learningRepository.findTop3ByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory.ACCOMPANIMENT))
+                .thenReturn(Collections.emptyList());
+
+        LearningHomeResponseDTO.HomeResultDTO result = learningService.getHome(userId);
+
+        assertThat(result.currentLearning()).isNotNull();
+        assertThat(result.currentLearning().stepTitle()).isEqualTo("11th 텐션 노트 활용하기");
+        assertThat(result.currentLearning().progressRate()).isEqualTo(25);
+        assertThat(result.theoryPackages()).hasSize(1);
+        assertThat(result.accompanimentPackages()).isEmpty();
+    }
+
+    @Test
+    void 학습_홈_조회_최근_학습_기록_없으면_currentLearning_null() {
+        Long userId = 1L;
+
+        when(userRepository.existsById(userId)).thenReturn(true);
+        when(userLearningProgressRepository.findFirstByUser_UserIdOrderByLastStudiedAtDesc(userId))
+                .thenReturn(Optional.empty());
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                eq(LearningCategory.THEORY), any()))
+                .thenReturn(Optional.empty());
+        when(learningRepository.findTop3ByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory.ACCOMPANIMENT))
+                .thenReturn(Collections.emptyList());
+
+        LearningHomeResponseDTO.HomeResultDTO result = learningService.getHome(userId);
+
+        assertThat(result.currentLearning()).isNull();
+    }
+
+    @Test
+    void 학습_홈_조회_실패_유저_없음() {
+        when(userRepository.existsById(1L)).thenReturn(false);
+
+        assertThatThrownBy(() -> learningService.getHome(1L))
                 .isInstanceOf(GeneralException.class)
                 .satisfies(e -> assertThat(((GeneralException) e).getCode())
                         .isEqualTo(UserErrorStatus.USER_NOT_FOUND));

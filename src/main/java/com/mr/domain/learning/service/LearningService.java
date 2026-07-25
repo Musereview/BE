@@ -3,6 +3,7 @@ package com.mr.domain.learning.service;
 import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
 import com.mr.domain.learning.dto.res.LearningAccompanimentListResponseDTO;
 import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
+import com.mr.domain.learning.dto.res.LearningHomeResponseDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
 import com.mr.domain.learning.dto.res.LearningResultResponseDTO;
@@ -173,8 +174,65 @@ public class LearningService {
 
         List<Learning> learnings = learningRepository
                 .findByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory.ACCOMPANIMENT);
+
+        List<LearningAccompanimentListResponseDTO.AccompanimentItem> items = toAccompanimentItems(userId, learnings);
+
+        return LearningAccompanimentListResponseDTO.AccompanimentListResultDTO.of(items);
+    }
+
+    // 학습 홈 조회
+    public LearningHomeResponseDTO.HomeResultDTO getHome(Long userId) {
+        ensureUserExists(userId);
+
+        LearningHomeResponseDTO.CurrentLearning currentLearning = buildCurrentLearning(userId);
+
+        List<LearningHomeResponseDTO.TheoryPackageItem> theoryPackages = List.of(
+                        LearningDifficulty.BEGINNER, LearningDifficulty.INTERMEDIATE, LearningDifficulty.ADVANCED)
+                .stream()
+                .flatMap(difficulty -> learningRepository
+                        .findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(LearningCategory.THEORY, difficulty)
+                        .stream())
+                .map(LearningHomeResponseDTO.TheoryPackageItem::from)
+                .toList();
+
+        List<Learning> accompanimentLearnings = learningRepository
+                .findTop3ByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory.ACCOMPANIMENT);
+        List<LearningAccompanimentListResponseDTO.AccompanimentItem> accompanimentPackages =
+                toAccompanimentItems(userId, accompanimentLearnings);
+
+        return LearningHomeResponseDTO.HomeResultDTO.of(currentLearning, theoryPackages, accompanimentPackages);
+    }
+
+    private LearningHomeResponseDTO.CurrentLearning buildCurrentLearning(Long userId) {
+        return userLearningProgressRepository.findFirstByUser_UserIdOrderByLastStudiedAtDesc(userId)
+                .map(latest -> {
+                    Learning learning = latest.getLearning();
+                    long totalStepCount = learningStepRepository.countByLearningId(learning.getId());
+                    long completedStepCount = userLearningProgressRepository
+                            .countCompletedStepsByUserIdAndLearningId(userId, learning.getId());
+
+                    return LearningHomeResponseDTO.CurrentLearning.of(
+                            learning,
+                            latest.getLearningStep().getTitle(),
+                            resolveProgressRate(completedStepCount, totalStepCount));
+                })
+                .orElse(null);
+    }
+
+    private List<LearningAccompanimentListResponseDTO.AccompanimentItem> toAccompanimentItems(
+            Long userId, List<Learning> learnings) {
+        Map<Long, Integer> progressRateByLearningId = buildProgressRateMap(userId, learnings);
+
+        return learnings.stream()
+                .map(learning -> LearningAccompanimentListResponseDTO.AccompanimentItem.of(
+                        learning, progressRateByLearningId.getOrDefault(learning.getId(), 0)))
+                .toList();
+    }
+
+    // 여러 학습에 대한 패키지 단위 진행률(%)을 한 번에 계산 (N+1 방지, 배치 집계 쿼리 재사용)
+    private Map<Long, Integer> buildProgressRateMap(Long userId, List<Learning> learnings) {
         if (learnings.isEmpty()) {
-            return LearningAccompanimentListResponseDTO.AccompanimentListResultDTO.of(List.of());
+            return Map.of();
         }
 
         List<Long> learningIds = learnings.stream().map(Learning::getId).toList();
@@ -190,16 +248,11 @@ public class LearningService {
                         UserLearningProgressRepository.CompletedStepCount::getLearningId,
                         UserLearningProgressRepository.CompletedStepCount::getCompletedStepCount));
 
-        List<LearningAccompanimentListResponseDTO.AccompanimentItem> items = learnings.stream()
-                .map(learning -> {
-                    long total = totalStepCountByLearningId.getOrDefault(learning.getId(), 0L);
-                    long completed = completedStepCountByLearningId.getOrDefault(learning.getId(), 0L);
-                    return LearningAccompanimentListResponseDTO.AccompanimentItem.of(
-                            learning, resolveProgressRate(completed, total));
-                })
-                .toList();
-
-        return LearningAccompanimentListResponseDTO.AccompanimentListResultDTO.of(items);
+        return learningIds.stream().collect(Collectors.toMap(
+                id -> id,
+                id -> resolveProgressRate(
+                        completedStepCountByLearningId.getOrDefault(id, 0L),
+                        totalStepCountByLearningId.getOrDefault(id, 0L))));
     }
 
     private int resolveProgressRate(long completedStepCount, long totalStepCount) {

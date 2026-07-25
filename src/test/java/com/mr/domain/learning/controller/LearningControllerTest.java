@@ -2,6 +2,7 @@ package com.mr.domain.learning.controller;
 
 import com.mr.domain.learning.dto.res.LearningAccompanimentListResponseDTO;
 import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
+import com.mr.domain.learning.dto.res.LearningHomeResponseDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningStepDetailResponseDTO;
 import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
@@ -221,6 +222,45 @@ class LearningControllerTest {
                 .thenThrow(new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
         mockMvc.perform(get("/api/learnings/accompaniment"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("USER_404_01"));
+    }
+
+    @Test
+    void 학습_홈_조회_성공() throws Exception {
+        LearningHomeResponseDTO.CurrentLearning currentLearning =
+                new LearningHomeResponseDTO.CurrentLearning(1L, "Tension Notes", "ADVANCED", "11th 텐션 노트 활용하기", 10);
+        LearningHomeResponseDTO.TheoryPackageItem theoryItem =
+                new LearningHomeResponseDTO.TheoryPackageItem(2L, "Diatonic Chords", "BEGINNER", "요약");
+        LearningAccompanimentListResponseDTO.AccompanimentItem accompanimentItem =
+                new LearningAccompanimentListResponseDTO.AccompanimentItem(5L, "Chapter 1", "설명", 10, 100);
+
+        when(learningService.getHome(anyLong())).thenReturn(LearningHomeResponseDTO.HomeResultDTO.of(
+                currentLearning, List.of(theoryItem), List.of(accompanimentItem)));
+
+        mockMvc.perform(get("/api/learnings/home"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.currentLearning.stepTitle").value("11th 텐션 노트 활용하기"))
+                .andExpect(jsonPath("$.data.theoryPackages[0].title").value("Diatonic Chords"))
+                .andExpect(jsonPath("$.data.accompanimentPackages[0].progressRate").value(100));
+    }
+
+    @Test
+    void 학습_홈_조회_성공_최근_학습_없으면_currentLearning_null() throws Exception {
+        when(learningService.getHome(anyLong())).thenReturn(
+                LearningHomeResponseDTO.HomeResultDTO.of(null, List.of(), List.of()));
+
+        mockMvc.perform(get("/api/learnings/home"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.currentLearning").doesNotExist());
+    }
+
+    @Test
+    void 학습_홈_조회_실패_유저_없음() throws Exception {
+        when(learningService.getHome(anyLong()))
+                .thenThrow(new GeneralException(UserErrorStatus.USER_NOT_FOUND));
+
+        mockMvc.perform(get("/api/learnings/home"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("USER_404_01"));
     }
