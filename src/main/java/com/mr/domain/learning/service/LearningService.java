@@ -1,6 +1,7 @@
 package com.mr.domain.learning.service;
 
 import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
+import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
 import com.mr.domain.learning.dto.res.LearningResultResponseDTO;
@@ -27,6 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -116,6 +120,35 @@ public class LearningService {
                 .findByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(LearningCategory.THEORY, parsedDifficulty);
 
         return LearningTheoryListResponseDTO.TheoryListResultDTO.from(learnings);
+    }
+
+    // 학습 커리큘럼 조회
+    public LearningCurriculumResponseDTO.CurriculumResultDTO getCurriculum(Long userId, Long learningId) {
+        Learning learning = getActiveLearningOrThrow(learningId);
+
+        long totalStepCount = learningStepRepository.countByLearningId(learningId);
+        long completedStepCount = userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, learningId);
+
+        List<LearningStep> steps = learningStepRepository.findByLearning_IdOrderByStepNoAsc(learningId);
+        Map<Long, UserLearningProgress> progressByStepId = userLearningProgressRepository
+                .findByUser_UserIdAndLearning_Id(userId, learningId).stream()
+                .collect(Collectors.toMap(p -> p.getLearningStep().getId(), Function.identity()));
+
+        List<LearningCurriculumResponseDTO.StepItem> stepItems = steps.stream()
+                .map(step -> toStepItem(step, progressByStepId.get(step.getId())))
+                .toList();
+
+        return LearningCurriculumResponseDTO.CurriculumResultDTO.of(
+                learning,
+                LearningCurriculumResponseDTO.ProgressInfo.of(completedStepCount, totalStepCount),
+                stepItems
+        );
+    }
+
+    private LearningCurriculumResponseDTO.StepItem toStepItem(LearningStep step, UserLearningProgress progress) {
+        String status = progress != null ? progress.getLearningStatus() : "NOT_STARTED";
+        Integer score = progress != null ? progress.getScore() : null;
+        return LearningCurriculumResponseDTO.StepItem.of(step, status, score);
     }
 
     private void ensureUserExists(Long userId) {

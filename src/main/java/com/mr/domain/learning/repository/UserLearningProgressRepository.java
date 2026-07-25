@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface UserLearningProgressRepository extends JpaRepository<UserLearningProgress, Long> {
@@ -14,4 +15,7 @@ public interface UserLearningProgressRepository extends JpaRepository<UserLearni
     @Query("SELECT COUNT(ulp) FROM UserLearningProgress ulp " +
             "WHERE ulp.user.userId = :userId AND ulp.learning.id = :learningId AND ulp.score >= 90")
     long countCompletedStepsByUserIdAndLearningId(@Param("userId") Long userId, @Param("learningId") Long learningId);
+
+    // 특정 학습의 단계별 진행 기록 전체 조회 (커리큘럼 조회에서 단계별 status/score 매핑용)
+    List<UserLearningProgress> findByUser_UserIdAndLearning_Id(Long userId, Long learningId);
 }

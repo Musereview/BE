@@ -1,6 +1,7 @@
 package com.mr.domain.learning.controller;
 
 import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
+import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
 import com.mr.domain.learning.dto.res.LearningResultResponseDTO;
@@ -55,6 +56,20 @@ public class LearningController {
             @PathVariable Long learningId
     ) {
         LearningProgressResponseDTO.ProgressResultDTO result = learningService.getLearningProgress(userDetails.getUserId(), learningId);
+        return ApiResponse.onSuccess(result);
+    }
+
+    @Operation(
+            summary = "학습 커리큘럼 조회",
+            description = "패키지 상세 정보, 전체 진행률(progress), 단계별 목록(상태·점수 포함)을 조회합니다."
+    )
+    @GetMapping("/{learningId}")
+    public ApiResponse<LearningCurriculumResponseDTO.CurriculumResultDTO> getCurriculum(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long learningId
+    ) {
+        LearningCurriculumResponseDTO.CurriculumResultDTO result =
+                learningService.getCurriculum(userDetails.getUserId(), learningId);
         return ApiResponse.onSuccess(result);
     }
 

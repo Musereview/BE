@@ -1,5 +1,6 @@
 package com.mr.domain.learning.controller;
 
+import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
 import com.mr.domain.learning.exception.LearningErrorStatus;
@@ -53,6 +54,34 @@ class LearningControllerTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void 커리큘럼_조회_성공() throws Exception {
+        LearningCurriculumResponseDTO.ProgressInfo progress =
+                new LearningCurriculumResponseDTO.ProgressInfo(1, 4, 25);
+        LearningCurriculumResponseDTO.StepItem step = new LearningCurriculumResponseDTO.StepItem(
+                11L, 1, "9th 텐션 노트 활용하기", "설명", 10, "COMPLETED", 93);
+        LearningCurriculumResponseDTO.CurriculumResultDTO response = new LearningCurriculumResponseDTO.CurriculumResultDTO(
+                1L, "Tension Notes", "부제목", "ADVANCED", "이론 설명", "연습 팁", progress, List.of(step));
+
+        when(learningService.getCurriculum(anyLong(), anyLong())).thenReturn(response);
+
+        mockMvc.perform(get("/api/learnings/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.learningId").value(1))
+                .andExpect(jsonPath("$.data.progress.progressRate").value(25))
+                .andExpect(jsonPath("$.data.steps[0].status").value("COMPLETED"));
+    }
+
+    @Test
+    void 커리큘럼_조회_실패_학습_없음() throws Exception {
+        when(learningService.getCurriculum(anyLong(), anyLong()))
+                .thenThrow(new GeneralException(LearningErrorStatus.LEARNING_NOT_FOUND));
+
+        mockMvc.perform(get("/api/learnings/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("LEARNING_404_01"));
     }
 
     @Test
