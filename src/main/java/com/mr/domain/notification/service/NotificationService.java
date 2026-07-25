@@ -19,14 +19,14 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
 
     public NotificationListDTO getNotificationList(Long userId, Pageable pageable){
-        Page<Notification> notificationPage = notificationRepository.findAllByUserIdAndDeletedAtIsNull(userId, pageable);
+        Page<Notification> notificationPage = notificationRepository.findAllByUser_UserIdAndDeletedAtIsNull(userId, pageable);
         return  NotificationListDTO.of(notificationPage);
     }
 
     // 알림 읽음 처리
     @Transactional
     public void readNotification(Long userId, Long notificationId) {
-        Notification notification = notificationRepository.findById(notificationId)
+        Notification notification = notificationRepository.findByIdAndDeletedAtIsNull(notificationId)
                 .orElseThrow(() -> new GeneralException(NotificationErrorStatus.NOTIFICATION_NOT_FOUND));
 
         // 본인 알림이 맞는지 검증 (선택 사항이나 보안상 권장)

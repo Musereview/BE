@@ -8,9 +8,13 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
+
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-    Page<Notification> findAllByUserIdAndDeletedAtIsNull(Long userId, Pageable pageable);
+    Page<Notification> findAllByUser_UserIdAndDeletedAtIsNull(Long userId, Pageable pageable);
+
+    Optional<Notification> findByIdAndDeletedAtIsNull(Long id);
 
     @Modifying(clearAutomatically = true)
     @Query("update Notification n set n.isRead = true where n.user.userId = :userId and n.isRead = false and n.deletedAt is null")
