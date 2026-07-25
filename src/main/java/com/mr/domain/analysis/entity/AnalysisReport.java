@@ -20,8 +20,8 @@ public class AnalysisReport extends BaseTimeEntity {
     @Column(name = "analysis_report_id")
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "analysis_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "analysis_id", nullable = false, unique = true)
     private Analysis analysis;
 
     @Enumerated(EnumType.STRING)
