@@ -37,6 +37,7 @@ public class BackingTrackService {
                 .orElseThrow(()-> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
         validateChordDuplicates(request.chordProgression());
+        validateChordSequence(request.timeSignature(), request.chordProgression());
 
         BackingTrack backingTrack = BackingTrack.create(
                 user,
@@ -81,6 +82,7 @@ public class BackingTrackService {
             BackingTrackSaveRequestDTO.SaveDTO request
     ) {
         validateChordDuplicates(request.chordProgression());
+        validateChordSequence(request.timeSignature(), request.chordProgression());
 
         BackingTrack backingTrack = backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId)
                 .orElseThrow(() -> new GeneralException(BackingTrackErrorStatus.BACKING_TRACK_NOT_FOUND));
@@ -132,6 +134,18 @@ public class BackingTrackService {
 
         if (hasDuplicates) {
             throw new GeneralException(BackingTrackErrorStatus.DUPLICATE_CHORD_POSITION);
+        }
+    }
+
+    private void validateChordSequence(String timeSignature, List<BackingTrackSaveRequestDTO.ChordProgressionDTO> chordProgressions) {
+        // 4/4 박이라면 분자인 4를 추출
+        int maxSequencePerMeasure = Integer.parseInt(timeSignature.split("/")[0]);
+
+        for (BackingTrackSaveRequestDTO.ChordProgressionDTO chord : chordProgressions) {
+            // 만약 4/4박자인데 sequenceNo가 5 이상으로 들어오면 예외 발생
+            if (chord.sequenceNo() > maxSequencePerMeasure) {
+                throw new GeneralException(BackingTrackErrorStatus.INVALID_CHORD_SEQUENCE);
+            }
         }
     }
 }
