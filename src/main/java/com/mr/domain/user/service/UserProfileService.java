@@ -6,8 +6,8 @@ import com.mr.domain.subscriptions.entity.Subscription;
 import com.mr.domain.subscriptions.entity.enums.SubscriptionTier;
 import com.mr.domain.subscriptions.exception.SubscriptionErrorStatus;
 import com.mr.domain.subscriptions.repository.SubscriptionRepository;
-import com.mr.domain.user.dto.UserProfileRequestDTO;
-import com.mr.domain.user.dto.UserProfileResponseDTO;
+import com.mr.domain.user.dto.req.UserProfileRequestDTO;
+import com.mr.domain.user.dto.res.UserProfileResponseDTO;
 import com.mr.domain.user.entity.Instrument;
 import com.mr.domain.user.entity.Student;
 import com.mr.domain.user.entity.StudentInstrument;
@@ -82,8 +82,9 @@ public class UserProfileService {
 
         String tier = validateSubscriptionTier(request.subscriptionTier());
 
-        ensureNicknameNotTaken(user.getUserId(), request.nickname());
-        user.updateNickname(request.nickname());
+        String trimmedNickname = trimNickname(request.nickname());
+        ensureNicknameNotTaken(user.getUserId(), trimmedNickname);
+        user.updateNickname(trimmedNickname);
 
         Student student;
         try {
@@ -117,8 +118,9 @@ public class UserProfileService {
         User user = getUser(userId);
         Student student = getStudent(user);
 
-        ensureNicknameNotTaken(user.getUserId(), request.nickname());
-        user.updateNickname(request.nickname());
+        String trimmedNickname = trimNickname(request.nickname());
+        ensureNicknameNotTaken(user.getUserId(), trimmedNickname);
+        user.updateNickname(trimmedNickname);
         student.updateTheoryLevel(request.skillLevel());
 
         return UserProfileResponseDTO.UpdateResponse.builder()
@@ -151,8 +153,11 @@ public class UserProfileService {
         return subscriptionTier;
     }
 
-    private void ensureNicknameNotTaken(Long userId, String requestedNickname) {
-        String trimmedNickname = requestedNickname == null ? null : requestedNickname.trim();
+    private String trimNickname(String nickname) {
+        return nickname == null ? null : nickname.trim();
+    }
+
+    private void ensureNicknameNotTaken(Long userId, String trimmedNickname) {
         if (userRepository.existsByNicknameAndUserIdNot(trimmedNickname, userId)) {
             throw new GeneralException(UserErrorStatus.NICKNAME_DUPLICATED);
         }
