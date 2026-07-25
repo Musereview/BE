@@ -101,11 +101,11 @@ public class UserLearningProgress extends BaseTimeEntity {
         this.lastStudiedAt = lastStudiedAt != null ? lastStudiedAt : LocalDateTime.now();
     }
 
-    // 점수 기준 학습 진행 상태 파악/ 점수는 임시 값
+    // 점수 기준 학습 진행 상태 파악
     public String getLearningStatus() {
         if (this.score == null) {
-            return "BEFORE_START";
+            return "NOT_STARTED";
         }
-        return this.score >= 80 ? "COMPLETED" : "IN_PROGRESS";
+        return this.score >= 90 ? "COMPLETED" : "RETRY";
     }
 }

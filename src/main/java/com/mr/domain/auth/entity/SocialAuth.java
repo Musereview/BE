@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-// TODO: 추후 User 도메인 완성 시 단방향/양방향 인덱스 추가
+// TODO: 추후 User 도메인 완성 시 인덱스 추가
 @Table(
         name = "social_auth",
         uniqueConstraints = {
@@ -29,7 +29,7 @@ public class SocialAuth extends BaseCreatedEntity {
     @Column(name = "social_auth_id")
     private Long id;
 
-    // TODO: User 엔티티 연관관계 연결 예정
+    // TODO: User연결 예정
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
@@ -55,7 +55,7 @@ public class SocialAuth extends BaseCreatedEntity {
     @Builder(access = AccessLevel.PRIVATE)
     private SocialAuth(Long userId, SocialType socialType, String socialId, String refreshToken,
                        String refreshTokenHash, LocalDateTime expiredAt, String deviceInfo) {
-        // 컴파일 에러 수정: 실제 정의된 validateUserAccount 메서드로 매핑
+
         validateUserAccount(userId);
         validateUserAccount(socialType);
         validateUserAccount(socialId);
@@ -116,7 +116,6 @@ public class SocialAuth extends BaseCreatedEntity {
         this.deviceInfo = deviceInfo;
     }
 
-    // 최신 토큰 만료 및 폐기 처리
     public void expireToken() {
         this.refreshToken = null;
         this.refreshTokenHash = null;
