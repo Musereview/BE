@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -128,7 +129,7 @@ public class LearningService {
             throw new GeneralException(LearningErrorStatus.INVALID_DIFFICULTY);
         }
         try {
-            return LearningDifficulty.valueOf(difficulty);
+            return LearningDifficulty.valueOf(difficulty.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             throw new GeneralException(LearningErrorStatus.INVALID_DIFFICULTY);
         }
