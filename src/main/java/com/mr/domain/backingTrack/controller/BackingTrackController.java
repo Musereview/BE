@@ -4,8 +4,10 @@ import com.mr.domain.backingTrack.dto.req.BackingTrackCreateRequestDTO;
 import com.mr.domain.backingTrack.dto.res.BackingTrackCreateResponseDTO;
 import com.mr.domain.backingTrack.service.BackingTrackService;
 import com.mr.global.apipayload.ApiResponse;
+import com.mr.global.security.principal.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,13 +22,11 @@ public class BackingTrackController {
 
     @PostMapping
     public ApiResponse<BackingTrackCreateResponseDTO.CreateResultDTO> createBackingTrack(
-            // 실제 인증 적용 시 @AuthUser / @AuthenticationPrincipal 등으로 유저 ID 주입
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody BackingTrackCreateRequestDTO.CreateDTO request
     ) {
-        Long userId = 1L; // 테스트용 임시 유저 ID
-
         BackingTrackCreateResponseDTO.CreateResultDTO result =
-                backingTrackService.createBackingTrack(userId, request);
+                backingTrackService.createBackingTrack(userDetails.getUserId(), request);
 
         return ApiResponse.onSuccess(result);
     }
