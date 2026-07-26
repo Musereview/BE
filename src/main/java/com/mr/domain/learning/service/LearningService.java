@@ -206,19 +206,54 @@ public class LearningService {
     }
 
     private LearningHomeResponseDTO.CurrentLearning buildCurrentLearning(Long userId) {
-        return userLearningProgressRepository.findFirstByUser_UserIdOrderByLastStudiedAtDesc(userId)
+        return userLearningProgressRepository.findFirstByUser_UserIdOrderByLastStudiedAtDescIdDesc(userId)
                 .map(latest -> {
                     Learning learning = latest.getLearning();
                     long totalStepCount = learningStepRepository.countByLearningId(learning.getId());
                     long completedStepCount = userLearningProgressRepository
                             .countCompletedStepsByUserIdAndLearningId(userId, learning.getId());
+                    int progressRate = resolveProgressRate(completedStepCount, totalStepCount);
+
+                    // 진행률 0%/100%면 홈 화면에 카드 자체를 숨김
+                    if (progressRate == 0 || progressRate == 100) {
+                        return null;
+                    }
+
+                    Long nextStepId = resolveNextStepId(userId, learning.getId(), latest.getLearningStep(), latest.getScore());
 
                     return LearningHomeResponseDTO.CurrentLearning.of(
                             learning,
                             latest.getLearningStep().getTitle(),
-                            resolveProgressRate(completedStepCount, totalStepCount));
+                            progressRate,
+                            nextStepId);
                 })
                 .orElse(null);
+    }
+
+    // [이어서 학습하기] 클릭 시 이동할 단계 계산
+    private Long resolveNextStepId(Long userId, Long learningId, LearningStep lastStep, Integer lastScore) {
+        if (lastScore < 90) {
+            return lastStep.getId();
+        }
+
+        List<LearningStep> steps = learningStepRepository.findByLearning_IdOrderByStepNoAsc(learningId);
+        Map<Long, Integer> scoreByStepId = userLearningProgressRepository
+                .findByUser_UserIdAndLearning_Id(userId, learningId).stream()
+                .collect(Collectors.toMap(p -> p.getLearningStep().getId(), UserLearningProgress::getScore));
+
+        return steps.stream()
+                .filter(step -> step.getStepNo() > lastStep.getStepNo())
+                .filter(step -> !isStepCompleted(scoreByStepId.get(step.getId())))
+                .findFirst()
+                .or(() -> steps.stream()
+                        .filter(step -> !isStepCompleted(scoreByStepId.get(step.getId())))
+                        .findFirst())
+                .map(LearningStep::getId)
+                .orElse(null);
+    }
+
+    private boolean isStepCompleted(Integer score) {
+        return score != null && score >= 90;
     }
 
     private List<LearningAccompanimentListResponseDTO.AccompanimentItem> toAccompanimentItems(
