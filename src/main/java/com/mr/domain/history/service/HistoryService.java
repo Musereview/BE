@@ -14,6 +14,7 @@ import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -161,6 +162,6 @@ public class HistoryService {
         if (daysBetween == 1) {
             return "어제";
         }
-        return daysBetween + "일 전";
+        return playedAt.format(DateTimeFormatter.ofPattern("M월 d일"));
     }
 }

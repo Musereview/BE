@@ -19,6 +19,7 @@ public record HistoryDetailResponseDTO(
         String timeSignature,
         LocalDateTime playedAt,
         Integer durationMinutes,
+        Integer durationSec,
         List<MidiEvent> midiEvents,
         String backingTrackMidiFileUrl,
         Integer totalBars,
@@ -37,6 +38,7 @@ public record HistoryDetailResponseDTO(
                 backingTrack != null ? backingTrack.getTimeSignature() : null,
                 playing.getEndedAt(),
                 toDurationMinutes(playing.getDurationSec()),
+                playing.getDurationSec(),
                 playing.getMidiData().stream().map(MidiEvent::from).toList(),
                 backingTrack != null ? backingTrack.getMidiFileUrl() : null,
                 null, // TODO: totalBars - playtimeSec/bpm 기반 추정 가능, 정확도 논의 후 추가

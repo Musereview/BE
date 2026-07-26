@@ -25,6 +25,7 @@ public record HistoryListResponseDTO(
             String summary,
             Integer scoreChange,
             Integer durationMinutes,
+            Integer durationSec,
             LocalDateTime playedAt,
             String relativeDate
     ) {
@@ -39,6 +40,7 @@ public record HistoryListResponseDTO(
                     latestAnalysis != null ? latestAnalysis.getSummary() : null,
                     scoreChange,
                     toDurationMinutes(playing.getDurationSec()),
+                    playing.getDurationSec(),
                     playing.getEndedAt(),
                     relativeDate
             );
