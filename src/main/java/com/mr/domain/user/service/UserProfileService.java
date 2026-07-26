@@ -87,22 +87,22 @@ public class UserProfileService {
         try {
             userRepository.saveAndFlush(user);
         } catch (DataIntegrityViolationException e) {
-            if (!isDuplicateKeyViolation(e)) {
-                throw e;
+            if (isDuplicateKeyViolation(e)) {
+                // 동시에 들어온 다른 요청이 먼저 같은 닉네임을 선점한 경우(User.nickname unique 제약 위반)
+                throw new GeneralException(UserErrorStatus.NICKNAME_DUPLICATED);
             }
-            // 동시에 들어온 다른 요청이 먼저 같은 닉네임을 선점한 경우(User.nickname unique 제약 위반)
-            throw new GeneralException(UserErrorStatus.NICKNAME_DUPLICATED);
+            throw e;
         }
 
         Student student;
         try {
             student = studentRepository.saveAndFlush(Student.create(user, request.skillLevel()));
         } catch (DataIntegrityViolationException e) {
-            if (!isDuplicateKeyViolation(e)) {
-                throw e;
+            if (isDuplicateKeyViolation(e)) {
+                // 동시에 들어온 다른 요청이 먼저 온보딩을 완료한 경우(Student.user_id unique 제약 위반)
+                throw new GeneralException(UserErrorStatus.ONBOARDING_ALREADY_COMPLETED);
             }
-            // 동시에 들어온 다른 요청이 먼저 온보딩을 완료한 경우(Student.user_id unique 제약 위반)
-            throw new GeneralException(UserErrorStatus.ONBOARDING_ALREADY_COMPLETED);
+            throw e;
         }
 
         Instrument piano = instrumentRepository.findByCode(PIANO_CODE)
@@ -137,11 +137,11 @@ public class UserProfileService {
         try {
             userRepository.saveAndFlush(user);
         } catch (DataIntegrityViolationException e) {
-            if (!isDuplicateKeyViolation(e)) {
-                throw e;
+            if (isDuplicateKeyViolation(e)) {
+                // 동시에 들어온 다른 요청이 먼저 같은 닉네임을 선점한 경우(User.nickname unique 제약 위반)
+                throw new GeneralException(UserErrorStatus.NICKNAME_DUPLICATED);
             }
-            // 동시에 들어온 다른 요청이 먼저 같은 닉네임을 선점한 경우(User.nickname unique 제약 위반)
-            throw new GeneralException(UserErrorStatus.NICKNAME_DUPLICATED);
+            throw e;
         }
 
         return UserProfileResponseDTO.UpdateResponse.builder()
