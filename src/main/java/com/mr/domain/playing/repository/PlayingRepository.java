@@ -3,6 +3,7 @@ package com.mr.domain.playing.repository;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -35,4 +36,30 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
               and p.deletedAt is null
             """)
     Optional<Playing> findByIdWithBackingTrack(@Param("id") Long id);
+
+    @Query("""
+            select p from Playing p
+            where p.user.userId = :userId
+              and p.status = :status
+              and p.deletedAt is null
+              and p.endedAt >= :since
+            order by p.endedAt desc
+            """)
+    List<Playing> findByUserAndStatusSince(
+            @Param("userId") Long userId,
+            @Param("status") PlayingStatus status,
+            @Param("since") LocalDateTime since
+    );
+
+    // 연속 출석일수는 상한이 없어 기간 제한 없이 날짜만 가볍게 조회
+    @Query("""
+            select p.endedAt from Playing p
+            where p.user.userId = :userId
+              and p.status = :status
+              and p.deletedAt is null
+            """)
+    List<LocalDateTime> findEndedAtsByUserAndStatus(
+            @Param("userId") Long userId,
+            @Param("status") PlayingStatus status
+    );
 }
