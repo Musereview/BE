@@ -243,17 +243,17 @@ public class LearningService {
 
         return steps.stream()
                 .filter(step -> step.getStepNo() > lastStep.getStepNo())
-                .filter(step -> !isStepCompleted(scoreByStepId.get(step.getId())))
+                .filter(step -> isStepIncomplete(scoreByStepId.get(step.getId())))
                 .findFirst()
                 .or(() -> steps.stream()
-                        .filter(step -> !isStepCompleted(scoreByStepId.get(step.getId())))
+                        .filter(step -> isStepIncomplete(scoreByStepId.get(step.getId())))
                         .findFirst())
                 .map(LearningStep::getId)
                 .orElse(null);
     }
 
-    private boolean isStepCompleted(Integer score) {
-        return score != null && score >= 90;
+    private boolean isStepIncomplete(Integer score) {
+        return score == null || score < 90;
     }
 
     private List<LearningAccompanimentListResponseDTO.AccompanimentItem> toAccompanimentItems(
