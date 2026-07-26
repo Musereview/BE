@@ -1,19 +1,25 @@
 package com.mr.domain.statistics.entity;
 
+import com.mr.domain.statistics.exception.StatisticsErrorStatus;
+import com.mr.domain.user.entity.User;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+// TODO: 사용자당 1행이 맞다면 @ManyToOne -> @OneToOne 전환 검토 (AnalysisReport 선례 참고)
 @Getter
 @Entity
 @Table(name = "user_statistics")
@@ -25,9 +31,9 @@ public class UserStatistics extends BaseTimeEntity {
     @Column(name = "user_statistic_id")
     private Long id;
 
-    /** TODO: User 도메인 엔티티 연관관계 연결 예정 */
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "total_practice_minutes", nullable = false)
     private Integer totalPracticeMinutes;
@@ -47,10 +53,12 @@ public class UserStatistics extends BaseTimeEntity {
     @Column(name = "recent_practiced_at")
     private LocalDateTime recentPracticedAt;
 
-    private UserStatistics(Long userId, Integer totalPracticeMinutes, Integer totalPracticeCount,
+    private UserStatistics(User user, Integer totalPracticeMinutes, Integer totalPracticeCount,
                            Integer totalAnalysisCount, BigDecimal averageScore, BigDecimal averageAccuracy,
                            LocalDateTime recentPracticedAt) {
-        this.userId = userId;
+        validateUser(user);
+
+        this.user = user;
         this.totalPracticeMinutes = totalPracticeMinutes;
         this.totalPracticeCount = totalPracticeCount;
         this.totalAnalysisCount = totalAnalysisCount;
@@ -59,9 +67,15 @@ public class UserStatistics extends BaseTimeEntity {
         this.recentPracticedAt = recentPracticedAt;
     }
 
-    public static UserStatistics createForUser(Long userId) {
+    private static void validateUser(User user) {
+        if (user == null) {
+            throw new GeneralException(StatisticsErrorStatus.STATISTICS_INVALID_REQUEST);
+        }
+    }
+
+    public static UserStatistics createForUser(User user) {
         return new UserStatistics(
-                userId,
+                user,
                 0,
                 0,
                 0,
