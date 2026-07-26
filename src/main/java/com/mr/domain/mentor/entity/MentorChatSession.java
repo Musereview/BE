@@ -103,6 +103,7 @@ public class MentorChatSession extends BaseTimeEntity {
         this.lastMessageAt = LocalDateTime.now();
     }
 
+    // TODO: 질문 횟수 3회 제한(MENTOR_429_01) 체크는 질문 전송 API 구현 시 추가
     public void increaseQuestionCount() {
         validateActive();
         this.questionCount += 1;
