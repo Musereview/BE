@@ -232,7 +232,7 @@ public class LearningService {
 
     // [이어서 학습하기] 클릭 시 이동할 단계 계산
     private Long resolveNextStepId(Long userId, Long learningId, LearningStep lastStep, Integer lastScore) {
-        if (lastScore < 90) {
+        if (isStepIncomplete(lastScore)) {
             return lastStep.getId();
         }
 
