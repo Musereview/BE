@@ -1,5 +1,6 @@
 package com.mr.domain.history.dto.res;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.backingTrack.entity.BackingTrack;
@@ -21,7 +22,7 @@ public record HistoryDetailResponseDTO(
         Integer durationMinutes,
         Integer durationSec,
         List<MidiEvent> midiEvents,
-        String backingTrackMidiFileUrl,
+        JsonNode backingTrackMidiData,
         Integer totalBars,
         List<AnalysisSummary> analyses
 ) {
@@ -40,7 +41,7 @@ public record HistoryDetailResponseDTO(
                 toDurationMinutes(playing.getDurationSec()),
                 playing.getDurationSec(),
                 playing.getMidiData().stream().map(MidiEvent::from).toList(),
-                backingTrack != null ? backingTrack.getMidiFileUrl() : null,
+                backingTrack != null ? backingTrack.getMidiData() : null,
                 null, // TODO: totalBars - playtimeSec/bpm 기반 추정 가능, 정확도 논의 후 추가
                 analyses.stream().map(AnalysisSummary::from).toList()
         );
