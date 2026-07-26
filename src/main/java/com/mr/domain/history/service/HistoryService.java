@@ -14,6 +14,7 @@ import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +44,7 @@ public class HistoryService {
         validatePaging(page, size);
 
         LocalDateTime cutoff = resolveCutoff(period);
-        Slice<Playing> slice = playingRepository.findCompletedPlayingsByUser(
+        Slice<Playing> slice = playingRepository.findPlayingsByUserAndStatus(
                 userId, PlayingStatus.COMPLETED, cutoff, PageRequest.of(page, size));
 
         List<Playing> playings = slice.getContent();
@@ -144,7 +145,7 @@ public class HistoryService {
         return switch (period) {
             case WEEKLY -> LocalDateTime.now().minusDays(WEEKLY_WINDOW_DAYS);
             case MONTHLY -> LocalDateTime.now().minusDays(MONTHLY_WINDOW_DAYS);
-            case RECENT -> null;
+            case RECENT -> null; // 필터 없음과 동일
         };
     }
 
@@ -161,6 +162,6 @@ public class HistoryService {
         if (daysBetween == 1) {
             return "어제";
         }
-        return daysBetween + "일 전";
+        return playedAt.format(DateTimeFormatter.ofPattern("M월 d일"));
     }
 }

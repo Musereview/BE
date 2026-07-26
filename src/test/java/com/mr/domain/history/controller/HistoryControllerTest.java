@@ -119,7 +119,7 @@ class HistoryControllerTest {
     void getHistoryDetail_success() throws Exception {
         HistoryDetailResponseDTO response = new HistoryDetailResponseDTO(
                 1L, "제목", "장르", "C Major", 120, "4/4",
-                LocalDateTime.of(2026, 7, 24, 10, 0), 5, List.of(), null, null, List.of()
+                LocalDateTime.of(2026, 7, 24, 10, 0), 5, 300, List.of(), null, null, List.of()
         );
         given(historyService.getHistoryDetail(anyLong(), anyLong())).willReturn(response);
 
