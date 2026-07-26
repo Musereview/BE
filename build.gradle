@@ -50,6 +50,10 @@ dependencies {
     // Health Check
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
+    // Spring Retry 및 AOP (알림 저장 실패 재시도용)
+    implementation 'org.springframework.retry:spring-retry'
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
