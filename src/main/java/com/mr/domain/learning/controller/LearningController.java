@@ -11,13 +11,12 @@ import com.mr.domain.learning.dto.res.LearningStepDetailResponseDTO;
 import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
 import com.mr.domain.learning.service.LearningService;
 import com.mr.global.apipayload.ApiResponse;
-import com.mr.global.security.principal.CustomUserDetails;
+import com.mr.global.security.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,10 +38,8 @@ public class LearningController {
             description = "최근 학습 이어서 하기(currentLearning), 학습 주제 대표 3개(난이도별), 실전 반주법 대표 3개를 조회합니다."
     )
     @GetMapping("/home")
-    public ApiResponse<LearningHomeResponseDTO.HomeResultDTO> getHome(
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        LearningHomeResponseDTO.HomeResultDTO result = learningService.getHome(userDetails.getUserId());
+    public ApiResponse<LearningHomeResponseDTO.HomeResultDTO> getHome() {
+        LearningHomeResponseDTO.HomeResultDTO result = learningService.getHome(SecurityUtil.getCurrentUserId());
         return ApiResponse.onSuccess(result);
     }
 
@@ -52,11 +49,11 @@ public class LearningController {
     )
     @PostMapping("/{learningId}/result")
     public ApiResponse<LearningResultResponseDTO.SaveResultResultDTO> saveLearningResult(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long learningId,
             @Valid @RequestBody LearningResultSaveRequestDTO.SaveResultDTO request
     ){
-        LearningResultResponseDTO.SaveResultResultDTO response = learningService.saveResult(userDetails.getUserId(), learningId, request);
+        LearningResultResponseDTO.SaveResultResultDTO response =
+                learningService.saveResult(SecurityUtil.getCurrentUserId(), learningId, request);
 
         return ApiResponse.onSuccess(response);
     }
@@ -67,10 +64,10 @@ public class LearningController {
     )
     @GetMapping("/{learningId}/progress")
     public ApiResponse<LearningProgressResponseDTO.ProgressResultDTO> getLearningProgress(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long learningId
     ) {
-        LearningProgressResponseDTO.ProgressResultDTO result = learningService.getLearningProgress(userDetails.getUserId(), learningId);
+        LearningProgressResponseDTO.ProgressResultDTO result =
+                learningService.getLearningProgress(SecurityUtil.getCurrentUserId(), learningId);
         return ApiResponse.onSuccess(result);
     }
 
@@ -80,11 +77,10 @@ public class LearningController {
     )
     @GetMapping("/{learningId}")
     public ApiResponse<LearningCurriculumResponseDTO.CurriculumResultDTO> getCurriculum(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long learningId
     ) {
         LearningCurriculumResponseDTO.CurriculumResultDTO result =
-                learningService.getCurriculum(userDetails.getUserId(), learningId);
+                learningService.getCurriculum(SecurityUtil.getCurrentUserId(), learningId);
         return ApiResponse.onSuccess(result);
     }
 
@@ -123,12 +119,11 @@ public class LearningController {
     )
     @GetMapping("/theory")
     public ApiResponse<LearningTheoryListResponseDTO.TheoryListResultDTO> getTheoryList(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "BEGINNER | INTERMEDIATE | ADVANCED", required = true)
             @RequestParam(required = false) String difficulty
     ) {
         LearningTheoryListResponseDTO.TheoryListResultDTO result =
-                learningService.getTheoryList(userDetails.getUserId(), difficulty);
+                learningService.getTheoryList(SecurityUtil.getCurrentUserId(), difficulty);
         return ApiResponse.onSuccess(result);
     }
 
@@ -137,11 +132,9 @@ public class LearningController {
             description = "난이도 구분 없이 전체 목록을 제목 기준 이름순으로 조회합니다. 각 항목의 progressRate는 진행률(%)만 반환합니다."
     )
     @GetMapping("/accompaniment")
-    public ApiResponse<LearningAccompanimentListResponseDTO.AccompanimentListResultDTO> getAccompanimentList(
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+    public ApiResponse<LearningAccompanimentListResponseDTO.AccompanimentListResultDTO> getAccompanimentList() {
         LearningAccompanimentListResponseDTO.AccompanimentListResultDTO result =
-                learningService.getAccompanimentList(userDetails.getUserId());
+                learningService.getAccompanimentList(SecurityUtil.getCurrentUserId());
         return ApiResponse.onSuccess(result);
     }
 }
