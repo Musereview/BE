@@ -1,0 +1,61 @@
+name: MuseReview Backend CI
+
+# develop 또는 main 브랜치로 PR 생성·업데이트 시 실행
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+  # develop 브랜치에 직접 push될 때 실행
+  push:
+    branches:
+      - develop
+
+# 저장소 코드 읽기 권한만 부여
+permissions:
+  contents: read
+
+# 같은 브랜치에서 새 CI가 실행되면 기존 실행 취소
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Spring Boot 테스트 프로필 사용
+env:
+  SPRING_PROFILES_ACTIVE: test
+
+jobs:
+  build:
+    name: Build Spring Boot
+    runs-on: ubuntu-latest
+
+    steps:
+      # 저장소 코드 가져오기
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # JDK 17 설치 및 Gradle 의존성 캐시 적용
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      # Gradle Wrapper 실행 권한 부여
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      # TODO: 테스트 코드 안정화 후 활성화
+      # - name: Run tests
+      #   run: ./gradlew clean test
+
+      # 테스트를 제외하고 실행 가능한 Spring Boot JAR 빌드
+      - name: Build BootJar
+        run: ./gradlew clean bootJar -x test
+

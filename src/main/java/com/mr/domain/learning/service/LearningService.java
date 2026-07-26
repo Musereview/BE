@@ -1,0 +1,152 @@
+package com.mr.domain.learning.service;
+
+import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
+import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
+import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
+import com.mr.domain.learning.dto.res.LearningResultResponseDTO;
+import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
+import com.mr.domain.learning.entity.Learning;
+import com.mr.domain.learning.entity.LearningStep;
+import com.mr.domain.learning.entity.PlayingExample;
+import com.mr.domain.learning.entity.UserLearningProgress;
+import com.mr.domain.learning.entity.enums.LearningCategory;
+import com.mr.domain.learning.entity.enums.LearningDifficulty;
+import com.mr.domain.learning.exception.LearningErrorStatus;
+import com.mr.domain.learning.repository.LearningRepository;
+import com.mr.domain.learning.repository.LearningStepRepository;
+import com.mr.domain.learning.repository.PlayingExampleRepository;
+import com.mr.domain.learning.repository.UserLearningProgressRepository;
+import com.mr.domain.user.entity.User;
+import com.mr.domain.user.exception.UserErrorStatus;
+import com.mr.domain.user.repository.UserRepository;
+import com.mr.global.apipayload.exception.GeneralException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class LearningService {
+
+    private final UserLearningProgressRepository userLearningProgressRepository;
+    private final LearningStepRepository learningStepRepository;
+    private final LearningRepository learningRepository;
+    private final PlayingExampleRepository playingExampleRepository;
+    // 임시 작명
+    private final UserRepository userRepository;
+
+    // 학습 결과 저장
+    @Transactional
+    public LearningResultResponseDTO.SaveResultResultDTO saveResult(
+            Long userId,
+            Long learningId,
+            LearningResultSaveRequestDTO.SaveResultDTO request
+    ){
+        User user = userRepository.findById(userId)
+                .orElseThrow(()-> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
+
+        Learning learning = learningRepository.findById(learningId)
+                .orElseThrow(() -> new GeneralException(LearningErrorStatus.LEARNING_NOT_FOUND));
+
+        LearningStep learningStep = learningStepRepository.findById(request.learningStepId())
+                .orElseThrow(() -> new GeneralException(LearningErrorStatus.LEARNING_STEP_NOT_FOUND));
+
+        learningStep.validateBelongsTo(learning);
+
+        UserLearningProgress progress = userLearningProgressRepository
+                .findByUser_UserIdAndLearningStep_Id(userId, request.learningStepId())
+                .map(p -> {
+                    p.updateProgress(request.score(), LocalDateTime.now());
+                    return p;
+                })
+                .orElseGet(() -> {
+                    UserLearningProgress newProgress = UserLearningProgress.create(user, learning, learningStep);
+                    newProgress.updateProgress(request.score(), LocalDateTime.now());
+                    return userLearningProgressRepository.save(newProgress);
+                });
+        return LearningResultResponseDTO.SaveResultResultDTO.from(progress);
+    }
+
+    // 학습 진행률 조회 로직
+    public LearningProgressResponseDTO.ProgressResultDTO getLearningProgress(
+            Long userId,
+            Long learningId
+    ) {
+        // 학습 존재 여부 확인
+        if (!learningRepository.existsById(learningId)) {
+            throw new GeneralException(LearningErrorStatus.LEARNING_NOT_FOUND);
+        }
+        // 전체 학습 단계 수 조회
+        long totalStepCount = learningStepRepository.countByLearningId(learningId);
+
+        // 완료한 학습 단계 수 조회
+        long completedStepCount = userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, learningId);
+
+        // 진행률 계산 (0으로 나누기 예외 방지)
+        int progressRate = totalStepCount == 0 ? 0 : (int) Math.round((double) completedStepCount / totalStepCount * 100);
+
+        return LearningProgressResponseDTO.ProgressResultDTO.of(learningId, progressRate);
+    }
+
+    // 학습 단계별 연습 실행 정보 조회
+    public LearningPracticeDataResponseDTO.PracticeDataResultDTO getPracticeData(
+            Long learningId,
+            Long learningStepId
+    ) {
+        Learning learning = getActiveLearningOrThrow(learningId);
+        LearningStep learningStep = getLearningStepOrThrow(learning, learningStepId);
+
+        PlayingExample playingExample = playingExampleRepository.findByLearningStep_Id(learningStep.getId())
+                .orElseThrow(() -> new GeneralException(LearningErrorStatus.PLAYING_EXAMPLE_NOT_FOUND));
+
+        return LearningPracticeDataResponseDTO.PracticeDataResultDTO.from(playingExample);
+    }
+
+    // 학습 주제(THEORY) 전체보기
+    public LearningTheoryListResponseDTO.TheoryListResultDTO getTheoryList(Long userId, String difficulty) {
+        LearningDifficulty parsedDifficulty = parseDifficulty(difficulty);
+        ensureUserExists(userId);
+
+        List<Learning> learnings = learningRepository
+                .findByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(LearningCategory.THEORY, parsedDifficulty);
+
+        return LearningTheoryListResponseDTO.TheoryListResultDTO.from(learnings);
+    }
+
+    private void ensureUserExists(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new GeneralException(UserErrorStatus.USER_NOT_FOUND);
+        }
+    }
+
+    private LearningDifficulty parseDifficulty(String difficulty) {
+        if (difficulty == null) {
+            throw new GeneralException(LearningErrorStatus.INVALID_DIFFICULTY);
+        }
+        try {
+            return LearningDifficulty.valueOf(difficulty.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new GeneralException(LearningErrorStatus.INVALID_DIFFICULTY);
+        }
+    }
+
+    private Learning getActiveLearningOrThrow(Long learningId) {
+        return learningRepository.findByIdAndIsActiveTrue(learningId)
+                .orElseThrow(() -> new GeneralException(LearningErrorStatus.LEARNING_NOT_FOUND));
+    }
+
+    private LearningStep getLearningStepOrThrow(Learning learning, Long learningStepId) {
+        LearningStep learningStep = learningStepRepository.findById(learningStepId)
+                .orElseThrow(() -> new GeneralException(LearningErrorStatus.LEARNING_STEP_NOT_FOUND));
+
+        if (!learningStep.getLearning().getId().equals(learning.getId())) {
+            throw new GeneralException(LearningErrorStatus.LEARNING_STEP_NOT_FOUND);
+        }
+        return learningStep;
+    }
+}
