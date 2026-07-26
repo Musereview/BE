@@ -35,7 +35,7 @@ public class LearningController {
 
     @Operation(
             summary = "학습 홈 조회",
-            description = "최근 학습 이어서 하기(currentLearning), 학습 주제 대표 3개(난이도별), 실전 반주법 대표 3개를 조회합니다."
+            description = "최근 학습 이어서 하기(currentLearning), 난이도별 대표 학습 주제(최대 3개, 데이터 없는 난이도는 제외), 실전 반주법 대표 3개를 조회합니다."
     )
     @GetMapping("/home")
     public ApiResponse<LearningHomeResponseDTO.HomeResultDTO> getHome() {
