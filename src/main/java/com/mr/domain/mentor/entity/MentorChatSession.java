@@ -30,6 +30,10 @@ public class MentorChatSession extends BaseTimeEntity {
     @Column(name = "mentor_chat_session_id")
     private Long id;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "analysis_id", nullable = false)
     private Analysis analysis;
@@ -48,6 +52,9 @@ public class MentorChatSession extends BaseTimeEntity {
     @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
 
+    @Column(name = "question_count", nullable = false)
+    private Integer questionCount;
+
     private MentorChatSession(Analysis analysis, User user, MentorChatStatus status,
                               String disabledReason, LocalDateTime lastMessageAt) {
         validateAnalysis(analysis);
@@ -58,6 +65,7 @@ public class MentorChatSession extends BaseTimeEntity {
         this.status = status;
         this.disabledReason = disabledReason;
         this.lastMessageAt = lastMessageAt;
+        this.questionCount = 0;
     }
 
     private static void validateAnalysis(Analysis analysis) {
@@ -93,5 +101,16 @@ public class MentorChatSession extends BaseTimeEntity {
 
     public void updateLastMessageAt() {
         this.lastMessageAt = LocalDateTime.now();
+    }
+
+    public void increaseQuestionCount() {
+        validateActive();
+        this.questionCount += 1;
+    }
+
+    private void validateActive() {
+        if (this.status != MentorChatStatus.ACTIVE) {
+            throw new GeneralException(MentorErrorStatus.MENTOR_SESSION_NOT_ACTIVE);
+        }
     }
 }
