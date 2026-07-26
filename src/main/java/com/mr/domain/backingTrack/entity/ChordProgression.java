@@ -33,7 +33,7 @@ public class ChordProgression{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "chord_progression_id")
-    private Long chordProgressionId;
+    private Long id;
 
     // 백킹트랙 아이디
     @ManyToOne(fetch = FetchType.LAZY)
@@ -61,12 +61,17 @@ public class ChordProgression{
     }
 
     public static ChordProgression create(BackingTrack backingTrack, Integer sequenceNo, Integer measureNo, String chordName) {
-        return ChordProgression.builder()
+        ChordProgression chordProgression = ChordProgression.builder()
                 .backingTrack(backingTrack)
                 .sequenceNo(sequenceNo)
                 .measureNo(measureNo)
                 .chordName(chordName)
                 .build();
+        // 양방향 매핑 추가 하고 연결하게
+        if (backingTrack != null) {
+            backingTrack.addChordProgression(chordProgression);
+        }
+        return chordProgression;
     }
 
     public void updateChordInfo(Integer sequenceNo, Integer measureNo, String chordName) {
