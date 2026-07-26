@@ -4,13 +4,17 @@ import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
+import com.mr.domain.backingTrack.dto.req.BackingTrackListRequestDTO;
 import com.mr.domain.backingTrack.dto.req.BackingTrackSaveRequestDTO;
 import com.mr.domain.backingTrack.dto.req.PlayCountIncreaseRequestDTO;
 import com.mr.domain.backingTrack.dto.res.BackingTrackCreateResponseDTO;
+import com.mr.domain.backingTrack.dto.res.BackingTrackDetailResponseDTO;
+import com.mr.domain.backingTrack.dto.res.BackingTrackListResponseDTO;
 import com.mr.domain.backingTrack.dto.res.BackingTrackUpdateResponseDTO;
 import com.mr.domain.backingTrack.dto.res.PlayCountIncreaseResponseDTO;
 import com.mr.domain.backingTrack.entity.BackingTrack;
 import com.mr.domain.backingTrack.entity.ChordProgression;
+import com.mr.domain.backingTrack.entity.enums.AccessLevel;
 import com.mr.domain.backingTrack.exception.BackingTrackErrorStatus;
 import com.mr.domain.backingTrack.repository.BackingTrackRepository;
 import com.mr.domain.user.entity.User;
@@ -18,9 +22,12 @@ import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -160,7 +167,8 @@ public class BackingTrackService {
     @Transactional
     public PlayCountIncreaseResponseDTO.IncreaseResponseDTO increasePlayCount(
             Long backingTrackId,
-            PlayCountIncreaseRequestDTO.IncreaseRequestDTO request
+            PlayCountIncreaseRequestDTO.IncreaseRequestDTO request,
+            Long userId
     ) {
 
         // 백킹트랙 존재 여부 확인
@@ -182,6 +190,79 @@ public class BackingTrackService {
         return PlayCountIncreaseResponseDTO.IncreaseResponseDTO.of(
                 backingTrack.getId(),
                 backingTrack.getPlayCount()
+        );
+    }
+
+    // 백킹트랙 목록 조회
+    public BackingTrackListResponseDTO.ListResponseDTO getBackingTracks(
+            BackingTrackListRequestDTO.ListRequestDTO request,
+            Long userId
+    ) {
+
+        PageRequest pageRequest = PageRequest.of(request.page(), request.size());
+
+        Page<BackingTrack> trackPage = backingTrackRepository.findAll(pageRequest);
+
+        Page<BackingTrackListResponseDTO.TrackInfo> mappedPage = trackPage.map(track -> {
+            List<String> chordNames = track.getChordProgressions().stream()
+                    .sorted(Comparator.comparing(ChordProgression::getMeasureNo)
+                            .thenComparing(ChordProgression::getSequenceNo))
+                    .map(ChordProgression::getChordName)
+                    .toList();
+
+            return BackingTrackListResponseDTO.TrackInfo.of(
+                    track.getId(),
+                    track.getTitle(),
+                    track.getGenre(),
+                    track.getKeySignature(),
+                    track.getScaleType().name(),
+                    chordNames,
+                    track.getBpm(),
+                    track.getLevel().name(),
+                    track.getPlaytimeSec()
+            );
+        });
+
+        return BackingTrackListResponseDTO.ListResponseDTO.of(mappedPage);
+    }
+
+    // 2. 백킹트랙 상세 조회
+    public BackingTrackDetailResponseDTO.DetailResponseDTO getBackingTrackDetail(
+            Long backingTrackId,
+            Long userId
+    ) {
+        BackingTrack track = backingTrackRepository.findById(backingTrackId)
+                .orElseThrow(() -> new GeneralException(BackingTrackErrorStatus.BACKING_TRACK_NOT_FOUND));
+
+        if (track.getAccessLevel() == AccessLevel.PRIVATE && !track.getUser().getUserId().equals(userId)) {
+            throw new GeneralException(BackingTrackErrorStatus.FORBIDDEN_READ);
+        }
+
+        List<BackingTrackDetailResponseDTO.ChordDetail> chordDetails = track.getChordProgressions().stream()
+                .sorted(Comparator.comparing(ChordProgression::getMeasureNo)
+                        .thenComparing(ChordProgression::getSequenceNo))
+                .map(c -> BackingTrackDetailResponseDTO.ChordDetail.of(
+                        c.getMeasureNo(),
+                        c.getSequenceNo(),
+                        c.getChordName()
+                ))
+                .toList();
+
+        String creatorName = track.getUser().getNickname();
+
+        return BackingTrackDetailResponseDTO.DetailResponseDTO.of(
+                track.getId(),
+                track.getTitle(),
+                track.getGenre(),
+                track.getKeySignature(),
+                track.getScaleType().name(),
+                track.getTimeSignature(),
+                track.getBpm(),
+                track.getPlaytimeSec(),
+                track.getLevel().name(),
+                creatorName,
+                track.getAudioFileUrl(),
+                chordDetails
         );
     }
 }

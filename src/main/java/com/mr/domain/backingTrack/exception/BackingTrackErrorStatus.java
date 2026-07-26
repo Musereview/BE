@@ -31,15 +31,22 @@ public enum BackingTrackErrorStatus implements BaseCode {
     DUPLICATE_CHORD_POSITION(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_21", "동일한 마디(measureNo)와 순서(sequenceNo)를 가진 코드 진행이 중복으로 존재합니다."),
     INVALID_CHORD_SEQUENCE(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_22", "마디의 허용된 코드 순서 범위를 초과했습니다."),
     INVALID_BACKING_TRACK_ID(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_23", "백킹트랙 ID가 1 미만이거나 형식이 올바르지 않습니다."),
+    INVALID_SORT_TYPE(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_24", "정렬 기준이 올바르지 않습니다."),
+    INVALID_BPM_RANGE(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_25", "BPM 범위가 올바르지 않습니다."),
+    INVALID_PAGE_NUMBER(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_26", "페이지 번호가 올바르지 않습니다."),
+    INVALID_PAGE_SIZE(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_27", "페이지 크기가 올바르지 않습니다."),
 
     // [403] 권한 에러
     FORBIDDEN_UPDATE(HttpStatus.FORBIDDEN, "BACKING_TRACK_403_01", "백킹트랙 수정 권한이 없습니다."),
+    FORBIDDEN_READ(HttpStatus.FORBIDDEN, "BACKING_TRACK_403_02", "백킹트랙 조회 권한이 없습니다."),
 
     // [404] 리소스 없음
     BACKING_TRACK_NOT_FOUND(HttpStatus.NOT_FOUND, "BACKING_TRACK_404_01", "존재하지 않는 백킹트랙입니다."),
 
     // [500] 서버 에러
-    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "BACKING_TRACK_500_01", "백킹트랙 생성 중 서버 오류가 발생했습니다.");
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "BACKING_TRACK_500_01", "백킹트랙 생성 중 서버 오류가 발생했습니다."),
+    LIST_INQUIRY_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "BACKING_TRACK_500_02", "백킹트랙 목록 조회 중 서버 오류가 발생했습니다."),
+    DETAIL_INQUIRY_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "BACKING_TRACK_500_03", "백킹트랙 상세 조회 중 서버 오류가 발생했습니다.");
 
     private final HttpStatus status;
     private final String code;
