@@ -122,8 +122,6 @@ class LearningServiceTest {
 
         when(userRepository.existsById(userId)).thenReturn(true);
         when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
-        when(learningStepRepository.countByLearningId(learningId)).thenReturn(2L);
-        when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, learningId)).thenReturn(1L);
         when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(learningId)).thenReturn(List.of(step1, step2));
         when(userLearningProgressRepository.findByUser_UserIdAndLearning_Id(userId, learningId)).thenReturn(List.of(progress1));
 
@@ -154,16 +152,47 @@ class LearningServiceTest {
         when(learning.getContent()).thenReturn("이론 설명");
         when(learning.getPracticeTip()).thenReturn("연습 팁");
 
+        LearningStep step1 = mock(LearningStep.class);
+        when(step1.getId()).thenReturn(11L);
+        when(step1.getStepNo()).thenReturn(1);
+        when(step1.getTitle()).thenReturn("스텝1");
+        when(step1.getSummary()).thenReturn("설명1");
+        when(step1.getEstimatedMinutes()).thenReturn(10);
+
+        LearningStep step2 = mock(LearningStep.class);
+        when(step2.getId()).thenReturn(12L);
+        when(step2.getStepNo()).thenReturn(2);
+        when(step2.getTitle()).thenReturn("스텝2");
+        when(step2.getSummary()).thenReturn("설명2");
+        when(step2.getEstimatedMinutes()).thenReturn(10);
+
+        // 완료 기록(score>=90) 3건이 실제 단계 수(2개)보다 많은 데이터 이상 상황을 가정
+        UserLearningProgress progress1 = mock(UserLearningProgress.class);
+        when(progress1.getLearningStep()).thenReturn(step1);
+        when(progress1.getScore()).thenReturn(95);
+        when(progress1.getLearningStatus()).thenReturn("COMPLETED");
+
+        UserLearningProgress progress2 = mock(UserLearningProgress.class);
+        when(progress2.getLearningStep()).thenReturn(step2);
+        when(progress2.getScore()).thenReturn(95);
+        when(progress2.getLearningStatus()).thenReturn("COMPLETED");
+
+        LearningStep orphanStep = mock(LearningStep.class);
+        when(orphanStep.getId()).thenReturn(13L);
+        UserLearningProgress progress3 = mock(UserLearningProgress.class);
+        when(progress3.getLearningStep()).thenReturn(orphanStep);
+        when(progress3.getScore()).thenReturn(95);
+
         when(userRepository.existsById(userId)).thenReturn(true);
         when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
-        when(learningStepRepository.countByLearningId(learningId)).thenReturn(2L);
-        when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, learningId)).thenReturn(3L);
-        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(learningId)).thenReturn(Collections.emptyList());
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(learningId)).thenReturn(List.of(step1, step2));
         when(userLearningProgressRepository.findByUser_UserIdAndLearning_Id(userId, learningId))
-                .thenReturn(Collections.emptyList());
+                .thenReturn(List.of(progress1, progress2, progress3));
 
         LearningCurriculumResponseDTO.CurriculumResultDTO result = learningService.getCurriculum(userId, learningId);
 
+        assertThat(result.progress().totalStepCount()).isEqualTo(2);
+        assertThat(result.progress().completedStepCount()).isEqualTo(3);
         assertThat(result.progress().progressRate()).isEqualTo(100);
     }
 

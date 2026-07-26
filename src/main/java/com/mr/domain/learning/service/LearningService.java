@@ -135,13 +135,16 @@ public class LearningService {
 
         Learning learning = getActiveLearningOrThrow(learningId);
 
-        long totalStepCount = learningStepRepository.countByLearningId(learningId);
-        long completedStepCount = userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, learningId);
-
         List<LearningStep> steps = learningStepRepository.findByLearning_IdOrderByStepNoAsc(learningId);
-        Map<Long, UserLearningProgress> progressByStepId = userLearningProgressRepository
-                .findByUser_UserIdAndLearning_Id(userId, learningId).stream()
+        List<UserLearningProgress> progressList = userLearningProgressRepository
+                .findByUser_UserIdAndLearning_Id(userId, learningId);
+        Map<Long, UserLearningProgress> progressByStepId = progressList.stream()
                 .collect(Collectors.toMap(p -> p.getLearningStep().getId(), Function.identity()));
+
+        long totalStepCount = steps.size();
+        long completedStepCount = progressList.stream()
+                .filter(p -> p.getScore() != null && p.getScore() >= 90)
+                .count();
 
         List<LearningCurriculumResponseDTO.StepItem> stepItems = steps.stream()
                 .map(step -> toStepItem(step, progressByStepId.get(step.getId())))
