@@ -11,10 +11,7 @@ public class UserProfileRequestDTO {
             String nickname,
 
             @Schema(description = "화성학 숙련도", example = "INTERMEDIATE")
-            TheoryLevel skillLevel,
-
-            @Schema(description = "구독 등급 (버튼 선택과 무관하게 항상 PRO 전송)", example = "PRO")
-            String subscriptionTier
+            TheoryLevel skillLevel
     ) {}
 
     @Schema(description = "프로필 수정 요청")

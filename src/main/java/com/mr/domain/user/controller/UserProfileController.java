@@ -35,7 +35,8 @@ public class UserProfileController {
 
     @Operation(
             summary = "프로필 최초 등록 (온보딩)",
-            description = "닉네임, 화성학 숙련도, 구독 등급을 입력받아 Student/StudentInstrument(대표 악기 PIANO)/Subscription을 하나의 트랜잭션으로 생성합니다. "
+            description = "닉네임, 화성학 숙련도를 입력받아 Student/StudentInstrument(대표 악기 PIANO)/Subscription을 하나의 트랜잭션으로 생성합니다. "
+                    + "구독 등급은 MVP 기간 동안 결제 없이 항상 PRO로 서버에서 고정됩니다. "
                     + "이미 온보딩을 완료한 사용자가 다시 호출하면 409(USER_409_02)가 반환됩니다."
     )
     @PostMapping

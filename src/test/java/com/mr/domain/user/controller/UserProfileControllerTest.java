@@ -111,7 +111,7 @@ class UserProfileControllerTest {
         mockMvc = setUp();
 
         UserProfileRequestDTO.OnboardingRequest request = new UserProfileRequestDTO.OnboardingRequest(
-                "김뮤즈", TheoryLevel.INTERMEDIATE, "PRO"
+                "김뮤즈", TheoryLevel.INTERMEDIATE
         );
         UserProfileResponseDTO.OnboardingResponse response = UserProfileResponseDTO.OnboardingResponse.builder()
                 .userId(1L)
@@ -139,7 +139,7 @@ class UserProfileControllerTest {
         mockMvc = setUp();
 
         UserProfileRequestDTO.OnboardingRequest request = new UserProfileRequestDTO.OnboardingRequest(
-                "김뮤즈", TheoryLevel.INTERMEDIATE, "PRO"
+                "김뮤즈", TheoryLevel.INTERMEDIATE
         );
         willThrow(new GeneralException(UserErrorStatus.ONBOARDING_ALREADY_COMPLETED))
                 .given(userProfileService).registerProfile(any());
@@ -157,7 +157,7 @@ class UserProfileControllerTest {
         mockMvc = setUp();
 
         UserProfileRequestDTO.OnboardingRequest request = new UserProfileRequestDTO.OnboardingRequest(
-                "김뮤즈", TheoryLevel.INTERMEDIATE, "PRO"
+                "김뮤즈", TheoryLevel.INTERMEDIATE
         );
         willThrow(new GeneralException(UserErrorStatus.NICKNAME_DUPLICATED))
                 .given(userProfileService).registerProfile(any());
