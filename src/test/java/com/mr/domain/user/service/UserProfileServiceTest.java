@@ -257,6 +257,44 @@ class UserProfileServiceTest {
                 .isEqualTo(UserErrorStatus.NICKNAME_DUPLICATED);
     }
 
+    @Test
+    @DisplayName("updateProfile - nickname을 생략(null)하면 기존 닉네임을 유지하고 skillLevel만 변경한다")
+    void updateProfile_partialUpdate_skillLevelOnly() {
+        user.updateNickname("기존닉네임");
+        Student student = Student.create(user, TheoryLevel.BEGINNER);
+
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
+        given(studentRepository.findByUser(user)).willReturn(Optional.of(student));
+
+        UserProfileRequestDTO.UpdateRequest request =
+                new UserProfileRequestDTO.UpdateRequest(null, TheoryLevel.ADVANCED);
+
+        UserProfileResponseDTO.UpdateResponse response = userProfileService.updateProfile(request);
+
+        assertThat(response.nickname()).isEqualTo("기존닉네임");
+        assertThat(response.skillLevel()).isEqualTo(TheoryLevel.ADVANCED);
+        verify(userRepository, never()).existsByNicknameAndUserIdNot(any(), any());
+    }
+
+    @Test
+    @DisplayName("updateProfile - skillLevel을 생략(null)하면 기존 숙련도를 유지하고 nickname만 변경한다")
+    void updateProfile_partialUpdate_nicknameOnly() {
+        user.updateNickname("기존닉네임");
+        Student student = Student.create(user, TheoryLevel.BEGINNER);
+
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
+        given(studentRepository.findByUser(user)).willReturn(Optional.of(student));
+        given(userRepository.existsByNicknameAndUserIdNot(any(), any())).willReturn(false);
+
+        UserProfileRequestDTO.UpdateRequest request =
+                new UserProfileRequestDTO.UpdateRequest("새로운뮤즈", null);
+
+        UserProfileResponseDTO.UpdateResponse response = userProfileService.updateProfile(request);
+
+        assertThat(response.nickname()).isEqualTo("새로운뮤즈");
+        assertThat(response.skillLevel()).isEqualTo(TheoryLevel.BEGINNER);
+    }
+
     private static DataIntegrityViolationException uniqueViolation(String constraintName) {
         SQLException sqlException = new SQLException("duplicate key value violates unique constraint", "23505");
         ConstraintViolationException constraintViolationException =

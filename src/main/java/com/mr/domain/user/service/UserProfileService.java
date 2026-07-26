@@ -131,10 +131,14 @@ public class UserProfileService {
         User user = getUser(userId);
         Student student = getStudent(user);
 
-        String trimmedNickname = trimNickname(request.nickname());
-        ensureNicknameNotTaken(user.getUserId(), trimmedNickname);
-        user.updateNickname(trimmedNickname);
-        student.updateTheoryLevel(request.skillLevel());
+        if (request.nickname() != null) {
+            String trimmedNickname = trimNickname(request.nickname());
+            ensureNicknameNotTaken(user.getUserId(), trimmedNickname);
+            user.updateNickname(trimmedNickname);
+        }
+        if (request.skillLevel() != null) {
+            student.updateTheoryLevel(request.skillLevel());
+        }
 
         try {
             userRepository.saveAndFlush(user);

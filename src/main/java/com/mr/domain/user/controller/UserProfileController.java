@@ -49,7 +49,8 @@ public class UserProfileController {
 
     @Operation(
             summary = "프로필 수정",
-            description = "닉네임과 화성학 숙련도만 수정합니다. 대표 악기, 프로필 이미지, 구독 등급은 이 API에서 변경되지 않습니다."
+            description = "닉네임과 화성학 숙련도를 부분 수정합니다. 요청에 생략하거나 null로 보낸 필드는 기존 값을 유지합니다. "
+                    + "대표 악기, 프로필 이미지, 구독 등급은 이 API에서 변경되지 않습니다."
     )
     @PatchMapping
     public ApiResponse<UserProfileResponseDTO.UpdateResponse> updateProfile(

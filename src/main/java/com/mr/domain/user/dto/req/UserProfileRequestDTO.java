@@ -14,12 +14,12 @@ public class UserProfileRequestDTO {
             TheoryLevel skillLevel
     ) {}
 
-    @Schema(description = "프로필 수정 요청")
+    @Schema(description = "프로필 수정 요청 (부분 수정 — 생략하거나 null인 필드는 기존 값 유지)")
     public record UpdateRequest(
-            @Schema(description = "변경할 닉네임 (한글/영문/숫자 2~10자)", example = "새로운뮤즈")
+            @Schema(description = "변경할 닉네임 (한글/영문/숫자 2~10자). 생략 시 기존 닉네임 유지", example = "새로운뮤즈")
             String nickname,
 
-            @Schema(description = "변경할 화성학 숙련도", example = "ADVANCED")
+            @Schema(description = "변경할 화성학 숙련도. 생략 시 기존 숙련도 유지", example = "ADVANCED")
             TheoryLevel skillLevel
     ) {}
 }
