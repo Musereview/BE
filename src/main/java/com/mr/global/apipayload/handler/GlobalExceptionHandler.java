@@ -4,12 +4,14 @@ import com.mr.global.apipayload.ApiResponse;
 import com.mr.global.apipayload.code.CommonStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import jakarta.validation.ConstraintViolationException;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -54,6 +56,16 @@ public class GlobalExceptionHandler {
                         violation -> violation.getMessage(),
                         (existing, replacement) -> existing
                 ));
+        ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), errors);
+        return new ResponseEntity<>(response, status.getStatus());
+    }
+
+    // 파라미터 타입 불일치 예외
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Object>> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException e) {
+        var status = CommonStatus.INVALID_INPUT_VALUE;
+        var errors = Map.of(e.getName(), "요청 파라미터 형식이 올바르지 않습니다.");
         ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), errors);
         return new ResponseEntity<>(response, status.getStatus());
     }
