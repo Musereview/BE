@@ -12,10 +12,8 @@ import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.global.apipayload.exception.GeneralException;
-import java.time.LocalDate;
+import com.mr.global.util.RelativeDateFormatter;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -81,7 +79,7 @@ public class HistoryService {
                 scoreChange = computeScoreChange(currentAnalysis, previousAnalysis);
             }
 
-            items.add(Item.of(current, currentAnalysis, scoreChange, toRelativeDate(current.getEndedAt())));
+            items.add(Item.of(current, currentAnalysis, scoreChange, RelativeDateFormatter.format(current.getEndedAt())));
         }
 
         return items;
@@ -149,19 +147,4 @@ public class HistoryService {
         };
     }
 
-    private String toRelativeDate(LocalDateTime playedAt) {
-        if (playedAt == null) {
-            return null;
-        }
-
-        long daysBetween = ChronoUnit.DAYS.between(playedAt.toLocalDate(), LocalDate.now());
-
-        if (daysBetween <= 0) {
-            return "오늘";
-        }
-        if (daysBetween == 1) {
-            return "어제";
-        }
-        return playedAt.format(DateTimeFormatter.ofPattern("M월 d일"));
-    }
 }
