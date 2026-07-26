@@ -68,7 +68,11 @@ class HistoryServiceTest {
     }
 
     private Analysis completedAnalysis(Long playingId, Integer totalScore) {
-        Analysis analysis = Analysis.createPending(1L, playingId, 1, 8, "{}");
+        User user = mock(User.class);
+        Playing playing = mock(Playing.class);
+        lenient().when(playing.getId()).thenReturn(playingId);
+
+        Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
         analysis.startProcessing();
         analysis.complete(totalScore, AnalysisGrade.GOOD, "요약", null, null, null, null, null);
         return analysis;
@@ -194,7 +198,7 @@ class HistoryServiceTest {
         given(playingRepository.findByIdWithBackingTrack(1L)).willReturn(Optional.of(playing));
 
         Analysis completed = completedAnalysis(1L, 90);
-        Analysis pending = Analysis.createPending(1L, 1L, 9, 16, "{}");
+        Analysis pending = Analysis.createPending(mock(User.class), mock(Playing.class), 9, 16, "{}");
         given(analysisRepository.findByPlayingIdAndUserIdOrderByStartBarAscIdAsc(1L, 1L))
                 .willReturn(List.of(completed, pending));
 
