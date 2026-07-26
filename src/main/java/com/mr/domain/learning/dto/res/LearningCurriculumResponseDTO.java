@@ -62,9 +62,13 @@ public class LearningCurriculumResponseDTO {
             Integer progressRate
     ) {
         public static ProgressInfo of(long completedStepCount, long totalStepCount) {
-            int progressRate = totalStepCount == 0
-                    ? 0
-                    : (int) Math.round((double) completedStepCount / totalStepCount * 100);
+            int progressRate;
+            if (totalStepCount == 0) {
+                progressRate = 0;
+            } else {
+                int rawProgressRate = (int) Math.round((double) completedStepCount / totalStepCount * 100);
+                progressRate = Math.min(100, Math.max(0, rawProgressRate));
+            }
             return new ProgressInfo((int) completedStepCount, (int) totalStepCount, progressRate);
         }
     }

@@ -293,7 +293,11 @@ public class LearningService {
     }
 
     private int resolveProgressRate(long completedStepCount, long totalStepCount) {
-        return totalStepCount == 0 ? 0 : (int) Math.round((double) completedStepCount / totalStepCount * 100);
+        if (totalStepCount == 0) {
+            return 0;
+        }
+        int progressRate = (int) Math.round((double) completedStepCount / totalStepCount * 100);
+        return Math.min(100, Math.max(0, progressRate));
     }
 
     private void ensureUserExists(Long userId) {

@@ -141,6 +141,33 @@ class LearningServiceTest {
     }
 
     @Test
+    @DisplayName("getCurriculum - 완료 단계 수가 전체 단계 수보다 많은 데이터 이상이어도 progressRate는 100을 넘지 않는다")
+    void getCurriculum_completedExceedsTotal_progressRateClampedTo100() {
+        Long userId = 1L;
+        Long learningId = 10L;
+
+        Learning learning = mock(Learning.class);
+        when(learning.getId()).thenReturn(learningId);
+        when(learning.getTitle()).thenReturn("Tension Notes");
+        when(learning.getSummary()).thenReturn("부제목");
+        when(learning.getDifficulty()).thenReturn(LearningDifficulty.ADVANCED);
+        when(learning.getContent()).thenReturn("이론 설명");
+        when(learning.getPracticeTip()).thenReturn("연습 팁");
+
+        when(userRepository.existsById(userId)).thenReturn(true);
+        when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
+        when(learningStepRepository.countByLearningId(learningId)).thenReturn(2L);
+        when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, learningId)).thenReturn(3L);
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(learningId)).thenReturn(Collections.emptyList());
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_Id(userId, learningId))
+                .thenReturn(Collections.emptyList());
+
+        LearningCurriculumResponseDTO.CurriculumResultDTO result = learningService.getCurriculum(userId, learningId);
+
+        assertThat(result.progress().progressRate()).isEqualTo(100);
+    }
+
+    @Test
     @DisplayName("getCurriculum - 학습이 없으면 404")
     void getCurriculum_learningNotFound_throws404() {
         when(userRepository.existsById(1L)).thenReturn(true);
@@ -302,6 +329,40 @@ class LearningServiceTest {
         assertThat(result.totalCount()).isEqualTo(2);
         assertThat(result.items().get(0).progressRate()).isEqualTo(100);
         assertThat(result.items().get(1).progressRate()).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("getAccompanimentList - 완료 단계 수가 전체 단계 수보다 많은 데이터 이상이어도 progressRate는 100을 넘지 않는다")
+    void getAccompanimentList_completedExceedsTotal_progressRateClampedTo100() {
+        Long userId = 1L;
+
+        Learning chapter1 = mock(Learning.class);
+        when(chapter1.getId()).thenReturn(5L);
+        when(chapter1.getTitle()).thenReturn("Chapter 1");
+        when(chapter1.getSummary()).thenReturn("설명1");
+        when(chapter1.getEstimatedMinutes()).thenReturn(10);
+
+        LearningStepRepository.LearningIdCount totalCh1 = mock(LearningStepRepository.LearningIdCount.class);
+        when(totalCh1.getLearningId()).thenReturn(5L);
+        when(totalCh1.getStepCount()).thenReturn(4L);
+
+        UserLearningProgressRepository.CompletedStepCount completedCh1 =
+                mock(UserLearningProgressRepository.CompletedStepCount.class);
+        when(completedCh1.getLearningId()).thenReturn(5L);
+        when(completedCh1.getCompletedStepCount()).thenReturn(6L);
+
+        when(userRepository.existsById(userId)).thenReturn(true);
+        when(learningRepository.findByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory.ACCOMPANIMENT))
+                .thenReturn(List.of(chapter1));
+        when(learningStepRepository.countByLearningIdIn(List.of(5L)))
+                .thenReturn(List.of(totalCh1));
+        when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningIdIn(userId, List.of(5L)))
+                .thenReturn(List.of(completedCh1));
+
+        LearningAccompanimentListResponseDTO.AccompanimentListResultDTO result =
+                learningService.getAccompanimentList(userId);
+
+        assertThat(result.items().get(0).progressRate()).isEqualTo(100);
     }
 
     @Test
