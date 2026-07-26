@@ -206,7 +206,7 @@ public class LearningService {
     }
 
     private LearningHomeResponseDTO.CurrentLearning buildCurrentLearning(Long userId) {
-        return userLearningProgressRepository.findFirstByUser_UserIdOrderByLastStudiedAtDescIdDesc(userId)
+        return userLearningProgressRepository.findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId)
                 .map(latest -> {
                     Learning learning = latest.getLearning();
                     long totalStepCount = learningStepRepository.countByLearningId(learning.getId());

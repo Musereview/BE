@@ -363,7 +363,7 @@ class LearningServiceTest {
         when(step2Progress.getScore()).thenReturn(93);
 
         when(userRepository.existsById(userId)).thenReturn(true);
-        when(userLearningProgressRepository.findFirstByUser_UserIdOrderByLastStudiedAtDescIdDesc(userId))
+        when(userLearningProgressRepository.findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
                 .thenReturn(Optional.of(latest));
         when(learningStepRepository.countByLearningId(1L)).thenReturn(4L);
         when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, 1L)).thenReturn(1L);
@@ -401,7 +401,7 @@ class LearningServiceTest {
         Long userId = 1L;
 
         when(userRepository.existsById(userId)).thenReturn(true);
-        when(userLearningProgressRepository.findFirstByUser_UserIdOrderByLastStudiedAtDescIdDesc(userId))
+        when(userLearningProgressRepository.findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
                 .thenReturn(Optional.empty());
         when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
                 eq(LearningCategory.THEORY), any()))
@@ -426,7 +426,7 @@ class LearningServiceTest {
         when(latest.getLearning()).thenReturn(currentPackage);
 
         when(userRepository.existsById(userId)).thenReturn(true);
-        when(userLearningProgressRepository.findFirstByUser_UserIdOrderByLastStudiedAtDescIdDesc(userId))
+        when(userLearningProgressRepository.findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
                 .thenReturn(Optional.of(latest));
         when(learningStepRepository.countByLearningId(1L)).thenReturn(2L);
         when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, 1L)).thenReturn(2L);
@@ -452,7 +452,7 @@ class LearningServiceTest {
         when(latest.getLearning()).thenReturn(currentPackage);
 
         when(userRepository.existsById(userId)).thenReturn(true);
-        when(userLearningProgressRepository.findFirstByUser_UserIdOrderByLastStudiedAtDescIdDesc(userId))
+        when(userLearningProgressRepository.findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
                 .thenReturn(Optional.of(latest));
         when(learningStepRepository.countByLearningId(1L)).thenReturn(4L);
         when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, 1L)).thenReturn(0L);
@@ -486,7 +486,7 @@ class LearningServiceTest {
         when(latest.getScore()).thenReturn(50);
 
         when(userRepository.existsById(userId)).thenReturn(true);
-        when(userLearningProgressRepository.findFirstByUser_UserIdOrderByLastStudiedAtDescIdDesc(userId))
+        when(userLearningProgressRepository.findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
                 .thenReturn(Optional.of(latest));
         when(learningStepRepository.countByLearningId(1L)).thenReturn(4L);
         when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, 1L)).thenReturn(1L);
@@ -529,7 +529,7 @@ class LearningServiceTest {
         when(step4Progress.getScore()).thenReturn(93);
 
         when(userRepository.existsById(userId)).thenReturn(true);
-        when(userLearningProgressRepository.findFirstByUser_UserIdOrderByLastStudiedAtDescIdDesc(userId))
+        when(userLearningProgressRepository.findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
                 .thenReturn(Optional.of(latest));
         when(learningStepRepository.countByLearningId(1L)).thenReturn(4L);
         when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, 1L)).thenReturn(3L);

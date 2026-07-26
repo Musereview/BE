@@ -12,7 +12,7 @@ public class LearningHomeResponseDTO {
             @Schema(description = "최근 학습 이어서 하기. 학습 기록이 하나도 없으면 null")
             CurrentLearning currentLearning,
 
-            @Schema(description = "난이도별 대표 학습 주제(THEORY), 항상 3개")
+            @Schema(description = "난이도별 대표 학습 주제(THEORY), 최대 3개. 데이터가 없는 난이도는 제외되어 3개 미만일 수 있음")
             List<TheoryPackageItem> theoryPackages,
 
             @Schema(description = "대표 실전 반주법 패키지(ACCOMPANIMENT), 이름순 3개")
