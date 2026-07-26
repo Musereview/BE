@@ -11,6 +11,7 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -96,6 +97,7 @@ public class Analysis extends BaseCreatedEntity {
                      String failedReason, LocalDateTime completedAt) {
         validateUser(user);
         validatePlaying(playing);
+        validateOwnerConsistency(user, playing);
         validatePositive(startBar, "startBar");
         validatePositive(endBar, "endBar");
         validateBarRange(startBar, endBar);
@@ -141,6 +143,12 @@ public class Analysis extends BaseCreatedEntity {
     private static void validatePlaying(Playing playing) {
         if (playing == null) {
             throw new GeneralException(AnalysisErrorStatus.ANALYSIS_INVALID_REQUEST);
+        }
+    }
+
+    private static void validateOwnerConsistency(User user, Playing playing) {
+        if (!Objects.equals(user.getUserId(), playing.getUser().getUserId())) {
+            throw new GeneralException(AnalysisErrorStatus.ANALYSIS_OWNER_MISMATCH);
         }
     }
 

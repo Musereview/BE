@@ -55,6 +55,7 @@ class AnalysisServiceTest {
 
         Playing playing = mock(Playing.class);
         lenient().when(playing.getId()).thenReturn(1L);
+        lenient().when(playing.getUser()).thenReturn(user);
 
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
         analysis.startProcessing();

@@ -71,6 +71,7 @@ class HistoryServiceTest {
         User user = mock(User.class);
         Playing playing = mock(Playing.class);
         lenient().when(playing.getId()).thenReturn(playingId);
+        lenient().when(playing.getUser()).thenReturn(user);
 
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
         analysis.startProcessing();
@@ -198,7 +199,10 @@ class HistoryServiceTest {
         given(playingRepository.findByIdWithBackingTrack(1L)).willReturn(Optional.of(playing));
 
         Analysis completed = completedAnalysis(1L, 90);
-        Analysis pending = Analysis.createPending(mock(User.class), mock(Playing.class), 9, 16, "{}");
+        User pendingUser = mock(User.class);
+        Playing pendingPlaying = mock(Playing.class);
+        given(pendingPlaying.getUser()).willReturn(pendingUser);
+        Analysis pending = Analysis.createPending(pendingUser, pendingPlaying, 9, 16, "{}");
         given(analysisRepository.findByPlayingIdAndUserIdOrderByStartBarAscIdAsc(1L, 1L))
                 .willReturn(List.of(completed, pending));
 

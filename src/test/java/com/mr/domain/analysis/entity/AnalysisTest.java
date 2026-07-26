@@ -2,6 +2,7 @@ package com.mr.domain.analysis.entity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
@@ -39,6 +40,7 @@ class AnalysisTest {
     void createPending_invalidBarRange_throwsException() {
         User user = mock(User.class);
         Playing playing = mock(Playing.class);
+        given(playing.getUser()).willReturn(user);
 
         assertThatThrownBy(() -> Analysis.createPending(user, playing, 8, 1, "{}"))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -49,9 +51,25 @@ class AnalysisTest {
     void createPending_success_setsPendingStatus() {
         User user = mock(User.class);
         Playing playing = mock(Playing.class);
+        given(playing.getUser()).willReturn(user);
 
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
 
         assertThat(analysis.getStatus()).isEqualTo(AnalysisStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("createPending - playing 소유자와 user가 다르면 예외가 발생한다")
+    void createPending_ownerMismatch_throwsException() {
+        User user = mock(User.class);
+        given(user.getUserId()).willReturn(1L);
+        User otherUser = mock(User.class);
+        given(otherUser.getUserId()).willReturn(2L);
+        Playing playing = mock(Playing.class);
+        given(playing.getUser()).willReturn(otherUser);
+
+        assertThatThrownBy(() -> Analysis.createPending(user, playing, 1, 8, "{}"))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.ANALYSIS_OWNER_MISMATCH);
     }
 }
