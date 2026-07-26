@@ -1,8 +1,14 @@
 package com.mr.domain.backingTrack.service;
 
+import com.mr.domain.analysis.entity.Analysis;
+import com.mr.domain.analysis.entity.enums.AnalysisStatus;
+import com.mr.domain.analysis.exception.AnalysisErrorStatus;
+import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.backingTrack.dto.req.BackingTrackSaveRequestDTO;
+import com.mr.domain.backingTrack.dto.req.PlayCountIncreaseRequestDTO;
 import com.mr.domain.backingTrack.dto.res.BackingTrackCreateResponseDTO;
 import com.mr.domain.backingTrack.dto.res.BackingTrackUpdateResponseDTO;
+import com.mr.domain.backingTrack.dto.res.PlayCountIncreaseResponseDTO;
 import com.mr.domain.backingTrack.entity.BackingTrack;
 import com.mr.domain.backingTrack.entity.ChordProgression;
 import com.mr.domain.backingTrack.exception.BackingTrackErrorStatus;
@@ -24,6 +30,7 @@ public class BackingTrackService {
 
     private final BackingTrackRepository backingTrackRepository;
     private final UserRepository userRepository;
+    private final AnalysisRepository analysisRepository;
 
     private static final Long TEMP_DEFAULT_ACADEMY_ID = 1L; // MVP 임시 학원 ID
 
@@ -147,5 +154,34 @@ public class BackingTrackService {
                 throw new GeneralException(BackingTrackErrorStatus.INVALID_CHORD_SEQUENCE);
             }
         }
+    }
+
+    // 재생 수 증가
+    @Transactional
+    public PlayCountIncreaseResponseDTO.IncreaseResponseDTO increasePlayCount(
+            Long backingTrackId,
+            PlayCountIncreaseRequestDTO.IncreaseRequestDTO request
+    ) {
+
+        // 백킹트랙 존재 여부 확인
+        BackingTrack backingTrack = backingTrackRepository.findById(backingTrackId)
+                .orElseThrow(() -> new GeneralException(BackingTrackErrorStatus.BACKING_TRACK_NOT_FOUND));
+
+        // AI 분석 결과 조회
+        Analysis analysis = analysisRepository.findById(request.analysisId())
+                .orElseThrow(() -> new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_FOUND));
+
+        // AI 분석 상태 검증
+        if (analysis.getStatus() != AnalysisStatus.COMPLETED) {
+            throw new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_COMPLETED);
+        }
+
+        // 재생 수 증가
+        backingTrack.increasePlayCount();
+
+        return PlayCountIncreaseResponseDTO.IncreaseResponseDTO.of(
+                backingTrack.getId(),
+                backingTrack.getPlayCount()
+        );
     }
 }

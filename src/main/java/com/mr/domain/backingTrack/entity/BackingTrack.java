@@ -180,4 +180,12 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     public void addChordProgression(ChordProgression chordProgression) {
         this.chordProgressions.add(chordProgression);
     }
+
+    // 재생 수 증가
+    public void increasePlayCount() {
+        if (this.playCount == null) {
+            this.playCount = 0;
+        }
+        this.playCount += 1;
+    }
 }
