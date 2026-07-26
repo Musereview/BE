@@ -21,7 +21,7 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
               and (:cutoff is null or p.endedAt >= :cutoff)
             order by p.endedAt desc, p.id desc
             """)
-    Slice<Playing> findCompletedPlayingsByUser(
+    Slice<Playing> findPlayingsByUserAndStatus(
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status,
             @Param("cutoff") LocalDateTime cutoff,

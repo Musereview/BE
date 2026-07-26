@@ -77,7 +77,7 @@ class HistoryServiceTest {
     @Test
     @DisplayName("getHistories - 결과가 0건이면 빈 목록을 반환하고 Analysis는 조회하지 않는다")
     void getHistories_empty_returnsEmptyList() {
-        given(playingRepository.findCompletedPlayingsByUser(eq(1L), eq(PlayingStatus.COMPLETED), any(), any()))
+        given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any(), any()))
                 .willReturn(new SliceImpl<>(List.of(), PageRequest.of(0, 10), false));
 
         HistoryListResponseDTO response = historyService.getHistories(1L, 0, 10, null);
@@ -91,7 +91,7 @@ class HistoryServiceTest {
     @DisplayName("getHistories - 최신 COMPLETED 분석이 없는 Playing은 latestAnalysisId가 null이다")
     void getHistories_noCompletedAnalysis_latestAnalysisIdIsNull() {
         Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
-        given(playingRepository.findCompletedPlayingsByUser(eq(1L), eq(PlayingStatus.COMPLETED), any(), any()))
+        given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any(), any()))
                 .willReturn(new SliceImpl<>(List.of(playing), PageRequest.of(0, 10), false));
         given(analysisRepository.findByPlayingIdInAndStatusOrderByCreatedAtDescIdDesc(
                 anyList(), eq(AnalysisStatus.COMPLETED)))
@@ -109,7 +109,7 @@ class HistoryServiceTest {
     void getHistories_scoreChange_adjacentComparisonOnly() {
         Playing playing1 = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
         Playing playing2 = mockPlaying(2L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now().minusDays(1));
-        given(playingRepository.findCompletedPlayingsByUser(eq(1L), eq(PlayingStatus.COMPLETED), any(), any()))
+        given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any(), any()))
                 .willReturn(new SliceImpl<>(List.of(playing1, playing2), PageRequest.of(0, 10), false));
 
         Analysis analysis1 = completedAnalysis(1L, 90);
