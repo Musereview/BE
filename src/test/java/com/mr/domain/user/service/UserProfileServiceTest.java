@@ -26,7 +26,9 @@ import com.mr.domain.user.repository.StudentRepository;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.principal.CustomUserDetails;
+import java.sql.SQLException;
 import java.util.Optional;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +37,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -116,6 +119,58 @@ class UserProfileServiceTest {
     }
 
     @Test
+    @DisplayName("registerProfile - 동시 요청으로 닉네임이 먼저 선점되면(UNIQUE 위반) USER_409_01(닉네임 중복)로 변환된다")
+    void registerProfile_nicknameRaceCondition_convertedToNicknameDuplicated() {
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
+        given(userRepository.existsByNicknameAndUserIdNot(any(), any())).willReturn(false);
+        given(userRepository.saveAndFlush(any(User.class)))
+                .willThrow(uniqueViolation("users_nickname_key"));
+
+        UserProfileRequestDTO.OnboardingRequest request =
+                new UserProfileRequestDTO.OnboardingRequest("김뮤즈", TheoryLevel.INTERMEDIATE);
+
+        assertThatThrownBy(() -> userProfileService.registerProfile(request))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getCode())
+                .isEqualTo(UserErrorStatus.NICKNAME_DUPLICATED);
+
+        verify(studentRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("registerProfile - 동시 요청으로 온보딩이 먼저 완료되면(Student UNIQUE 위반) USER_409_02로 변환된다")
+    void registerProfile_studentRaceCondition_convertedToAlreadyCompleted() {
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
+        given(userRepository.existsByNicknameAndUserIdNot(any(), any())).willReturn(false);
+        given(studentRepository.saveAndFlush(any(Student.class)))
+                .willThrow(uniqueViolation("student_user_id_key"));
+
+        UserProfileRequestDTO.OnboardingRequest request =
+                new UserProfileRequestDTO.OnboardingRequest("김뮤즈", TheoryLevel.INTERMEDIATE);
+
+        assertThatThrownBy(() -> userProfileService.registerProfile(request))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getCode())
+                .isEqualTo(UserErrorStatus.ONBOARDING_ALREADY_COMPLETED);
+    }
+
+    @Test
+    @DisplayName("registerProfile - 닉네임 위반이 아닌 다른 무결성 오류는 그대로 전파된다")
+    void registerProfile_nonDuplicateIntegrityViolation_propagates() {
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
+        given(userRepository.existsByNicknameAndUserIdNot(any(), any())).willReturn(false);
+        DataIntegrityViolationException notNullViolation =
+                new DataIntegrityViolationException("not null violation");
+        given(userRepository.saveAndFlush(any(User.class))).willThrow(notNullViolation);
+
+        UserProfileRequestDTO.OnboardingRequest request =
+                new UserProfileRequestDTO.OnboardingRequest("김뮤즈", TheoryLevel.INTERMEDIATE);
+
+        assertThatThrownBy(() -> userProfileService.registerProfile(request))
+                .isSameAs(notNullViolation);
+    }
+
+    @Test
     @DisplayName("registerProfile - PIANO 시드 데이터가 없으면 INSTRUMENT_500_01")
     void registerProfile_instrumentNotSeeded() {
         given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
@@ -147,5 +202,33 @@ class UserProfileServiceTest {
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getCode())
                 .isEqualTo(StudentErrorStatus.STUDENT_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("updateProfile - 동시 요청으로 닉네임이 먼저 선점되면(UNIQUE 위반) USER_409_01로 변환된다")
+    void updateProfile_nicknameRaceCondition_convertedToNicknameDuplicated() {
+        user.updateNickname("기존닉네임");
+        Student student = Student.create(user, TheoryLevel.INTERMEDIATE);
+
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
+        given(studentRepository.findByUser(user)).willReturn(Optional.of(student));
+        given(userRepository.existsByNicknameAndUserIdNot(any(), any())).willReturn(false);
+        given(userRepository.saveAndFlush(any(User.class)))
+                .willThrow(uniqueViolation("users_nickname_key"));
+
+        UserProfileRequestDTO.UpdateRequest request =
+                new UserProfileRequestDTO.UpdateRequest("새로운뮤즈", TheoryLevel.ADVANCED);
+
+        assertThatThrownBy(() -> userProfileService.updateProfile(request))
+                .isInstanceOf(GeneralException.class)
+                .extracting(e -> ((GeneralException) e).getCode())
+                .isEqualTo(UserErrorStatus.NICKNAME_DUPLICATED);
+    }
+
+    private static DataIntegrityViolationException uniqueViolation(String constraintName) {
+        SQLException sqlException = new SQLException("duplicate key value violates unique constraint", "23505");
+        ConstraintViolationException constraintViolationException =
+                new ConstraintViolationException("duplicate key", sqlException, constraintName);
+        return new DataIntegrityViolationException("duplicate key", constraintViolationException);
     }
 }

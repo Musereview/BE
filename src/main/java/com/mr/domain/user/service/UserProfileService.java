@@ -24,6 +24,7 @@ import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.SecurityUtil;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,7 @@ public class UserProfileService {
 
     private static final String PIANO_CODE = "PIANO";
     private static final int SUBSCRIPTION_PERIOD_DAYS = 30;
+    private static final String POSTGRES_UNIQUE_VIOLATION_SQL_STATE = "23505";
 
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
@@ -82,10 +84,23 @@ public class UserProfileService {
         ensureNicknameNotTaken(user.getUserId(), trimmedNickname);
         user.updateNickname(trimmedNickname);
 
+        try {
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException e) {
+            if (!isDuplicateKeyViolation(e)) {
+                throw e;
+            }
+            // 동시에 들어온 다른 요청이 먼저 같은 닉네임을 선점한 경우(User.nickname unique 제약 위반)
+            throw new GeneralException(UserErrorStatus.NICKNAME_DUPLICATED);
+        }
+
         Student student;
         try {
             student = studentRepository.saveAndFlush(Student.create(user, request.skillLevel()));
         } catch (DataIntegrityViolationException e) {
+            if (!isDuplicateKeyViolation(e)) {
+                throw e;
+            }
             // 동시에 들어온 다른 요청이 먼저 온보딩을 완료한 경우(Student.user_id unique 제약 위반)
             throw new GeneralException(UserErrorStatus.ONBOARDING_ALREADY_COMPLETED);
         }
@@ -119,6 +134,16 @@ public class UserProfileService {
         user.updateNickname(trimmedNickname);
         student.updateTheoryLevel(request.skillLevel());
 
+        try {
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException e) {
+            if (!isDuplicateKeyViolation(e)) {
+                throw e;
+            }
+            // 동시에 들어온 다른 요청이 먼저 같은 닉네임을 선점한 경우(User.nickname unique 제약 위반)
+            throw new GeneralException(UserErrorStatus.NICKNAME_DUPLICATED);
+        }
+
         return UserProfileResponseDTO.UpdateResponse.builder()
                 .userId(user.getUserId())
                 .nickname(user.getNickname())
@@ -135,6 +160,11 @@ public class UserProfileService {
     private Student getStudent(User user) {
         return studentRepository.findByUser(user)
                 .orElseThrow(() -> new GeneralException(StudentErrorStatus.STUDENT_NOT_FOUND));
+    }
+
+    private boolean isDuplicateKeyViolation(DataIntegrityViolationException e) {
+        return e.getCause() instanceof ConstraintViolationException constraintViolationException
+                && POSTGRES_UNIQUE_VIOLATION_SQL_STATE.equals(constraintViolationException.getSQLState());
     }
 
     private String trimNickname(String nickname) {
