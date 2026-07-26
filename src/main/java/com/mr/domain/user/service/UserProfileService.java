@@ -1,5 +1,6 @@
 package com.mr.domain.user.service;
 
+import com.mr.domain.learning.repository.UserLearningProgressRepository;
 import com.mr.domain.statistics.entity.UserStatistics;
 import com.mr.domain.statistics.repository.UserStatisticsRepository;
 import com.mr.domain.subscriptions.entity.Subscription;
@@ -44,6 +45,7 @@ public class UserProfileService {
     private final InstrumentRepository instrumentRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final UserStatisticsRepository userStatisticsRepository;
+    private final UserLearningProgressRepository userLearningProgressRepository;
 
     public UserProfileResponseDTO.ProfileResponse getMyProfile() {
         Long userId = SecurityUtil.getCurrentUserId();
@@ -187,10 +189,7 @@ public class UserProfileService {
                 .build();
     }
 
-    // TODO: feat/#32-learning-status-api(동균 강) 병합 후 UserLearningProgressRepository로 교체
-    // SELECT COUNT(DISTINCT ulp.learning_id) FROM user_learning_progress ulp
-    // WHERE ulp.user_id = :userId AND ulp.score >= 90
     private Long countCompletedLearnings(Long userId) {
-        return 0L;
+        return userLearningProgressRepository.countDistinctCompletedLearningsByUserId(userId);
     }
 }

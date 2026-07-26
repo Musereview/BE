@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.mr.domain.learning.repository.UserLearningProgressRepository;
 import com.mr.domain.statistics.repository.UserStatisticsRepository;
 import com.mr.domain.subscriptions.entity.Subscription;
 import com.mr.domain.subscriptions.repository.SubscriptionRepository;
@@ -14,6 +15,7 @@ import com.mr.domain.user.dto.req.UserProfileRequestDTO;
 import com.mr.domain.user.dto.res.UserProfileResponseDTO;
 import com.mr.domain.user.entity.Instrument;
 import com.mr.domain.user.entity.Student;
+import com.mr.domain.user.entity.StudentInstrument;
 import com.mr.domain.user.entity.User;
 import com.mr.domain.user.entity.enums.TheoryLevel;
 import com.mr.domain.user.entity.enums.UserRole;
@@ -27,6 +29,7 @@ import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.principal.CustomUserDetails;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.AfterEach;
@@ -58,6 +61,8 @@ class UserProfileServiceTest {
     private SubscriptionRepository subscriptionRepository;
     @Mock
     private UserStatisticsRepository userStatisticsRepository;
+    @Mock
+    private UserLearningProgressRepository userLearningProgressRepository;
 
     @InjectMocks
     private UserProfileService userProfileService;
@@ -187,6 +192,33 @@ class UserProfileServiceTest {
                 .isInstanceOf(GeneralException.class)
                 .extracting(e -> ((GeneralException) e).getCode())
                 .isEqualTo(InstrumentErrorStatus.INSTRUMENT_NOT_SEEDED);
+    }
+
+    @Test
+    @DisplayName("getMyProfile - 통계의 completedLearningCount는 UserLearningProgressRepository 집계 결과를 그대로 사용한다")
+    void getMyProfile_usesLearningProgressAggregationForCompletedLearningCount() {
+        user.updateNickname("김뮤즈");
+        Student student = Student.create(user, TheoryLevel.INTERMEDIATE);
+        Instrument piano = Instrument.create("PIANO", "피아노");
+        StudentInstrument primaryInstrument = StudentInstrument.createPrimary(student, piano);
+        Subscription subscription = Subscription.create(
+                user, "PRO", LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(29));
+
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
+        given(studentRepository.findByUser(user)).willReturn(Optional.of(student));
+        given(studentInstrumentRepository.findByStudentAndPrimaryTrue(student))
+                .willReturn(Optional.of(primaryInstrument));
+        given(subscriptionRepository
+                .findFirstByUserAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(
+                        any(), any(), any()))
+                .willReturn(Optional.of(subscription));
+        given(userStatisticsRepository.findByUserId(USER_ID)).willReturn(Optional.empty());
+        given(userLearningProgressRepository.countDistinctCompletedLearningsByUserId(USER_ID)).willReturn(8L);
+
+        UserProfileResponseDTO.ProfileResponse response = userProfileService.getMyProfile();
+
+        assertThat(response.statistics().completedLearningCount()).isEqualTo(8L);
+        verify(userLearningProgressRepository).countDistinctCompletedLearningsByUserId(USER_ID);
     }
 
     @Test

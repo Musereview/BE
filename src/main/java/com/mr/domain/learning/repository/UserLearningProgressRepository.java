@@ -14,4 +14,9 @@ public interface UserLearningProgressRepository extends JpaRepository<UserLearni
     @Query("SELECT COUNT(ulp) FROM UserLearningProgress ulp " +
             "WHERE ulp.user.userId = :userId AND ulp.learning.id = :learningId AND ulp.score >= 90")
     long countCompletedStepsByUserIdAndLearningId(@Param("userId") Long userId, @Param("learningId") Long learningId);
+
+    // 유저가 완료(점수 90점 이상)한 학습(learning) distinct 개수 조회 (프로필 통계의 completedLearningCount)
+    @Query("SELECT COUNT(DISTINCT ulp.learning.id) FROM UserLearningProgress ulp " +
+            "WHERE ulp.user.userId = :userId AND ulp.score >= 90")
+    long countDistinctCompletedLearningsByUserId(@Param("userId") Long userId);
 }
