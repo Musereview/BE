@@ -1,4 +1,4 @@
-package com.mr.domain.auth.dto;
+package com.mr.domain.auth.dto.res;
 
 import lombok.Builder;
 
