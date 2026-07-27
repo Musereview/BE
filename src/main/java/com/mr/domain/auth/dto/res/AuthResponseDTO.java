@@ -12,6 +12,13 @@ public class AuthResponseDTO {
     ) {}
 
     @Builder
+    public record TokenInfo(
+            String accessToken,
+            String refreshToken,
+            Long accessTokenExpiresInSeconds
+    ) {}
+
+    @Builder
     public record LoginResponse(
             Long userId,
             String nickname,
