@@ -16,6 +16,7 @@ public class AuthResponseDTO {
             Long userId,
             String nickname,
             boolean isNewUser,
+            boolean isOnboardingCompleted,
             TokenResponse tokenInfo
     ) {}
 }

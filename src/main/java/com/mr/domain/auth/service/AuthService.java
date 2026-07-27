@@ -26,32 +26,26 @@ public class AuthService {
 
     @Transactional
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String oAuthAccessToken, String deviceInfo) {
-        // 1. 소셜 프로필 조회
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, oAuthAccessToken);
 
-        // 2. SocialAuth 존재 여부 확인 및 회원가입/로그인 진행
-        // [수정] OAuthUserInfo.getSocialId() -> userInfo.getSocialId()
-        SocialAuth socialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.getSocialId())
+        SocialAuth socialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId())
                 .orElse(null);
 
         boolean isNewUser = false;
         User user;
 
         if (socialAuth == null) {
-            // 신규 유저 생성 (OAuth 가입 단계)
-            user = userRepository.save(User.createFromOAuth(userInfo.getProfileImgUrl()));
+            user = userRepository.save(User.createFromOAuth(userInfo.profileImgUrl()));
             isNewUser = true;
 
-            // Refresh Token 생성 및 저장
             String refreshToken = jwtTokenProvider.createRefreshToken(user.getUserId());
             String refreshTokenHash = jwtTokenProvider.hashToken(refreshToken);
             LocalDateTime expiredAt = jwtTokenProvider.getRefreshTokenExpiryTime();
 
-            // SocialAuth 정보 신규 적재
             socialAuth = SocialAuth.create(
                     user,
                     socialType,
-                    userInfo.getSocialId(),
+                    userInfo.socialId(),
                     refreshToken,
                     refreshTokenHash,
                     expiredAt,
@@ -59,7 +53,6 @@ public class AuthService {
             );
             socialAuthRepository.save(socialAuth);
         } else {
-            // 기존 유저 로그인 -> Refresh Token 갱신
             user = socialAuth.getUser();
 
             String refreshToken = jwtTokenProvider.createRefreshToken(user.getUserId());
@@ -69,7 +62,6 @@ public class AuthService {
             socialAuth.updateRefreshToken(refreshToken, refreshTokenHash, newExpiredAt, deviceInfo);
         }
 
-        // 3. 서비스 전용 AccessToken 생성 및 응답 반환
         String appAccessToken = jwtTokenProvider.createAccessToken(user.getUserId());
 
         AuthResponseDTO.TokenResponse tokenResponse = AuthResponseDTO.TokenResponse.builder()

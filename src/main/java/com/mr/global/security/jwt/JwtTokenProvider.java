@@ -16,7 +16,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 
 @Component
@@ -27,6 +32,7 @@ public class JwtTokenProvider {
     private static final String TOKEN_TYPE_CLAIM = "type";
     private static final String ACCESS_TYPE = "access";
     private static final String REFRESH_TYPE = "refresh";
+    private static final String SEOUL_ZONE = "Asia/Seoul";
 
     private final CustomUserDetailsService userDetailsService;
     private final JwtProperties jwtProperties;
@@ -103,5 +109,32 @@ public class JwtTokenProvider {
         } catch (ExpiredJwtException e) {
             throw new JwtException("만료된 토큰입니다.", e);
         }
+    }
+
+    public String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encodedHash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder(2 * encodedHash.length);
+            for (byte b : encodedHash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 알고리즘을 찾을 수 없습니다.", e);
+        }
+    }
+
+    public LocalDateTime getRefreshTokenExpiryTime() {
+        return LocalDateTime.now(ZoneId.of(SEOUL_ZONE))
+                .plusSeconds(jwtProperties.refreshTokenValidityInSeconds());
+    }
+
+    public Long getAccessTokenExpirationSeconds() {
+        return jwtProperties.accessTokenValidityInSeconds();
     }
 }
