@@ -32,7 +32,8 @@ public class OAuthClientService {
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded;charset=utf-8")
                     .retrieve()
-                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() {
+                    });
 
             if (response == null) {
                 throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
@@ -52,13 +53,7 @@ public class OAuthClientService {
                     .profileImgUrl(profileImgUrl)
                     .build();
 
-        } catch (HttpClientErrorException e) {
-            // 🌟 카카오 서버가 거부한 진짜 이유(HTTP 상태코드 및 응답 바디)를 콘솔에 출력합니다!
-            log.error("카카오 OAuth API 호출 실패 - Status: {}, Response: {}",
-                    e.getStatusCode(), e.getResponseBodyAsString());
-            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
         } catch (Exception e) {
-            log.error("OAuth 처리 중 자바 내부 예외 발생", e);
             throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
         }
     }
