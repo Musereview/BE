@@ -1,7 +1,8 @@
 package com.mr.domain.auth.entity;
 
-import com.mr.domain.auth.exception.AuthErrorStatus;
 import com.mr.domain.auth.entity.enums.SocialType;
+import com.mr.domain.auth.exception.AuthErrorStatus;
+import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseCreatedEntity;
 import jakarta.persistence.*;
@@ -14,7 +15,6 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-// TODO: 추후 User 도메인 완성 시 인덱스 추가
 @Table(
         name = "social_auth",
         uniqueConstraints = {
@@ -29,9 +29,9 @@ public class SocialAuth extends BaseCreatedEntity {
     @Column(name = "social_auth_id")
     private Long id;
 
-    // TODO: User연결 예정
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "social_type", nullable = false, length = 20)
@@ -53,14 +53,14 @@ public class SocialAuth extends BaseCreatedEntity {
     private String deviceInfo;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private SocialAuth(Long userId, SocialType socialType, String socialId, String refreshToken,
+    private SocialAuth(User user, SocialType socialType, String socialId, String refreshToken,
                        String refreshTokenHash, LocalDateTime expiredAt, String deviceInfo) {
 
-        validateUserAccount(userId);
-        validateUserAccount(socialType);
-        validateUserAccount(socialId);
+        validateUser(user);
+        validateSocialType(socialType);
+        validateSocialId(socialId);
 
-        this.userId = userId;
+        this.user = user;
         this.socialType = socialType;
         this.socialId = socialId;
         this.refreshToken = refreshToken;
@@ -69,7 +69,7 @@ public class SocialAuth extends BaseCreatedEntity {
         this.deviceInfo = deviceInfo;
     }
 
-    public static SocialAuth create(Long userId, SocialType socialType, String socialId,
+    public static SocialAuth create(User user, SocialType socialType, String socialId,
                                     String encryptedToken, String tokenHash, LocalDateTime expiredAt, String deviceInfo) {
 
         validateTokenValue(encryptedToken);
@@ -77,7 +77,7 @@ public class SocialAuth extends BaseCreatedEntity {
         validateExpiryTime(expiredAt);
 
         return SocialAuth.builder()
-                .userId(userId)
+                .user(user)
                 .socialType(socialType)
                 .socialId(socialId)
                 .refreshToken(encryptedToken)
@@ -87,14 +87,26 @@ public class SocialAuth extends BaseCreatedEntity {
                 .build();
     }
 
-    private static void validateUserAccount(Object value) {
-        if (value == null || (value instanceof String && ((String) value).trim().isEmpty())) {
+    private static void validateUser(User user) {
+        if (user == null) {
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        }
+    }
+
+    private static void validateSocialType(SocialType socialType) {
+        if (socialType == null) {
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        }
+    }
+
+    private static void validateSocialId(String socialId) {
+        if (socialId == null || socialId.isBlank()) {
             throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
         }
     }
 
     private static void validateTokenValue(String token) {
-        if (token == null || token.trim().isEmpty()) {
+        if (token == null || token.isBlank()) {
             throw new GeneralException(AuthErrorStatus.TOKEN_MISSING);
         }
     }
@@ -119,6 +131,6 @@ public class SocialAuth extends BaseCreatedEntity {
     public void expireToken() {
         this.refreshToken = null;
         this.refreshTokenHash = null;
-        this.expiredAt = LocalDateTime.now(ZoneId.of("Asia/Seoul")); // null 대신 현재 시각 기록
+        this.expiredAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
 }
