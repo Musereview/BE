@@ -4,6 +4,6 @@ import lombok.Builder;
 
 @Builder
 public record OAuthUserInfo(
-        String socialId,
+        Long socialId,
         String profileImgUrl
 ) {}
