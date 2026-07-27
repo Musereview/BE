@@ -1,5 +1,7 @@
 package com.mr.domain.learning.entity;
 
+import com.mr.domain.learning.exception.LearningErrorStatus;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseCreatedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -99,6 +101,12 @@ public class LearningStep extends BaseCreatedEntity {
         this.practiceTip = practiceTip;
         if (estimatedMinutes != null) {
             this.estimatedMinutes = estimatedMinutes;
+        }
+    }
+
+    public void validateBelongsTo(Learning targetLearning) {
+        if (this.learning == null || !this.learning.getId().equals(targetLearning.getId())) {
+            throw new GeneralException(LearningErrorStatus.INVALID_LEARNING_STEP);
         }
     }
 }

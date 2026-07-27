@@ -2,11 +2,16 @@ package com.mr.domain.analysis.entity;
 
 import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
+import com.mr.domain.analysis.exception.AnalysisErrorStatus;
+import com.mr.domain.playing.entity.Playing;
+import com.mr.domain.user.entity.User;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseCreatedEntity;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,11 +19,12 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-// TODO: 추후 User, Playing 도메인 인덱스 추가
 @Table(
         name = "analysis",
         indexes = {
-                @Index(name = "idx_analysis_status", columnList = "status")
+                @Index(name = "idx_analysis_status", columnList = "status"),
+                @Index(name = "idx_analysis_user_id", columnList = "user_id"),
+                @Index(name = "idx_analysis_playing_id", columnList = "playing_id")
         })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Analysis extends BaseCreatedEntity {
@@ -28,13 +34,13 @@ public class Analysis extends BaseCreatedEntity {
     @Column(name = "analysis_id")
     private Long id;
 
-    /** TODO: User 도메인 엔티티 연관관계 연결 예정 */
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    /** TODO: Playing 엔티티 연관관계 연결 예정 */
-    @Column(name = "playing_id", nullable = false)
-    private Long playingId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "playing_id", nullable = false)
+    private Playing playing;
 
     @Column(name = "analysis_version", nullable = false, length = 50)
     private String analysisVersion;
@@ -84,17 +90,20 @@ public class Analysis extends BaseCreatedEntity {
     private LocalDateTime completedAt;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private Analysis(Long userId, Long playingId, String analysisVersion, Integer startBar, Integer endBar,
+    private Analysis(User user, Playing playing, String analysisVersion, Integer startBar, Integer endBar,
                      AnalysisStatus status, Integer totalScore, AnalysisGrade grade, String summary,
                      String analysisRequestJson, BigDecimal scaleScore, BigDecimal tensionScore,
                      BigDecimal progressionScore, BigDecimal voiceLeadingScore, String rawResultJson,
                      String failedReason, LocalDateTime completedAt) {
+        validateUser(user);
+        validatePlaying(playing);
+        validateOwnerConsistency(user, playing);
         validatePositive(startBar, "startBar");
         validatePositive(endBar, "endBar");
         validateBarRange(startBar, endBar);
 
-        this.userId = userId;
-        this.playingId = playingId;
+        this.user = user;
+        this.playing = playing;
         this.analysisVersion = analysisVersion;
         this.startBar = startBar;
         this.endBar = endBar;
@@ -112,17 +121,35 @@ public class Analysis extends BaseCreatedEntity {
         this.completedAt = completedAt;
     }
 
-    public static Analysis createPending(Long userId, Long playingId, Integer startBar, Integer endBar,
+    public static Analysis createPending(User user, Playing playing, Integer startBar, Integer endBar,
                                          String analysisRequestJson) {
         return Analysis.builder()
-                .userId(userId)
-                .playingId(playingId)
+                .user(user)
+                .playing(playing)
                 .analysisVersion("v1")
                 .startBar(startBar)
                 .endBar(endBar)
                 .status(AnalysisStatus.PENDING)
                 .analysisRequestJson(analysisRequestJson)
                 .build();
+    }
+
+    private static void validateUser(User user) {
+        if (user == null) {
+            throw new GeneralException(AnalysisErrorStatus.ANALYSIS_INVALID_REQUEST);
+        }
+    }
+
+    private static void validatePlaying(Playing playing) {
+        if (playing == null) {
+            throw new GeneralException(AnalysisErrorStatus.ANALYSIS_INVALID_REQUEST);
+        }
+    }
+
+    private static void validateOwnerConsistency(User user, Playing playing) {
+        if (!Objects.equals(user.getUserId(), playing.getUser().getUserId())) {
+            throw new GeneralException(AnalysisErrorStatus.ANALYSIS_OWNER_MISMATCH);
+        }
     }
 
     private static void validatePositive(Integer value, String fieldName) {

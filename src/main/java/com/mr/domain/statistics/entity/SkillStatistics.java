@@ -2,22 +2,28 @@ package com.mr.domain.statistics.entity;
 
 import com.mr.domain.statistics.entity.enums.PeriodType;
 import com.mr.domain.statistics.entity.enums.SkillType;
+import com.mr.domain.statistics.exception.StatisticsErrorStatus;
+import com.mr.domain.user.entity.User;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseCreatedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+// TODO: (user, periodType, periodStart, periodEnd, skillType) 유니크 제약 필요한지 집계 로직 구현 시 확인
 @Getter
 @Entity
 @Table(name = "skill_statistics")
@@ -29,9 +35,9 @@ public class SkillStatistics extends BaseCreatedEntity {
     @Column(name = "skill_statistic_id")
     private Long id;
 
-    /** TODO: User 도메인 엔티티 연관관계 연결 예정 */
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "period_type", nullable = false, length = 50)
@@ -53,9 +59,11 @@ public class SkillStatistics extends BaseCreatedEntity {
     @Column(name = "previous_score", precision = 5, scale = 2)
     private BigDecimal previousScore;
 
-    private SkillStatistics(Long userId, PeriodType periodType, LocalDate periodStart,
+    private SkillStatistics(User user, PeriodType periodType, LocalDate periodStart,
                             LocalDate periodEnd, SkillType skillType, BigDecimal score, BigDecimal previousScore) {
-        this.userId = userId;
+        validateUser(user);
+
+        this.user = user;
         this.periodType = periodType;
         this.periodStart = periodStart;
         this.periodEnd = periodEnd;
@@ -64,10 +72,16 @@ public class SkillStatistics extends BaseCreatedEntity {
         this.previousScore = previousScore;
     }
 
-    public static SkillStatistics create(Long userId, PeriodType periodType,
+    private static void validateUser(User user) {
+        if (user == null) {
+            throw new GeneralException(StatisticsErrorStatus.STATISTICS_INVALID_REQUEST);
+        }
+    }
+
+    public static SkillStatistics create(User user, PeriodType periodType,
                                          LocalDate periodStart, LocalDate periodEnd, SkillType skillType, BigDecimal score) {
         return new SkillStatistics(
-                userId,
+                user,
                 periodType,
                 periodStart,
                 periodEnd,
@@ -77,11 +91,11 @@ public class SkillStatistics extends BaseCreatedEntity {
         );
     }
 
-    public static SkillStatistics createWithPreviousScore(Long userId, PeriodType periodType,
+    public static SkillStatistics createWithPreviousScore(User user, PeriodType periodType,
                                                           LocalDate periodStart, LocalDate periodEnd, SkillType skillType, BigDecimal score,
                                                           BigDecimal previousScore) {
         return new SkillStatistics(
-                userId,
+                user,
                 periodType,
                 periodStart,
                 periodEnd,
