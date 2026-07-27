@@ -25,6 +25,8 @@ public class AuthService {
     private final JwtTokenProvider tokenProvider;
     private final OAuthClientService oAuthClientService;
 
+
+
     @Transactional
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String accessToken, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
@@ -56,17 +58,14 @@ public class AuthService {
     }
 
     private SocialAuth registerNewUser(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
-        // 🌟 프로필 이미지가 null인 경우 기본 이미지 URL로 대체 (또는 팀 내 공통 기본 이미지 상수 사용)
         String profileImgUrl = userInfo.profileImgUrl();
         if (profileImgUrl == null || profileImgUrl.isBlank()) {
-            profileImgUrl = "https://example.com/default-profile.png"; // 팀에서 쓰는 기본 이미지 URL로 변경
+            profileImgUrl = "https://example.com/default-profile.png";
         }
 
-        // 🌟 User 엔티티 생성 팩토리 메서드 호출
         User user = User.createFromOAuth(profileImgUrl);
         userRepository.save(user);
 
-        // 초기 토큰 값 생성 후 SocialAuth 매핑
         String initialToken = tokenProvider.createRefreshToken(user.getUserId());
         String initialHash = tokenProvider.hashToken(initialToken);
 

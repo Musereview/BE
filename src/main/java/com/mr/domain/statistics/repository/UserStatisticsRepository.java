@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserStatisticsRepository extends JpaRepository<UserStatistics, Long> {
 
-    Optional<UserStatistics> findByUserId(Long userId);
+    Optional<UserStatistics> findByUser_UserId(Long userId);
 }
