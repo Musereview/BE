@@ -10,7 +10,8 @@ import lombok.Getter;
 public enum StudentErrorStatus implements BaseCode {
 
     USER_REQUIRED(HttpStatus.BAD_REQUEST, "STUDENT_400_01", "user는 필수입니다."),
-    THEORY_LEVEL_REQUIRED(HttpStatus.BAD_REQUEST, "STUDENT_400_02", "theoryLevel은 필수입니다.");
+    THEORY_LEVEL_REQUIRED(HttpStatus.BAD_REQUEST, "STUDENT_400_02", "theoryLevel은 필수입니다."),
+    STUDENT_NOT_FOUND(HttpStatus.NOT_FOUND, "STUDENT_404_01", "온보딩 정보가 없는 사용자입니다.");
 
     private final HttpStatus status;
     private final String code;
