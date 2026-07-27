@@ -1,10 +1,15 @@
 package com.mr.domain.learning.service;
 
 import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
+import com.mr.domain.learning.dto.res.LearningAccompanimentListResponseDTO;
+import com.mr.domain.learning.dto.res.LearningCurriculumResponseDTO;
+import com.mr.domain.learning.dto.res.LearningHomeResponseDTO;
 import com.mr.domain.learning.dto.res.LearningPracticeDataResponseDTO;
 import com.mr.domain.learning.dto.res.LearningProgressResponseDTO;
 import com.mr.domain.learning.dto.res.LearningResultResponseDTO;
+import com.mr.domain.learning.dto.res.LearningStepDetailResponseDTO;
 import com.mr.domain.learning.dto.res.LearningTheoryListResponseDTO;
+import com.mr.domain.learning.entity.ChordExample;
 import com.mr.domain.learning.entity.Learning;
 import com.mr.domain.learning.entity.LearningStep;
 import com.mr.domain.learning.entity.PlayingExample;
@@ -12,6 +17,7 @@ import com.mr.domain.learning.entity.UserLearningProgress;
 import com.mr.domain.learning.entity.enums.LearningCategory;
 import com.mr.domain.learning.entity.enums.LearningDifficulty;
 import com.mr.domain.learning.exception.LearningErrorStatus;
+import com.mr.domain.learning.repository.ChordExampleRepository;
 import com.mr.domain.learning.repository.LearningRepository;
 import com.mr.domain.learning.repository.LearningStepRepository;
 import com.mr.domain.learning.repository.PlayingExampleRepository;
@@ -27,6 +33,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +47,7 @@ public class LearningService {
     private final LearningStepRepository learningStepRepository;
     private final LearningRepository learningRepository;
     private final PlayingExampleRepository playingExampleRepository;
+    private final ChordExampleRepository chordExampleRepository;
     // 임시 작명
     private final UserRepository userRepository;
 
@@ -116,6 +127,180 @@ public class LearningService {
                 .findByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(LearningCategory.THEORY, parsedDifficulty);
 
         return LearningTheoryListResponseDTO.TheoryListResultDTO.from(learnings);
+    }
+
+    // 학습 커리큘럼 조회
+    public LearningCurriculumResponseDTO.CurriculumResultDTO getCurriculum(Long userId, Long learningId) {
+        ensureUserExists(userId);
+
+        Learning learning = getActiveLearningOrThrow(learningId);
+
+        List<LearningStep> steps = learningStepRepository.findByLearning_IdOrderByStepNoAsc(learningId);
+        List<UserLearningProgress> progressList = userLearningProgressRepository
+                .findByUser_UserIdAndLearning_Id(userId, learningId);
+        Map<Long, UserLearningProgress> progressByStepId = progressList.stream()
+                .collect(Collectors.toMap(p -> p.getLearningStep().getId(), Function.identity()));
+
+        long totalStepCount = steps.size();
+        long completedStepCount = progressList.stream()
+                .filter(p -> p.getScore() != null && p.getScore() >= 90)
+                .count();
+
+        List<LearningCurriculumResponseDTO.StepItem> stepItems = steps.stream()
+                .map(step -> toStepItem(step, progressByStepId.get(step.getId())))
+                .toList();
+
+        return LearningCurriculumResponseDTO.CurriculumResultDTO.of(
+                learning,
+                LearningCurriculumResponseDTO.ProgressInfo.of(completedStepCount, totalStepCount),
+                stepItems
+        );
+    }
+
+    private LearningCurriculumResponseDTO.StepItem toStepItem(LearningStep step, UserLearningProgress progress) {
+        String status = progress != null ? progress.getLearningStatus() : "NOT_STARTED";
+        Integer score = progress != null ? progress.getScore() : null;
+        return LearningCurriculumResponseDTO.StepItem.of(step, status, score);
+    }
+
+    // 학습 단계별 조회
+    public LearningStepDetailResponseDTO.StepDetailResultDTO getStepDetail(Long learningId, Long learningStepId) {
+        Learning learning = getActiveLearningOrThrow(learningId);
+        LearningStep learningStep = getLearningStepOrThrow(learning, learningStepId);
+
+        PlayingExample playingExample = playingExampleRepository.findByLearningStep_Id(learningStepId).orElse(null);
+        List<ChordExample> chordExamples = chordExampleRepository.findByLearningStep_Id(learningStepId);
+
+        return LearningStepDetailResponseDTO.StepDetailResultDTO.of(learning, learningStep, playingExample, chordExamples);
+    }
+
+    // 실전 반주법 패키지(ACCOMPANIMENT) 전체보기
+    public LearningAccompanimentListResponseDTO.AccompanimentListResultDTO getAccompanimentList(Long userId) {
+        ensureUserExists(userId);
+
+        List<Learning> learnings = learningRepository
+                .findByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory.ACCOMPANIMENT);
+
+        List<LearningAccompanimentListResponseDTO.AccompanimentItem> items = toAccompanimentItems(userId, learnings);
+
+        return LearningAccompanimentListResponseDTO.AccompanimentListResultDTO.of(items);
+    }
+
+    // 학습 홈 조회
+    public LearningHomeResponseDTO.HomeResultDTO getHome(Long userId) {
+        ensureUserExists(userId);
+
+        LearningHomeResponseDTO.CurrentLearning currentLearning = buildCurrentLearning(userId);
+
+        List<LearningHomeResponseDTO.TheoryPackageItem> theoryPackages = Stream.of(
+                        LearningDifficulty.BEGINNER, LearningDifficulty.INTERMEDIATE, LearningDifficulty.ADVANCED)
+                .flatMap(difficulty -> learningRepository
+                        .findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(LearningCategory.THEORY, difficulty)
+                        .stream())
+                .map(LearningHomeResponseDTO.TheoryPackageItem::from)
+                .toList();
+
+        List<Learning> accompanimentLearnings = learningRepository
+                .findTop3ByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory.ACCOMPANIMENT);
+        List<LearningAccompanimentListResponseDTO.AccompanimentItem> accompanimentPackages =
+                toAccompanimentItems(userId, accompanimentLearnings);
+
+        return LearningHomeResponseDTO.HomeResultDTO.of(currentLearning, theoryPackages, accompanimentPackages);
+    }
+
+    private LearningHomeResponseDTO.CurrentLearning buildCurrentLearning(Long userId) {
+        return userLearningProgressRepository.findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId)
+                .map(latest -> {
+                    Learning learning = latest.getLearning();
+                    long totalStepCount = learningStepRepository.countByLearningId(learning.getId());
+                    long completedStepCount = userLearningProgressRepository
+                            .countCompletedStepsByUserIdAndLearningId(userId, learning.getId());
+                    int progressRate = resolveProgressRate(completedStepCount, totalStepCount);
+
+                    // 진행률 0%/100%면 홈 화면에 카드 자체를 숨김
+                    if (progressRate == 0 || progressRate == 100) {
+                        return null;
+                    }
+
+                    Long nextStepId = resolveNextStepId(userId, learning.getId(), latest.getLearningStep(), latest.getScore());
+
+                    return LearningHomeResponseDTO.CurrentLearning.of(
+                            learning,
+                            latest.getLearningStep().getTitle(),
+                            progressRate,
+                            nextStepId);
+                })
+                .orElse(null);
+    }
+
+    // [이어서 학습하기] 클릭 시 이동할 단계 계산
+    private Long resolveNextStepId(Long userId, Long learningId, LearningStep lastStep, Integer lastScore) {
+        if (isStepIncomplete(lastScore)) {
+            return lastStep.getId();
+        }
+
+        List<LearningStep> steps = learningStepRepository.findByLearning_IdOrderByStepNoAsc(learningId);
+        Map<Long, Integer> scoreByStepId = userLearningProgressRepository
+                .findByUser_UserIdAndLearning_Id(userId, learningId).stream()
+                .collect(Collectors.toMap(p -> p.getLearningStep().getId(), UserLearningProgress::getScore));
+
+        return steps.stream()
+                .filter(step -> step.getStepNo() > lastStep.getStepNo())
+                .filter(step -> isStepIncomplete(scoreByStepId.get(step.getId())))
+                .findFirst()
+                .or(() -> steps.stream()
+                        .filter(step -> isStepIncomplete(scoreByStepId.get(step.getId())))
+                        .findFirst())
+                .map(LearningStep::getId)
+                .orElse(null);
+    }
+
+    private boolean isStepIncomplete(Integer score) {
+        return score == null || score < 90;
+    }
+
+    private List<LearningAccompanimentListResponseDTO.AccompanimentItem> toAccompanimentItems(
+            Long userId, List<Learning> learnings) {
+        Map<Long, Integer> progressRateByLearningId = buildProgressRateMap(userId, learnings);
+
+        return learnings.stream()
+                .map(learning -> LearningAccompanimentListResponseDTO.AccompanimentItem.of(
+                        learning, progressRateByLearningId.getOrDefault(learning.getId(), 0)))
+                .toList();
+    }
+
+    // 여러 학습에 대한 패키지 단위 진행률(%)을 한 번에 계산 (N+1 방지, 배치 집계 쿼리 재사용)
+    private Map<Long, Integer> buildProgressRateMap(Long userId, List<Learning> learnings) {
+        if (learnings.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> learningIds = learnings.stream().map(Learning::getId).toList();
+
+        Map<Long, Long> totalStepCountByLearningId = learningStepRepository.countByLearningIdIn(learningIds).stream()
+                .collect(Collectors.toMap(
+                        LearningStepRepository.LearningIdCount::getLearningId,
+                        LearningStepRepository.LearningIdCount::getStepCount));
+
+        Map<Long, Long> completedStepCountByLearningId = userLearningProgressRepository
+                .countCompletedStepsByUserIdAndLearningIdIn(userId, learningIds).stream()
+                .collect(Collectors.toMap(
+                        UserLearningProgressRepository.CompletedStepCount::getLearningId,
+                        UserLearningProgressRepository.CompletedStepCount::getCompletedStepCount));
+
+        return learningIds.stream().collect(Collectors.toMap(
+                id -> id,
+                id -> resolveProgressRate(
+                        completedStepCountByLearningId.getOrDefault(id, 0L),
+                        totalStepCountByLearningId.getOrDefault(id, 0L))));
+    }
+
+    private int resolveProgressRate(long completedStepCount, long totalStepCount) {
+        if (totalStepCount == 0) {
+            return 0;
+        }
+        int progressRate = (int) Math.round((double) completedStepCount / totalStepCount * 100);
+        return Math.min(100, Math.max(0, progressRate));
     }
 
     private void ensureUserExists(Long userId) {
