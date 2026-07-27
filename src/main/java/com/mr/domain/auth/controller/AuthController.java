@@ -1,35 +1,46 @@
 package com.mr.domain.auth.controller;
 
-import com.mr.domain.auth.dto.AuthRequestDTO;
-import com.mr.domain.auth.dto.AuthResponseDTO;
+import com.mr.domain.auth.dto.req.AuthRequestDTO;
+import com.mr.domain.auth.dto.res.AuthResponseDTO;
 import com.mr.domain.auth.entity.enums.SocialType;
 import com.mr.domain.auth.service.AuthService;
 import com.mr.global.apipayload.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "Auth API", description = "인증 및 소셜 로그인 관련 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
-@Profile({"local", "dev"})
 public class AuthController {
 
     private final AuthService authService;
 
     @SecurityRequirements
+    @Operation(
+            summary = "소셜 로그인 / 회원가입 API",
+            description = "카카오 및 구글 OAuth Access Token을 받아 로그인을 진행하고, 서비스 전용 JWT 토큰을 발급합니다."
+    )
     @PostMapping("/login/{socialType}")
     public ApiResponse<AuthResponseDTO.LoginResponse> socialLogin(
+            @Parameter(description = "소셜 로그인 제공자 (KAKAO, GOOGLE)", example = "KAKAO")
             @PathVariable(name = "socialType") SocialType socialType,
-            @RequestBody @Valid AuthRequestDTO.SocialLoginRequest request
+            @RequestBody @Valid AuthRequestDTO.SocialLoginRequest request,
+            @RequestHeader(value = HttpHeaders.USER_AGENT, required = false, defaultValue = "Unknown Device") String deviceInfo
     ) {
-        AuthResponseDTO.LoginResponse response = authService.socialLogin(socialType, request.accessToken());
+        AuthResponseDTO.LoginResponse response = authService.socialLogin(socialType, request.accessToken(), deviceInfo);
         return ApiResponse.onSuccess(response);
     }
 }
