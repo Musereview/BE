@@ -9,12 +9,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,5 +42,31 @@ public class AuthController {
     ) {
         AuthResponseDTO.LoginResponse response = authService.socialLogin(socialType, request.accessToken(), deviceInfo);
         return ApiResponse.onSuccess(response);
+    }
+    @Operation(summary = "토큰 재발급 API", description = "만료된 Access Token을 Refresh Token을 이용해 재발급합니다.")
+    @PostMapping("/reissue")
+    public ApiResponse<AuthResponseDTO.TokenInfo> reissue(
+            @RequestBody @Valid AuthRequestDTO.TokenRefreshRequest request
+    ) {
+        AuthResponseDTO.TokenInfo tokenInfo = authService.reissueToken(request.refreshToken());
+        return ApiResponse.onSuccess(tokenInfo);
+    }
+
+    @Operation(summary = "로그아웃 API", description = "현재 로그인된 사용자의 세션 및 토큰을 무효화합니다.")
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(
+            @Parameter(hidden = true) @RequestAttribute("userId") Long userId
+    ) {
+        authService.logout(userId);
+        return ApiResponse.onSuccess(null);
+    }
+
+    @Operation(summary = "회원 탈퇴 API", description = "사용자 계정을 탈퇴 처리하고 관련 인증 정보를 삭제/만료합니다.")
+    @PostMapping("/withdraw")
+    public ApiResponse<Void> withdraw(
+            @Parameter(hidden = true) @RequestAttribute("userId") Long userId
+    ) {
+        authService.withdraw(userId);
+        return ApiResponse.onSuccess(null);
     }
 }
