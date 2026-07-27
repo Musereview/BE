@@ -7,14 +7,22 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.domain.analysis.dto.res.AnalysisResultResponseDTO;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.AnalysisReport;
 import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.LlmStatus;
+import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.analysis.repository.AnalysisReportRepository;
 import com.mr.domain.analysis.repository.AnalysisRepository;
+import com.mr.domain.playing.entity.Playing;
+import com.mr.domain.user.entity.User;
+import com.mr.global.apipayload.exception.GeneralException;
 import java.math.BigDecimal;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +50,14 @@ class AnalysisServiceTest {
     }
 
     private Analysis completedAnalysis(Long userId) {
-        Analysis analysis = Analysis.createPending(userId, 1L, 1, 8, "{}");
+        User user = mock(User.class);
+        given(user.getUserId()).willReturn(userId);
+
+        Playing playing = mock(Playing.class);
+        lenient().when(playing.getId()).thenReturn(1L);
+        lenient().when(playing.getUser()).thenReturn(user);
+
+        Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
         analysis.startProcessing();
         analysis.complete(
                 85,
@@ -98,5 +113,18 @@ class AnalysisServiceTest {
         assertThat(response.totalScore()).isEqualTo(85);
         assertThat(response.grade()).isEqualTo(AnalysisGrade.GOOD);
         assertThat(response.domainScores().scaleScore()).isEqualByComparingTo(new BigDecimal("80.00"));
+    }
+
+    @Test
+    @DisplayName("getAnalysisResult - 다른 사용자의 분석이면 접근이 거부된다")
+    void getAnalysisResult_otherUsersAnalysis_throwsAccessDenied() {
+        Long analysisId = 1L;
+        Analysis analysis = completedAnalysis(1L);
+
+        given(analysisRepository.findById(analysisId)).willReturn(Optional.of(analysis));
+
+        assertThatThrownBy(() -> analysisService.getAnalysisResult(2L, analysisId))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.ANALYSIS_ACCESS_DENIED);
     }
 }
