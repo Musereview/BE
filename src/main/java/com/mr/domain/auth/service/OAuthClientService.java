@@ -2,8 +2,9 @@ package com.mr.domain.auth.service;
 
 import com.mr.domain.auth.dto.OAuthUserInfo;
 import com.mr.domain.auth.entity.enums.SocialType;
-import com.mr.global.apipayload.code.CommonStatus;
+import com.mr.domain.auth.exception.AuthErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.ClientHttpRequestFactories;
 import org.springframework.boot.web.client.ClientHttpRequestFactorySettings;
@@ -11,8 +12,10 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Duration;
 import java.util.Map;
@@ -70,10 +73,8 @@ public class OAuthClientService {
                     .profileImgUrl(profileImgUrl)
                     .build();
 
-        } catch (GeneralException e) {
-            throw e;
         } catch (Exception e) {
-            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
+            throw mapOAuthException(e, "Kakao");
         }
     }
 
@@ -93,25 +94,51 @@ public class OAuthClientService {
                     .socialId(socialId)
                     .profileImgUrl(profileImgUrl)
                     .build();
-        } catch (GeneralException e) {
-            throw e;
         } catch (Exception e) {
-            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
+            throw mapOAuthException(e, "Google");
         }
     }
 
     private String extractSocialId(Map<String, Object> response) {
         if (response == null) {
-            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
         }
         Object idObj = response.get("id");
         if (idObj == null) {
-            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
         }
         String socialId = String.valueOf(idObj);
         if (socialId.isBlank() || "null".equalsIgnoreCase(socialId.trim())) {
-            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
         }
         return socialId;
+    }
+
+    private GeneralException mapOAuthException(Exception e, String provider) {
+        if (e instanceof GeneralException ge) {
+            return ge;
+        }
+        if (e instanceof HttpClientErrorException clientErr) {
+            log.warn("{} OAuth 클라이언트 인증 오류 (status={}): {}", provider, clientErr.getStatusCode(), clientErr.getMessage());
+            return new GeneralException(AuthErrorStatus.OAUTH_CLIENT_ERROR);
+        }
+        if (e instanceof HttpServerErrorException serverErr) {
+            log.error("{} OAuth 서버 오류 (status={}): {}", provider, serverErr.getStatusCode(), serverErr.getMessage());
+            return new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
+        }
+        if (e instanceof ResourceAccessException netErr) {
+            log.error("{} OAuth 타임아웃/네트워크 통신 오류: {}", provider, netErr.getMessage());
+            return new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
+        }
+        if (e instanceof RestClientResponseException rcre) {
+            log.error("{} OAuth HTTP 응답 예외 (status={}): {}", provider, rcre.getStatusCode(), rcre.getMessage());
+            if (rcre.getStatusCode().is4xxClientError()) {
+                return new GeneralException(AuthErrorStatus.OAUTH_CLIENT_ERROR);
+            } else {
+                return new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
+            }
+        }
+        log.error("{} OAuth 사용자 정보 처리 중 예외 발생", provider, e);
+        return new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
     }
 }
