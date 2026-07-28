@@ -1,7 +1,7 @@
 package com.mr.domain.history.dto.res;
 
 import com.mr.domain.analysis.entity.Analysis;
-import com.mr.domain.backingTrack.entity.BackingTrack;
+import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.Playing;
 
 import java.time.LocalDateTime;
