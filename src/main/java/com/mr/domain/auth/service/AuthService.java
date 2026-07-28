@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,14 +39,37 @@ public class AuthService {
 
         Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId());
         boolean isNewUser = optionalSocialAuth.isEmpty();
-        SocialAuth socialAuth = optionalSocialAuth.orElseGet(() -> registerNewUser(socialType, userInfo, deviceInfo));
 
-        User user = socialAuth.getUser();
+        User user;
+        SocialAuth socialAuth;
+
+        if (optionalSocialAuth.isPresent()) {
+            socialAuth = optionalSocialAuth.get();
+            user = socialAuth.getUser();
+        } else {
+            user = registerNewUser(userInfo);
+            socialAuth = null;
+        }
+
         String newAccessToken = tokenProvider.createAccessToken(user.getUserId());
         String newRefreshToken = tokenProvider.createRefreshToken(user.getUserId());
         String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
+        LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
 
-        socialAuth.updateRefreshToken(refreshTokenHash, tokenProvider.getRefreshTokenExpiryTime(), deviceInfo);
+        if (isNewUser) {
+            socialAuth = SocialAuth.create(
+                    user,
+                    socialType,
+                    userInfo.socialId(),
+                    refreshTokenHash,
+                    expiryTime,
+                    deviceInfo
+            );
+            socialAuth = socialAuthRepository.save(socialAuth);
+        } else {
+            socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
+        }
+
         AuthResponseDTO.TokenResponse tokenResponse = AuthResponseDTO.TokenResponse.builder()
                 .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)
@@ -61,28 +85,14 @@ public class AuthService {
                 .build();
     }
 
-    private SocialAuth registerNewUser(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
+    private User registerNewUser(OAuthUserInfo userInfo) {
         String profileImgUrl = userInfo.profileImgUrl();
         if (profileImgUrl == null || profileImgUrl.isBlank()) {
             profileImgUrl = defaultProfileImageUrl;
         }
 
         User user = User.createFromOAuth(profileImgUrl);
-        userRepository.save(user);
-
-        String initialToken = tokenProvider.createRefreshToken(user.getUserId());
-        String initialHash = tokenProvider.hashToken(initialToken);
-
-        SocialAuth socialAuth = SocialAuth.create(
-                user,
-                socialType,
-                userInfo.socialId(),
-                initialHash,
-                tokenProvider.getRefreshTokenExpiryTime(),
-                deviceInfo
-        );
-
-        return socialAuthRepository.save(socialAuth);
+        return userRepository.save(user);
     }
 
     @Transactional
