@@ -14,11 +14,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.mr.global.security.SecurityUtil;
 
 @Tag(name = "Auth API", description = "인증 및 소셜 로그인 관련 API")
 @RestController
@@ -58,9 +58,9 @@ public class AuthController {
     )
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
-            @Parameter(hidden = true) @RequestAttribute("userId") Long userId,
             @RequestBody @Valid AuthRequestDTO.LogoutRequest request
     ) {
+        Long userId = SecurityUtil.getCurrentUserId();
         authService.logout(userId, request.refreshToken());
         return ApiResponse.onSuccess(null);
     }
@@ -70,9 +70,8 @@ public class AuthController {
             description = "사용자 계정을 탈퇴 처리하고 저장된 소셜 인증 정보 및 Refresh Token 세션을 완전히 삭제합니다."
     )
     @PostMapping("/withdraw")
-    public ApiResponse<Void> withdraw(
-            @Parameter(hidden = true) @RequestAttribute("userId") Long userId
-    ) {
+    public ApiResponse<Void> withdraw() {
+        Long userId = SecurityUtil.getCurrentUserId();
         authService.withdraw(userId);
         return ApiResponse.onSuccess(null);
     }
