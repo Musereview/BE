@@ -3,6 +3,7 @@ package com.mr.domain.auth.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.mr.domain.auth.dto.OAuthUserInfo;
 import com.mr.domain.auth.entity.enums.SocialType;
 import com.mr.domain.auth.exception.AuthErrorStatus;
 import com.mr.domain.auth.exception.OAuthExceptionMapper;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.match.MockRestRequestMatchers;
@@ -53,6 +55,7 @@ class OAuthClientServiceTest {
     @DisplayName("카카오 response의 id가 null이면 GeneralException(INVALID_AUTH_REQUEST)이 발생한다")
     void getKakaoUserInfo_nullId_throwsException() {
         mockServer.expect(MockRestRequestMatchers.requestTo("https://kapi.kakao.com/v2/user/me"))
+                .andExpect(MockRestRequestMatchers.header(HttpHeaders.AUTHORIZATION, "Bearer token"))
                 .andRespond(MockRestResponseCreators.withSuccess("{\"id\": null}", MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> oAuthClientService.getUserInfo(SocialType.KAKAO, "token"))
@@ -64,6 +67,7 @@ class OAuthClientServiceTest {
     @DisplayName("카카오 response의 id가 'null' 문자열이면 GeneralException이 발생한다")
     void getKakaoUserInfo_literalNullId_throwsException() {
         mockServer.expect(MockRestRequestMatchers.requestTo("https://kapi.kakao.com/v2/user/me"))
+                .andExpect(MockRestRequestMatchers.header(HttpHeaders.AUTHORIZATION, "Bearer token"))
                 .andRespond(MockRestResponseCreators.withSuccess("{\"id\": \"null\"}", MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> oAuthClientService.getUserInfo(SocialType.KAKAO, "token"))
@@ -75,6 +79,7 @@ class OAuthClientServiceTest {
     @DisplayName("구글 response의 id가 없으면 GeneralException이 발생한다")
     void getGoogleUserInfo_missingId_throwsException() {
         mockServer.expect(MockRestRequestMatchers.requestTo("https://www.googleapis.com/oauth2/v2/userinfo"))
+                .andExpect(MockRestRequestMatchers.header(HttpHeaders.AUTHORIZATION, "Bearer token"))
                 .andRespond(MockRestResponseCreators.withSuccess("{\"email\": \"test@example.com\"}", MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> oAuthClientService.getUserInfo(SocialType.GOOGLE, "token"))
@@ -86,6 +91,7 @@ class OAuthClientServiceTest {
     @DisplayName("카카오 OAuth 서버가 401 Unauthorized를 반환하면 OAUTH_CLIENT_ERROR 예외로 매핑된다")
     void getKakaoUserInfo_401Error_throwsOauthClientError() {
         mockServer.expect(MockRestRequestMatchers.requestTo("https://kapi.kakao.com/v2/user/me"))
+                .andExpect(MockRestRequestMatchers.header(HttpHeaders.AUTHORIZATION, "Bearer invalid_token"))
                 .andRespond(MockRestResponseCreators.withUnauthorizedRequest());
 
         assertThatThrownBy(() -> oAuthClientService.getUserInfo(SocialType.KAKAO, "invalid_token"))
@@ -97,6 +103,7 @@ class OAuthClientServiceTest {
     @DisplayName("구글 OAuth 서버가 500 Internal Server Error를 반환하면 OAUTH_SERVER_ERROR 예외로 매핑된다")
     void getGoogleUserInfo_500Error_throwsOauthServerError() {
         mockServer.expect(MockRestRequestMatchers.requestTo("https://www.googleapis.com/oauth2/v2/userinfo"))
+                .andExpect(MockRestRequestMatchers.header(HttpHeaders.AUTHORIZATION, "Bearer token"))
                 .andRespond(MockRestResponseCreators.withServerError());
 
         assertThatThrownBy(() -> oAuthClientService.getUserInfo(SocialType.GOOGLE, "token"))
@@ -119,9 +126,10 @@ class OAuthClientServiceTest {
                 """;
 
         mockServer.expect(MockRestRequestMatchers.requestTo("https://kapi.kakao.com/v2/user/me"))
+                .andExpect(MockRestRequestMatchers.header(HttpHeaders.AUTHORIZATION, "Bearer valid_token"))
                 .andRespond(MockRestResponseCreators.withSuccess(jsonResponse, MediaType.APPLICATION_JSON));
 
-        com.mr.domain.auth.dto.OAuthUserInfo userInfo = oAuthClientService.getUserInfo(SocialType.KAKAO, "valid_token");
+        OAuthUserInfo userInfo = oAuthClientService.getUserInfo(SocialType.KAKAO, "valid_token");
 
         assertThat(userInfo.socialId()).isEqualTo("123456789");
         assertThat(userInfo.profileImgUrl()).isEqualTo("https://example.com/kakao_profile.png");
@@ -139,9 +147,10 @@ class OAuthClientServiceTest {
                 """;
 
         mockServer.expect(MockRestRequestMatchers.requestTo("https://www.googleapis.com/oauth2/v2/userinfo"))
+                .andExpect(MockRestRequestMatchers.header(HttpHeaders.AUTHORIZATION, "Bearer valid_token"))
                 .andRespond(MockRestResponseCreators.withSuccess(jsonResponse, MediaType.APPLICATION_JSON));
 
-        com.mr.domain.auth.dto.OAuthUserInfo userInfo = oAuthClientService.getUserInfo(SocialType.GOOGLE, "valid_token");
+        OAuthUserInfo userInfo = oAuthClientService.getUserInfo(SocialType.GOOGLE, "valid_token");
 
         assertThat(userInfo.socialId()).isEqualTo("google_987654321");
         assertThat(userInfo.profileImgUrl()).isEqualTo("https://example.com/google_profile.png");
