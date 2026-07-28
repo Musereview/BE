@@ -45,7 +45,7 @@ public class AuthService {
         String newRefreshToken = tokenProvider.createRefreshToken(user.getUserId());
         String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
 
-        socialAuth.updateRefreshToken(newRefreshToken, refreshTokenHash, tokenProvider.getRefreshTokenExpiryTime(), deviceInfo);
+        socialAuth.updateRefreshToken(refreshTokenHash, tokenProvider.getRefreshTokenExpiryTime(), deviceInfo);
         AuthResponseDTO.TokenResponse tokenResponse = AuthResponseDTO.TokenResponse.builder()
                 .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)
@@ -77,7 +77,6 @@ public class AuthService {
                 user,
                 socialType,
                 userInfo.socialId(),
-                initialToken,
                 initialHash,
                 tokenProvider.getRefreshTokenExpiryTime(),
                 deviceInfo
@@ -103,7 +102,7 @@ public class AuthService {
         String newRefreshToken = tokenProvider.createRefreshToken(userId);
         String newRefreshTokenHash = tokenProvider.hashToken(newRefreshToken);
 
-        socialAuth.updateRefreshToken(newRefreshToken, newRefreshTokenHash, tokenProvider.getRefreshTokenExpiryTime(), socialAuth.getDeviceInfo());
+        socialAuth.updateRefreshToken(newRefreshTokenHash, tokenProvider.getRefreshTokenExpiryTime(), socialAuth.getDeviceInfo());
 
         return AuthResponseDTO.TokenInfo.builder()
                 .accessToken(newAccessToken)

@@ -40,9 +40,6 @@ public class SocialAuth extends BaseCreatedEntity {
     @Column(name = "social_id", nullable = false, length = 100)
     private String socialId;
 
-    @Column(name = "refresh_token", length = 1000)
-    private String refreshToken;
-
     @Column(name = "refresh_token_hash", length = 64, unique = true)
     private String refreshTokenHash;
 
@@ -53,7 +50,7 @@ public class SocialAuth extends BaseCreatedEntity {
     private String deviceInfo;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private SocialAuth(User user, SocialType socialType, String socialId, String refreshToken,
+    private SocialAuth(User user, SocialType socialType, String socialId,
                        String refreshTokenHash, LocalDateTime expiredAt, String deviceInfo) {
 
         validateUser(user);
@@ -63,16 +60,14 @@ public class SocialAuth extends BaseCreatedEntity {
         this.user = user;
         this.socialType = socialType;
         this.socialId = socialId;
-        this.refreshToken = refreshToken;
         this.refreshTokenHash = refreshTokenHash;
         this.expiredAt = expiredAt;
         this.deviceInfo = deviceInfo;
     }
 
     public static SocialAuth create(User user, SocialType socialType, String socialId,
-                                    String encryptedToken, String tokenHash, LocalDateTime expiredAt, String deviceInfo) {
+                                    String tokenHash, LocalDateTime expiredAt, String deviceInfo) {
 
-        validateTokenValue(encryptedToken);
         validateTokenValue(tokenHash);
         validateExpiryTime(expiredAt);
 
@@ -80,7 +75,6 @@ public class SocialAuth extends BaseCreatedEntity {
                 .user(user)
                 .socialType(socialType)
                 .socialId(socialId)
-                .refreshToken(encryptedToken)
                 .refreshTokenHash(tokenHash)
                 .expiredAt(expiredAt)
                 .deviceInfo(deviceInfo)
@@ -117,19 +111,16 @@ public class SocialAuth extends BaseCreatedEntity {
         }
     }
 
-    public void updateRefreshToken(String encryptedToken, String tokenHash, LocalDateTime newExpiredAt, String deviceInfo) {
-        validateTokenValue(encryptedToken);
+    public void updateRefreshToken(String tokenHash, LocalDateTime newExpiredAt, String deviceInfo) {
         validateTokenValue(tokenHash);
         validateExpiryTime(newExpiredAt);
 
-        this.refreshToken = encryptedToken;
         this.refreshTokenHash = tokenHash;
         this.expiredAt = newExpiredAt;
         this.deviceInfo = deviceInfo;
     }
 
     public void expireToken() {
-        this.refreshToken = null;
         this.refreshTokenHash = null;
         this.expiredAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
