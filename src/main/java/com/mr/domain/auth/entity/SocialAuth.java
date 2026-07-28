@@ -121,6 +121,7 @@ public class SocialAuth extends BaseCreatedEntity {
 
     public void expireToken() {
         this.refreshTokenHash = null;
+        this.deviceInfo = null;
         this.expiredAt = LocalDateTime.now();
     }
 
