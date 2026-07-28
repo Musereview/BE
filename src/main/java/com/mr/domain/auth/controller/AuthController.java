@@ -54,13 +54,14 @@ public class AuthController {
 
     @Operation(
             summary = "로그아웃 API",
-            description = "현재 로그인된 사용자의 Refresh Token 세션을 만료 처리합니다. (발급된 Access Token은 자체 만료 시각까지 유효하며, 추가 토큰 재발급이 차단됩니다.)"
+            description = "현재 요청 기기의 Refresh Token 세션을 선택적으로 만료 처리합니다."
     )
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
-            @Parameter(hidden = true) @RequestAttribute("userId") Long userId
+            @Parameter(hidden = true) @RequestAttribute("userId") Long userId,
+            @RequestBody @Valid AuthRequestDTO.LogoutRequest request
     ) {
-        authService.logout(userId);
+        authService.logout(userId, request.refreshToken());
         return ApiResponse.onSuccess(null);
     }
 

@@ -165,13 +165,18 @@ public class AuthService {
     }
 
     @Transactional
-    public void logout(Long userId) {
-        List<SocialAuth> socialAuths = socialAuthRepository.findAllByUser_UserId(userId);
-        if (socialAuths.isEmpty()) {
-            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+    public void logout(Long userId, String refreshToken) {
+        if (!tokenProvider.validateRefreshToken(refreshToken)) {
+            throw new GeneralException(AuthErrorStatus.INVALID_TOKEN);
         }
 
-        socialAuths.forEach(SocialAuth::expireToken);
+        String requestTokenHash = tokenProvider.hashToken(refreshToken);
+
+        SocialAuth socialAuth = socialAuthRepository.findByRefreshTokenHashWithLock(requestTokenHash)
+                .filter(auth -> auth.getUser().getUserId().equals(userId))
+                .orElseThrow(() -> new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST));
+
+        socialAuth.expireToken();
     }
 
     @Transactional

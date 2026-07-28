@@ -13,4 +13,9 @@ public class AuthRequestDTO {
             @NotBlank(message = "Refresh Token은 필수 입력값입니다.")
             String refreshToken
     ) {}
+
+    public record LogoutRequest(
+            @NotBlank(message = "Refresh Token은 필수 입력값입니다.")
+            String refreshToken
+    ) {}
 }

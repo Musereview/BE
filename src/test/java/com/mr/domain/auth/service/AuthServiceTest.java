@@ -107,15 +107,16 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("logout - 로그아웃 시 사용자의 모든 SocialAuth 토큰 해시가 초기화(만료)된다")
-    void logout_expiresAllSocialAuthTokensInDb() {
+    @DisplayName("logout - 요청된 특정 Refresh Token 세션만 선택적으로 만료 처리한다")
+    void logout_expiresSpecificDeviceSession() {
         // given
         given(oAuthClientService.getUserInfo(SocialType.KAKAO, "access_token")).willReturn(kakaoUserInfo);
         AuthResponseDTO.LoginResponse loginResponse = authService.socialLogin(SocialType.KAKAO, "access_token", "deviceInfo");
         Long userId = loginResponse.userId();
+        String refreshToken = loginResponse.tokenInfo().refreshToken();
 
         // when
-        authService.logout(userId);
+        authService.logout(userId, refreshToken);
 
         // then
         List<SocialAuth> socialAuths = socialAuthRepository.findAllByUser_UserId(userId);
