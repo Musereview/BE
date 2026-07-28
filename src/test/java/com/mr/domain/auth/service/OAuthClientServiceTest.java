@@ -9,6 +9,7 @@ import com.mr.domain.auth.exception.OAuthExceptionMapper;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.config.OAuthRestClientConfig;
 import java.time.Duration;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,11 @@ class OAuthClientServiceTest {
         restClientBuilder = RestClient.builder();
         mockServer = MockRestServiceServer.bindTo(restClientBuilder).build();
         oAuthClientService = new OAuthClientService(restClientBuilder.build(), new OAuthExceptionMapper());
+    }
+
+    @AfterEach
+    void tearDown() {
+        mockServer.verify();
     }
 
     @Test
