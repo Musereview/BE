@@ -144,7 +144,7 @@ public class AuthService {
             throw new GeneralException(AuthErrorStatus.INVALID_TOKEN);
         }
 
-        Long userId = Long.valueOf(tokenProvider.getAuthentication(refreshToken).getName());
+        Long userId = tokenProvider.getUserIdFromToken(refreshToken);
         String requestTokenHash = tokenProvider.hashToken(refreshToken);
 
         SocialAuth socialAuth = socialAuthRepository.findByRefreshTokenHashWithLock(requestTokenHash)
