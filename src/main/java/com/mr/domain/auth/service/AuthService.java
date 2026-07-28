@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -92,14 +93,11 @@ public class AuthService {
         }
 
         Long userId = Long.valueOf(tokenProvider.getAuthentication(refreshToken).getName());
-
-        SocialAuth socialAuth = socialAuthRepository.findByUser_UserId(userId)
-                .orElseThrow(() -> new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST));
-
         String requestTokenHash = tokenProvider.hashToken(refreshToken);
-        if (!requestTokenHash.equals(socialAuth.getRefreshTokenHash())) {
-            throw new GeneralException(AuthErrorStatus.REVOKED_TOKEN);
-        }
+
+        SocialAuth socialAuth = socialAuthRepository.findByRefreshTokenHash(requestTokenHash)
+                .filter(auth -> auth.getUser().getUserId().equals(userId))
+                .orElseThrow(() -> new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST));
 
         String newAccessToken = tokenProvider.createAccessToken(userId);
         String newRefreshToken = tokenProvider.createRefreshToken(userId);
@@ -116,10 +114,12 @@ public class AuthService {
 
     @Transactional
     public void logout(Long userId) {
-        SocialAuth socialAuth = socialAuthRepository.findByUser_UserId(userId)
-                .orElseThrow(() -> new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST));
+        List<SocialAuth> socialAuths = socialAuthRepository.findAllByUser_UserId(userId);
+        if (socialAuths.isEmpty()) {
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        }
 
-        socialAuth.expireToken();
+        socialAuths.forEach(SocialAuth::expireToken);
     }
 
     @Transactional
@@ -127,10 +127,10 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
-        SocialAuth socialAuth = socialAuthRepository.findByUser_UserId(userId).orElse(null);
-        if (socialAuth != null) {
-            socialAuth.expireToken();
-            socialAuthRepository.delete(socialAuth);
+        List<SocialAuth> socialAuths = socialAuthRepository.findAllByUser_UserId(userId);
+        if (!socialAuths.isEmpty()) {
+            socialAuths.forEach(SocialAuth::expireToken);
+            socialAuthRepository.deleteAll(socialAuths);
         }
 
         userRepository.delete(user);

@@ -14,6 +14,7 @@ import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.security.jwt.JwtTokenProvider;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -99,5 +100,42 @@ class AuthServiceTest {
 
         // then
         assertThat(response.isNewUser()).isFalse();
+    }
+
+    @Test
+    @DisplayName("logout - 사용자의 모든 SocialAuth 토큰을 만료 처리한다")
+    void logout_expiresAllSocialAuthTokens() {
+        // given
+        Long userId = 1L;
+        User user = User.createFromOAuth("https://example.com/profile.png");
+        SocialAuth kakaoAuth = SocialAuth.create(user, SocialType.KAKAO, "k123", "t1", "h1", LocalDateTime.now().plusDays(1), "device");
+        SocialAuth googleAuth = SocialAuth.create(user, SocialType.GOOGLE, "g456", "t2", "h2", LocalDateTime.now().plusDays(1), "device");
+
+        given(socialAuthRepository.findAllByUser_UserId(userId)).willReturn(List.of(kakaoAuth, googleAuth));
+
+        // when
+        authService.logout(userId);
+
+        // then
+        verify(socialAuthRepository).findAllByUser_UserId(userId);
+    }
+
+    @Test
+    @DisplayName("withdraw - 사용자의 모든 SocialAuth를 삭제하고 User를 삭제한다")
+    void withdraw_deletesAllSocialAuthsAndUser() {
+        // given
+        Long userId = 1L;
+        User user = User.createFromOAuth("https://example.com/profile.png");
+        SocialAuth kakaoAuth = SocialAuth.create(user, SocialType.KAKAO, "k123", "t1", "h1", LocalDateTime.now().plusDays(1), "device");
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(socialAuthRepository.findAllByUser_UserId(userId)).willReturn(List.of(kakaoAuth));
+
+        // when
+        authService.withdraw(userId);
+
+        // then
+        verify(socialAuthRepository).deleteAll(List.of(kakaoAuth));
+        verify(userRepository).delete(user);
     }
 }
