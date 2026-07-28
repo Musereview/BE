@@ -43,6 +43,7 @@ public class AuthController {
         AuthResponseDTO.LoginResponse response = authService.socialLogin(socialType, request.accessToken(), deviceInfo);
         return ApiResponse.onSuccess(response);
     }
+    @SecurityRequirements
     @Operation(summary = "토큰 재발급 API", description = "만료된 Access Token을 Refresh Token을 이용해 재발급합니다.")
     @PostMapping("/reissue")
     public ApiResponse<AuthResponseDTO.TokenInfo> reissue(
