@@ -21,7 +21,6 @@ import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Date;
 import java.util.UUID;
 
@@ -33,7 +32,6 @@ public class JwtTokenProvider {
     private static final String TOKEN_TYPE_CLAIM = "type";
     private static final String ACCESS_TYPE = "access";
     private static final String REFRESH_TYPE = "refresh";
-    private static final String SEOUL_ZONE = "Asia/Seoul";
 
     private final CustomUserDetailsService userDetailsService;
     private final JwtProperties jwtProperties;
@@ -138,7 +136,7 @@ public class JwtTokenProvider {
     }
 
     public LocalDateTime getRefreshTokenExpiryTime() {
-        return LocalDateTime.now(ZoneId.of(SEOUL_ZONE))
+        return LocalDateTime.now()
                 .plusSeconds(jwtProperties.refreshTokenValidityInSeconds());
     }
 

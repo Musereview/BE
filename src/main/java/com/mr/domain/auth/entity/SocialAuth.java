@@ -7,7 +7,6 @@ import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseCreatedEntity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -106,7 +105,7 @@ public class SocialAuth extends BaseCreatedEntity {
     }
 
     private static void validateExpiryTime(LocalDateTime expiredAt) {
-        if (expiredAt == null || !expiredAt.isAfter(LocalDateTime.now(ZoneId.of("Asia/Seoul")))) {
+        if (expiredAt == null || !expiredAt.isAfter(LocalDateTime.now())) {
             throw new GeneralException(AuthErrorStatus.INVALID_TOKEN_EXPIRY);
         }
     }
@@ -122,10 +121,10 @@ public class SocialAuth extends BaseCreatedEntity {
 
     public void expireToken() {
         this.refreshTokenHash = null;
-        this.expiredAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        this.expiredAt = LocalDateTime.now();
     }
 
     public boolean isExpired() {
-        return this.expiredAt == null || !this.expiredAt.isAfter(LocalDateTime.now(ZoneId.of("Asia/Seoul")));
+        return this.expiredAt == null || !this.expiredAt.isAfter(LocalDateTime.now());
     }
 }
