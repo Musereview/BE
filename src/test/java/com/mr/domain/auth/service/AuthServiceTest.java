@@ -63,7 +63,7 @@ class AuthServiceTest {
         given(tokenProvider.getAccessTokenExpirationSeconds()).willReturn(3600L);
 
         SocialAuth savedSocialAuth = SocialAuth.create(
-                newUser, SocialType.KAKAO, "12345", "new_refresh_token", "token_hash", LocalDateTime.now().plusDays(7), "deviceInfo"
+                newUser, SocialType.KAKAO, "12345", "token_hash", LocalDateTime.now().plusDays(7), "deviceInfo"
         );
         given(socialAuthRepository.save(any(SocialAuth.class))).willReturn(savedSocialAuth);
 
@@ -84,7 +84,7 @@ class AuthServiceTest {
 
         User existingUser = User.createFromOAuth(userInfo.profileImgUrl());
         SocialAuth existingSocialAuth = SocialAuth.create(
-                existingUser, SocialType.KAKAO, "12345", "old_token", "old_hash", LocalDateTime.now().plusDays(7), "deviceInfo"
+                existingUser, SocialType.KAKAO, "12345", "old_hash", LocalDateTime.now().plusDays(7), "deviceInfo"
         );
         given(socialAuthRepository.findBySocialTypeAndSocialId(SocialType.KAKAO, "12345"))
                 .willReturn(Optional.of(existingSocialAuth));
@@ -108,8 +108,8 @@ class AuthServiceTest {
         // given
         Long userId = 1L;
         User user = User.createFromOAuth("https://example.com/profile.png");
-        SocialAuth kakaoAuth = SocialAuth.create(user, SocialType.KAKAO, "k123", "t1", "h1", LocalDateTime.now().plusDays(1), "device");
-        SocialAuth googleAuth = SocialAuth.create(user, SocialType.GOOGLE, "g456", "t2", "h2", LocalDateTime.now().plusDays(1), "device");
+        SocialAuth kakaoAuth = SocialAuth.create(user, SocialType.KAKAO, "k123", "h1", LocalDateTime.now().plusDays(1), "device");
+        SocialAuth googleAuth = SocialAuth.create(user, SocialType.GOOGLE, "g456", "h2", LocalDateTime.now().plusDays(1), "device");
 
         given(socialAuthRepository.findAllByUser_UserId(userId)).willReturn(List.of(kakaoAuth, googleAuth));
 
@@ -126,7 +126,7 @@ class AuthServiceTest {
         // given
         Long userId = 1L;
         User user = User.createFromOAuth("https://example.com/profile.png");
-        SocialAuth kakaoAuth = SocialAuth.create(user, SocialType.KAKAO, "k123", "t1", "h1", LocalDateTime.now().plusDays(1), "device");
+        SocialAuth kakaoAuth = SocialAuth.create(user, SocialType.KAKAO, "k123", "h1", LocalDateTime.now().plusDays(1), "device");
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(socialAuthRepository.findAllByUser_UserId(userId)).willReturn(List.of(kakaoAuth));
