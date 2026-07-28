@@ -3,11 +3,15 @@ package com.mr.domain.home.service;
 import com.mr.domain.home.dto.res.HomeResponseDTO;
 import com.mr.domain.home.dto.res.HomeResponseDTO.AttendanceStatus;
 import com.mr.domain.home.dto.res.HomeResponseDTO.DayOfWeekCode;
+import com.mr.domain.home.dto.res.HomeResponseDTO.LearningSummary;
 import com.mr.domain.home.dto.res.HomeResponseDTO.PracticeSummary;
 import com.mr.domain.home.dto.res.HomeResponseDTO.RecentPlaying;
+import com.mr.domain.home.dto.res.HomeResponseDTO.RecommendedLearning;
 import com.mr.domain.home.dto.res.HomeResponseDTO.Streak;
 import com.mr.domain.home.dto.res.HomeResponseDTO.Streak.DayAttendance;
 import com.mr.domain.home.dto.res.HomeResponseDTO.UserSummary;
+import com.mr.domain.learning.dto.res.LearningHomeResponseDTO;
+import com.mr.domain.learning.service.LearningService;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
@@ -47,6 +51,7 @@ public class HomeService {
     private final StudentRepository studentRepository;
     private final StudentInstrumentRepository studentInstrumentRepository;
     private final PlayingRepository playingRepository;
+    private final LearningService learningService;
 
     public HomeResponseDTO getHome(Long userId) {
         User user = userRepository.findById(userId)
@@ -58,14 +63,22 @@ public class HomeService {
         List<Playing> recentCompleted =
                 playingRepository.findByUserAndStatusSince(userId, PlayingStatus.COMPLETED, since);
 
+        LearningHomeResponseDTO.CurrentLearning currentLearning = learningService.getCurrentLearning(userId);
+
         return new HomeResponseDTO(
                 buildUserSummary(user),
                 buildStreak(practiceDates),
                 buildPracticeSummary(recentCompleted),
-                null,
-                List.of(),
+                LearningSummary.from(currentLearning),
+                buildRecommendedLearnings(userId),
                 buildRecentPlayings(userId)
         );
+    }
+
+    private List<RecommendedLearning> buildRecommendedLearnings(Long userId) {
+        return learningService.getRecommendedLearnings(userId).stream()
+                .map(RecommendedLearning::from)
+                .toList();
     }
 
     // 연속 출석일수는 기간 상한이 없어야 하므로 별도로 전체 기간 조회
@@ -115,14 +128,14 @@ public class HomeService {
         return currentDays + "일 연속 학습 중이에요!";
     }
 
-    private List<DayAttendance> buildWeeklyAttendance(Set<LocalDate> practiceDates) {
+    private List<dance> buildWeeklyAttendance(Set<LocalDate> practiceDates) {
         LocalDate today = LocalDate.now();
         LocalDate weekStart = today.with(DayOfWeek.MONDAY);
 
-        List<DayAttendance> weeklyAttendance = new ArrayList<>();
+        List<dance> weeklyAttendance = new ArrayList<>();
         for (int i = 0; i < 7; i++) {
             LocalDate day = weekStart.plusDays(i);
-            weeklyAttendance.add(new DayAttendance(
+            weeklyAttendance.add(new dance(
                     DayOfWeekCode.from(day.getDayOfWeek()),
                     toKoreanLabel(day.getDayOfWeek()),
                     resolveStatus(day, today, practiceDates)

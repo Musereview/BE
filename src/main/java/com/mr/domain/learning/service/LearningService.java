@@ -43,6 +43,11 @@ import java.util.stream.Stream;
 @Transactional(readOnly = true)
 public class LearningService {
 
+    // 추천 학습 카드 최대 개수
+    private static final int RECOMMENDED_LEARNING_LIMIT = 2;
+    private static final List<LearningDifficulty> RECOMMENDATION_DIFFICULTY_ORDER =
+            List.of(LearningDifficulty.BEGINNER, LearningDifficulty.INTERMEDIATE, LearningDifficulty.ADVANCED);
+
     private final UserLearningProgressRepository userLearningProgressRepository;
     private final LearningStepRepository learningStepRepository;
     private final LearningRepository learningRepository;
@@ -190,7 +195,7 @@ public class LearningService {
     public LearningHomeResponseDTO.HomeResultDTO getHome(Long userId) {
         ensureUserExists(userId);
 
-        LearningHomeResponseDTO.CurrentLearning currentLearning = buildCurrentLearning(userId);
+        LearningHomeResponseDTO.CurrentLearning currentLearning = getCurrentLearning(userId);
 
         List<LearningHomeResponseDTO.TheoryPackageItem> theoryPackages = Stream.of(
                         LearningDifficulty.BEGINNER, LearningDifficulty.INTERMEDIATE, LearningDifficulty.ADVANCED)
@@ -208,7 +213,7 @@ public class LearningService {
         return LearningHomeResponseDTO.HomeResultDTO.of(currentLearning, theoryPackages, accompanimentPackages);
     }
 
-    private LearningHomeResponseDTO.CurrentLearning buildCurrentLearning(Long userId) {
+    public LearningHomeResponseDTO.CurrentLearning getCurrentLearning(Long userId) {
         return userLearningProgressRepository.findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId)
                 .map(latest -> {
                     Learning learning = latest.getLearning();
@@ -231,6 +236,38 @@ public class LearningService {
                             nextStepId);
                 })
                 .orElse(null);
+    }
+
+    public List<LearningHomeResponseDTO.RecommendedLearning> getRecommendedLearnings(Long userId) {
+        List<Learning> orderedPackages = RECOMMENDATION_DIFFICULTY_ORDER.stream()
+                .flatMap(difficulty -> learningRepository
+                        .findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(LearningCategory.THEORY, difficulty)
+                        .stream())
+                .toList();
+
+        if (orderedPackages.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> learningIds = orderedPackages.stream().map(Learning::getId).toList();
+        Map<Long, Learning> learningById = orderedPackages.stream()
+                .collect(Collectors.toMap(Learning::getId, Function.identity()));
+
+        List<LearningStep> orderedSteps = orderedPackages.stream()
+                .flatMap(learning -> learningStepRepository.findByLearning_IdOrderByStepNoAsc(learning.getId()).stream())
+                .toList();
+
+        // null score toMap NPE 방지
+        Map<Long, Integer> scoreByStepId = userLearningProgressRepository
+                .findByUser_UserIdAndLearning_IdIn(userId, learningIds).stream()
+                .filter(p -> p.getScore() != null)
+                .collect(Collectors.toMap(p -> p.getLearningStep().getId(), UserLearningProgress::getScore));
+
+        return orderedSteps.stream()
+                .filter(step -> isStepIncomplete(scoreByStepId.get(step.getId())))
+                .limit(RECOMMENDED_LEARNING_LIMIT)
+                .map(step -> LearningHomeResponseDTO.RecommendedLearning.of(learningById.get(step.getLearning().getId()), step))
+                .toList();
     }
 
     // [이어서 학습하기] 클릭 시 이동할 단계 계산
