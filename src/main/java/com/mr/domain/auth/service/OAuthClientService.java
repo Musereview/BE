@@ -56,11 +56,7 @@ public class OAuthClientService {
                     .body(new ParameterizedTypeReference<Map<String, Object>>() {
                     });
 
-            if (response == null) {
-                throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
-            }
-
-            String socialId = String.valueOf(response.get("id"));
+            String socialId = extractSocialId(response);
 
             @SuppressWarnings("unchecked")
             Map<String, Object> kakaoAccount = (Map<String, Object>) response.get("kakao_account");
@@ -74,6 +70,8 @@ public class OAuthClientService {
                     .profileImgUrl(profileImgUrl)
                     .build();
 
+        } catch (GeneralException e) {
+            throw e;
         } catch (Exception e) {
             throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
         }
@@ -81,22 +79,39 @@ public class OAuthClientService {
 
     private OAuthUserInfo getGoogleUserInfo(String accessToken) {
         try {
-            Map response = restClient.get()
+            Map<String, Object> response = restClient.get()
                     .uri("https://www.googleapis.com/oauth2/v2/userinfo")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .retrieve()
-                    .body(Map.class);
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() {
+                    });
 
-            String socialId = (String) response.get("id");
-            String email = (String) response.get("email");
-            String profileImgUrl = (String) response.get("picture");
+            String socialId = extractSocialId(response);
+            String profileImgUrl = response != null ? (String) response.get("picture") : null;
 
             return OAuthUserInfo.builder()
                     .socialId(socialId)
                     .profileImgUrl(profileImgUrl)
                     .build();
+        } catch (GeneralException e) {
+            throw e;
         } catch (Exception e) {
             throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
         }
+    }
+
+    private String extractSocialId(Map<String, Object> response) {
+        if (response == null) {
+            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
+        }
+        Object idObj = response.get("id");
+        if (idObj == null) {
+            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
+        }
+        String socialId = String.valueOf(idObj);
+        if (socialId.isBlank() || "null".equalsIgnoreCase(socialId.trim())) {
+            throw new GeneralException(CommonStatus.INVALID_INPUT_VALUE);
+        }
+        return socialId;
     }
 }
