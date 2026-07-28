@@ -65,7 +65,7 @@ class HomeServiceTest {
         User user = mock(User.class);
         lenient().when(user.getUserId()).thenReturn(userId);
         lenient().when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        lenient().when(studentRepository.findByUser_UserId(userId)).thenReturn(Optional.empty());
+        lenient().when(studentRepository.findByUser(user)).thenReturn(Optional.empty());
         lenient().when(playingRepository.findEndedAtsByUserAndStatus(anyLong(), any())).thenReturn(List.of());
         lenient().when(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).thenReturn(List.of());
         lenient().when(playingRepository.findPlayingsByUserAndStatus(anyLong(), any(), any(), any()))
@@ -99,7 +99,7 @@ class HomeServiceTest {
 
         Student student = mock(Student.class);
         given(student.getTheoryLevel()).willReturn(TheoryLevel.INTERMEDIATE);
-        given(studentRepository.findByUser_UserId(1L)).willReturn(Optional.of(student));
+        given(studentRepository.findByUser(any(User.class))).willReturn(Optional.of(student));
 
         Instrument instrument = mock(Instrument.class);
         given(instrument.getCode()).willReturn("KEYBOARD");

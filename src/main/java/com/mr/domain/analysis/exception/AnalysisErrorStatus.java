@@ -9,10 +9,10 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 public enum AnalysisErrorStatus implements BaseCode {
 
-    // 400_01은 스펙상 마디 검증용으로 예약됨
-    ANALYSIS_INVALID_REQUEST(HttpStatus.BAD_REQUEST, "ANALYSIS_400_02", "필수 정보가 누락되었습니다."),
+    // 400_01, 400_02는 스펙상 마디 검증용으로 예약됨
+    ANALYSIS_INVALID_REQUEST(HttpStatus.BAD_REQUEST, "ANALYSIS_400_03", "필수 정보가 누락되었습니다."),
 
-    ANALYSIS_OWNER_MISMATCH(HttpStatus.BAD_REQUEST, "ANALYSIS_400_03", "playing 소유자와 user가 일치하지 않습니다."),
+    ANALYSIS_OWNER_MISMATCH(HttpStatus.BAD_REQUEST, "ANALYSIS_400_04", "playing 소유자와 user가 일치하지 않습니다."),
 
     ANALYSIS_ACCESS_DENIED(HttpStatus.FORBIDDEN, "ANALYSIS_403_01", "해당 분석 결과에 접근할 수 없습니다."),
 

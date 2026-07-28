@@ -78,7 +78,7 @@ public class HomeService {
     }
 
     private UserSummary buildUserSummary(User user) {
-        Student student = studentRepository.findByUser_UserId(user.getUserId()).orElse(null);
+        Student student = studentRepository.findByUser(user).orElse(null);
 
         TheoryLevel skillLevel = student != null ? student.getTheoryLevel() : null;
         String instrumentType = student == null ? null
