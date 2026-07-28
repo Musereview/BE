@@ -13,6 +13,7 @@ import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -38,6 +39,15 @@ public class AuthService {
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String accessToken, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
 
+        try {
+            return executeSocialLogin(socialType, userInfo, deviceInfo);
+        } catch (DataIntegrityViolationException e) {
+            // 동시 가입 요청으로 DB Unique 제약조건(uk_social_auth_type_id) 위반 시, 기존 가입된 계정으로 로그인 재시도
+            return executeSocialLoginForExistingUser(socialType, userInfo, deviceInfo);
+        }
+    }
+
+    private AuthResponseDTO.LoginResponse executeSocialLogin(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
         return transactionTemplate.execute(status -> {
             Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId());
             boolean isNewUser = optionalSocialAuth.isEmpty();
@@ -67,7 +77,7 @@ public class AuthService {
                         expiryTime,
                         deviceInfo
                 );
-                socialAuth = socialAuthRepository.save(socialAuth);
+                socialAuthRepository.saveAndFlush(socialAuth);
             } else {
                 socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
             }
@@ -82,6 +92,36 @@ public class AuthService {
                     .userId(user.getUserId())
                     .nickname(user.getNickname())
                     .isNewUser(isNewUser)
+                    .isOnboardingCompleted(user.isOnboardingCompleted())
+                    .tokenInfo(tokenResponse)
+                    .build();
+        });
+    }
+
+    private AuthResponseDTO.LoginResponse executeSocialLoginForExistingUser(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
+        return transactionTemplate.execute(status -> {
+            SocialAuth socialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId())
+                    .orElseThrow(() -> new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST));
+
+            User user = socialAuth.getUser();
+
+            String newAccessToken = tokenProvider.createAccessToken(user.getUserId());
+            String newRefreshToken = tokenProvider.createRefreshToken(user.getUserId());
+            String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
+            LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
+
+            socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
+
+            AuthResponseDTO.TokenResponse tokenResponse = AuthResponseDTO.TokenResponse.builder()
+                    .accessToken(newAccessToken)
+                    .refreshToken(newRefreshToken)
+                    .accessTokenExpiresInSeconds(tokenProvider.getAccessTokenExpirationSeconds())
+                    .build();
+
+            return AuthResponseDTO.LoginResponse.builder()
+                    .userId(user.getUserId())
+                    .nickname(user.getNickname())
+                    .isNewUser(false)
                     .isOnboardingCompleted(user.isOnboardingCompleted())
                     .tokenInfo(tokenResponse)
                     .build();
