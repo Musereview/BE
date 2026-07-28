@@ -124,4 +124,8 @@ public class SocialAuth extends BaseCreatedEntity {
         this.refreshTokenHash = null;
         this.expiredAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
+
+    public boolean isExpired() {
+        return this.expiredAt == null || !this.expiredAt.isAfter(LocalDateTime.now(ZoneId.of("Asia/Seoul")));
+    }
 }

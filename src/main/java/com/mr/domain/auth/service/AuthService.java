@@ -149,6 +149,7 @@ public class AuthService {
 
         SocialAuth socialAuth = socialAuthRepository.findByRefreshTokenHashWithLock(requestTokenHash)
                 .filter(auth -> auth.getUser().getUserId().equals(userId))
+                .filter(auth -> !auth.isExpired())
                 .orElseThrow(() -> new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST));
 
         String newAccessToken = tokenProvider.createAccessToken(userId);
