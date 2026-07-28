@@ -128,14 +128,14 @@ public class HomeService {
         return currentDays + "일 연속 학습 중이에요!";
     }
 
-    private List<dance> buildWeeklyAttendance(Set<LocalDate> practiceDates) {
+    private List<DayAttendance> buildWeeklyAttendance(Set<LocalDate> practiceDates) {
         LocalDate today = LocalDate.now();
         LocalDate weekStart = today.with(DayOfWeek.MONDAY);
 
-        List<dance> weeklyAttendance = new ArrayList<>();
+        List<DayAttendance> weeklyAttendance = new ArrayList<>();
         for (int i = 0; i < 7; i++) {
             LocalDate day = weekStart.plusDays(i);
-            weeklyAttendance.add(new dance(
+            weeklyAttendance.add(new DayAttendance(
                     DayOfWeekCode.from(day.getDayOfWeek()),
                     toKoreanLabel(day.getDayOfWeek()),
                     resolveStatus(day, today, practiceDates)
