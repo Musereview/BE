@@ -139,4 +139,24 @@ class AuthServiceTest {
         assertThat(userRepository.findById(userId)).isEmpty();
         assertThat(socialAuthRepository.findAllByUser_UserId(userId)).isEmpty();
     }
+
+    @Test
+    @DisplayName("linkSocialAccount - 기존 사용자 계정에 다른 소셜 계정(구글)을 추가 연동할 수 있다")
+    void linkSocialAccount_existingUser_addsSecondSocialAuth() {
+        // given
+        given(oAuthClientService.getUserInfo(SocialType.KAKAO, "kakao_token")).willReturn(kakaoUserInfo);
+        AuthResponseDTO.LoginResponse loginResponse = authService.socialLogin(SocialType.KAKAO, "kakao_token", "deviceInfo");
+        Long userId = loginResponse.userId();
+
+        OAuthUserInfo googleUserInfo = new OAuthUserInfo("google_67890", "https://example.com/google.png");
+        given(oAuthClientService.getUserInfo(SocialType.GOOGLE, "google_token")).willReturn(googleUserInfo);
+
+        // when
+        AuthResponseDTO.TokenInfo tokenInfo = authService.linkSocialAccount(userId, SocialType.GOOGLE, "google_token", "deviceInfo");
+
+        // then
+        assertThat(tokenInfo.accessToken()).isNotBlank();
+        List<SocialAuth> userSocialAuths = socialAuthRepository.findAllByUser_UserId(userId);
+        assertThat(userSocialAuths).hasSize(2);
+    }
 }

@@ -127,6 +127,49 @@ public class AuthService {
         });
     }
 
+    public AuthResponseDTO.TokenInfo linkSocialAccount(Long userId, SocialType socialType, String accessToken, String deviceInfo) {
+        OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
+
+        return transactionTemplate.execute(status -> {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
+
+            Optional<SocialAuth> existingSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId());
+            if (existingSocialAuth.isPresent()) {
+                SocialAuth socialAuth = existingSocialAuth.get();
+                if (!socialAuth.getUser().getUserId().equals(userId)) {
+                    throw new GeneralException(AuthErrorStatus.ALREADY_LINKED_SOCIAL_ACCOUNT);
+                }
+            }
+
+            String newAccessToken = tokenProvider.createAccessToken(userId);
+            String newRefreshToken = tokenProvider.createRefreshToken(userId);
+            String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
+            LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
+
+            if (existingSocialAuth.isPresent()) {
+                SocialAuth socialAuth = existingSocialAuth.get();
+                socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
+            } else {
+                SocialAuth newSocialAuth = SocialAuth.create(
+                        user,
+                        socialType,
+                        userInfo.socialId(),
+                        refreshTokenHash,
+                        expiryTime,
+                        deviceInfo
+                );
+                socialAuthRepository.save(newSocialAuth);
+            }
+
+            return AuthResponseDTO.TokenInfo.builder()
+                    .accessToken(newAccessToken)
+                    .refreshToken(newRefreshToken)
+                    .accessTokenExpiresInSeconds(tokenProvider.getAccessTokenExpirationSeconds())
+                    .build();
+        });
+    }
+
     private User registerNewUser(OAuthUserInfo userInfo) {
         String profileImgUrl = userInfo.profileImgUrl();
         if (profileImgUrl == null || profileImgUrl.isBlank()) {

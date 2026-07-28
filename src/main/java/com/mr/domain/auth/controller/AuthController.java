@@ -54,6 +54,22 @@ public class AuthController {
     }
 
     @Operation(
+            summary = "소셜 계정 추가 연동 API",
+            description = "현재 로그인된 사용자의 계정에 새로운 소셜 계정(카카오/구글)을 추가로 연동합니다."
+    )
+    @PostMapping("/link/{socialType}")
+    public ApiResponse<AuthResponseDTO.TokenInfo> linkSocialAccount(
+            @Parameter(description = "연동할 소셜 제공자 (KAKAO, GOOGLE)", example = "GOOGLE")
+            @PathVariable(name = "socialType") SocialType socialType,
+            @RequestBody @Valid AuthRequestDTO.SocialLoginRequest request,
+            @RequestHeader(value = HttpHeaders.USER_AGENT, defaultValue = "Unknown Device") String deviceInfo
+    ) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        AuthResponseDTO.TokenInfo tokenInfo = authService.linkSocialAccount(userId, socialType, request.accessToken(), deviceInfo);
+        return ApiResponse.onSuccess(tokenInfo);
+    }
+
+    @Operation(
             summary = "로그아웃 API",
             description = "현재 요청 기기의 Refresh Token 세션을 선택적으로 만료 처리합니다."
     )
