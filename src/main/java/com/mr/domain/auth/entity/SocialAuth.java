@@ -61,7 +61,15 @@ public class SocialAuth extends BaseCreatedEntity {
         this.socialId = socialId;
         this.refreshTokenHash = refreshTokenHash;
         this.expiredAt = expiredAt;
-        this.deviceInfo = deviceInfo;
+        this.deviceInfo = sanitizeDeviceInfo(deviceInfo);
+    }
+
+    private static String sanitizeDeviceInfo(String deviceInfo) {
+        if (deviceInfo == null || deviceInfo.isBlank()) {
+            return "Unknown Device";
+        }
+        String trimmed = deviceInfo.trim();
+        return trimmed.length() > 255 ? trimmed.substring(0, 255) : trimmed;
     }
 
     public static SocialAuth create(User user, SocialType socialType, String socialId,
@@ -116,7 +124,7 @@ public class SocialAuth extends BaseCreatedEntity {
 
         this.refreshTokenHash = tokenHash;
         this.expiredAt = newExpiredAt;
-        this.deviceInfo = deviceInfo;
+        this.deviceInfo = sanitizeDeviceInfo(deviceInfo);
     }
 
     public void expireToken() {

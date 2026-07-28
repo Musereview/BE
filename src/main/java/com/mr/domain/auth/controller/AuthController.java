@@ -38,7 +38,7 @@ public class AuthController {
             @Parameter(description = "소셜 로그인 제공자 (KAKAO, GOOGLE)", example = "KAKAO")
             @PathVariable(name = "socialType") SocialType socialType,
             @RequestBody @Valid AuthRequestDTO.SocialLoginRequest request,
-            @RequestHeader(value = HttpHeaders.USER_AGENT, required = false, defaultValue = "Unknown Device") String deviceInfo
+            @RequestHeader(value = HttpHeaders.USER_AGENT, defaultValue = "Unknown Device") String deviceInfo
     ) {
         AuthResponseDTO.LoginResponse response = authService.socialLogin(socialType, request.accessToken(), deviceInfo);
         return ApiResponse.onSuccess(response);
