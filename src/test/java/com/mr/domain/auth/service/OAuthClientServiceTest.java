@@ -103,4 +103,47 @@ class OAuthClientServiceTest {
                 .isInstanceOf(GeneralException.class)
                 .satisfies(e -> assertThat(((GeneralException) e).getCode()).isEqualTo(AuthErrorStatus.OAUTH_SERVER_ERROR));
     }
+
+    @Test
+    @DisplayName("카카오 정상 응답 시 OAuthUserInfo(socialId, profileImgUrl)로 성공적으로 매핑된다")
+    void getKakaoUserInfo_success() {
+        String jsonResponse = """
+                {
+                    "id": 123456789,
+                    "kakao_account": {
+                        "profile": {
+                            "profile_image_url": "https://example.com/kakao_profile.png"
+                        }
+                    }
+                }
+                """;
+
+        mockServer.expect(MockRestRequestMatchers.requestTo("https://kapi.kakao.com/v2/user/me"))
+                .andRespond(MockRestResponseCreators.withSuccess(jsonResponse, MediaType.APPLICATION_JSON));
+
+        com.mr.domain.auth.dto.OAuthUserInfo userInfo = oAuthClientService.getUserInfo(SocialType.KAKAO, "valid_token");
+
+        assertThat(userInfo.socialId()).isEqualTo("123456789");
+        assertThat(userInfo.profileImgUrl()).isEqualTo("https://example.com/kakao_profile.png");
+    }
+
+    @Test
+    @DisplayName("구글 정상 응답 시 OAuthUserInfo(socialId, profileImgUrl)로 성공적으로 매핑된다")
+    void getGoogleUserInfo_success() {
+        String jsonResponse = """
+                {
+                    "id": "google_987654321",
+                    "picture": "https://example.com/google_profile.png",
+                    "email": "user@gmail.com"
+                }
+                """;
+
+        mockServer.expect(MockRestRequestMatchers.requestTo("https://www.googleapis.com/oauth2/v2/userinfo"))
+                .andRespond(MockRestResponseCreators.withSuccess(jsonResponse, MediaType.APPLICATION_JSON));
+
+        com.mr.domain.auth.dto.OAuthUserInfo userInfo = oAuthClientService.getUserInfo(SocialType.GOOGLE, "valid_token");
+
+        assertThat(userInfo.socialId()).isEqualTo("google_987654321");
+        assertThat(userInfo.profileImgUrl()).isEqualTo("https://example.com/google_profile.png");
+    }
 }
