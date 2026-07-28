@@ -28,10 +28,8 @@ public class AuthService {
     private final JwtTokenProvider tokenProvider;
     private final OAuthClientService oAuthClientService;
 
-    @Value("${app.profile.default-image-url:https://musereview-storage-526426842030-ap-northeast-2.s3.ap-northeast-2.amazonaws.com/profile/default-profile.png}")
+    @Value("${app.profile.default-image-url}")
     private String defaultProfileImageUrl;
-
-
 
     @Transactional
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String accessToken, String deviceInfo) {
@@ -65,9 +63,7 @@ public class AuthService {
     private SocialAuth registerNewUser(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
         String profileImgUrl = userInfo.profileImgUrl();
         if (profileImgUrl == null || profileImgUrl.isBlank()) {
-            profileImgUrl = (defaultProfileImageUrl != null && !defaultProfileImageUrl.isBlank())
-                    ? defaultProfileImageUrl
-                    : "https://musereview-storage-526426842030-ap-northeast-2.s3.ap-northeast-2.amazonaws.com/profile/default-profile.png";
+            profileImgUrl = defaultProfileImageUrl;
         }
 
         User user = User.createFromOAuth(profileImgUrl);
