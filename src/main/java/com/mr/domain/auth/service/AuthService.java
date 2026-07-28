@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,60 +30,62 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtTokenProvider tokenProvider;
     private final OAuthClientService oAuthClientService;
+    private final TransactionTemplate transactionTemplate;
 
     @Value("${app.profile.default-image-url}")
     private String defaultProfileImageUrl;
 
-    @Transactional
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String accessToken, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
 
-        Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId());
-        boolean isNewUser = optionalSocialAuth.isEmpty();
+        return transactionTemplate.execute(status -> {
+            Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId());
+            boolean isNewUser = optionalSocialAuth.isEmpty();
 
-        User user;
-        SocialAuth socialAuth;
+            User user;
+            SocialAuth socialAuth;
 
-        if (optionalSocialAuth.isPresent()) {
-            socialAuth = optionalSocialAuth.get();
-            user = socialAuth.getUser();
-        } else {
-            user = registerNewUser(userInfo);
-            socialAuth = null;
-        }
+            if (optionalSocialAuth.isPresent()) {
+                socialAuth = optionalSocialAuth.get();
+                user = socialAuth.getUser();
+            } else {
+                user = registerNewUser(userInfo);
+                socialAuth = null;
+            }
 
-        String newAccessToken = tokenProvider.createAccessToken(user.getUserId());
-        String newRefreshToken = tokenProvider.createRefreshToken(user.getUserId());
-        String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
-        LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
+            String newAccessToken = tokenProvider.createAccessToken(user.getUserId());
+            String newRefreshToken = tokenProvider.createRefreshToken(user.getUserId());
+            String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
+            LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
 
-        if (isNewUser) {
-            socialAuth = SocialAuth.create(
-                    user,
-                    socialType,
-                    userInfo.socialId(),
-                    refreshTokenHash,
-                    expiryTime,
-                    deviceInfo
-            );
-            socialAuth = socialAuthRepository.save(socialAuth);
-        } else {
-            socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
-        }
+            if (isNewUser) {
+                socialAuth = SocialAuth.create(
+                        user,
+                        socialType,
+                        userInfo.socialId(),
+                        refreshTokenHash,
+                        expiryTime,
+                        deviceInfo
+                );
+                socialAuth = socialAuthRepository.save(socialAuth);
+            } else {
+                socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
+            }
 
-        AuthResponseDTO.TokenResponse tokenResponse = AuthResponseDTO.TokenResponse.builder()
-                .accessToken(newAccessToken)
-                .refreshToken(newRefreshToken)
-                .accessTokenExpiresInSeconds(tokenProvider.getAccessTokenExpirationSeconds())
-                .build();
+            AuthResponseDTO.TokenResponse tokenResponse = AuthResponseDTO.TokenResponse.builder()
+                    .accessToken(newAccessToken)
+                    .refreshToken(newRefreshToken)
+                    .accessTokenExpiresInSeconds(tokenProvider.getAccessTokenExpirationSeconds())
+                    .build();
 
-        return AuthResponseDTO.LoginResponse.builder()
-                .userId(user.getUserId())
-                .nickname(user.getNickname())
-                .isNewUser(isNewUser)
-                .isOnboardingCompleted(user.isOnboardingCompleted())
-                .tokenInfo(tokenResponse)
-                .build();
+            return AuthResponseDTO.LoginResponse.builder()
+                    .userId(user.getUserId())
+                    .nickname(user.getNickname())
+                    .isNewUser(isNewUser)
+                    .isOnboardingCompleted(user.isOnboardingCompleted())
+                    .tokenInfo(tokenResponse)
+                    .build();
+        });
     }
 
     private User registerNewUser(OAuthUserInfo userInfo) {
