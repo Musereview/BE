@@ -1,6 +1,8 @@
 package com.mr.domain.auth.service;
 
 import com.mr.domain.auth.dto.OAuthUserInfo;
+import com.mr.domain.auth.dto.res.GoogleUserResponse;
+import com.mr.domain.auth.dto.res.KakaoUserResponse;
 import com.mr.domain.auth.entity.enums.SocialType;
 import com.mr.domain.auth.exception.AuthErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
@@ -8,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.ClientHttpRequestFactories;
 import org.springframework.boot.web.client.ClientHttpRequestFactorySettings;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -18,7 +19,6 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Duration;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -51,22 +51,26 @@ public class OAuthClientService {
 
     private OAuthUserInfo getKakaoUserInfo(String accessToken) {
         try {
-            Map<String, Object> response = restClient.get()
+            KakaoUserResponse response = restClient.get()
                     .uri("https://kapi.kakao.com/v2/user/me")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded;charset=utf-8")
                     .retrieve()
-                    .body(new ParameterizedTypeReference<Map<String, Object>>() {
-                    });
+                    .body(KakaoUserResponse.class);
 
-            String socialId = extractSocialId(response);
+            if (response == null || response.id() == null) {
+                throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+            }
 
-            @SuppressWarnings("unchecked")
-            Map<String, Object> kakaoAccount = (Map<String, Object>) response.get("kakao_account");
+            String socialId = String.valueOf(response.id());
+            if (socialId.isBlank() || "null".equalsIgnoreCase(socialId.trim())) {
+                throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+            }
 
-            @SuppressWarnings("unchecked")
-            Map<String, Object> profile = kakaoAccount != null ? (Map<String, Object>) kakaoAccount.get("profile") : null;
-            String profileImgUrl = profile != null ? (String) profile.get("profile_image_url") : null;
+            String profileImgUrl = null;
+            if (response.kakaoAccount() != null && response.kakaoAccount().profile() != null) {
+                profileImgUrl = response.kakaoAccount().profile().profileImageUrl();
+            }
 
             return OAuthUserInfo.builder()
                     .socialId(socialId)
@@ -80,38 +84,23 @@ public class OAuthClientService {
 
     private OAuthUserInfo getGoogleUserInfo(String accessToken) {
         try {
-            Map<String, Object> response = restClient.get()
+            GoogleUserResponse response = restClient.get()
                     .uri("https://www.googleapis.com/oauth2/v2/userinfo")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .retrieve()
-                    .body(new ParameterizedTypeReference<Map<String, Object>>() {
-                    });
+                    .body(GoogleUserResponse.class);
 
-            String socialId = extractSocialId(response);
-            String profileImgUrl = response != null ? (String) response.get("picture") : null;
+            if (response == null || response.id() == null || response.id().isBlank() || "null".equalsIgnoreCase(response.id().trim())) {
+                throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+            }
 
             return OAuthUserInfo.builder()
-                    .socialId(socialId)
-                    .profileImgUrl(profileImgUrl)
+                    .socialId(response.id())
+                    .profileImgUrl(response.picture())
                     .build();
         } catch (Exception e) {
             throw mapOAuthException(e, "Google");
         }
-    }
-
-    private String extractSocialId(Map<String, Object> response) {
-        if (response == null) {
-            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
-        }
-        Object idObj = response.get("id");
-        if (idObj == null) {
-            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
-        }
-        String socialId = String.valueOf(idObj);
-        if (socialId.isBlank() || "null".equalsIgnoreCase(socialId.trim())) {
-            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
-        }
-        return socialId;
     }
 
     private GeneralException mapOAuthException(Exception e, String provider) {
