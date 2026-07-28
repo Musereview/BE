@@ -52,7 +52,10 @@ public class AuthController {
         return ApiResponse.onSuccess(tokenInfo);
     }
 
-    @Operation(summary = "로그아웃 API", description = "현재 로그인된 사용자의 세션 및 토큰을 무효화합니다.")
+    @Operation(
+            summary = "로그아웃 API",
+            description = "현재 로그인된 사용자의 Refresh Token 세션을 만료 처리합니다. (발급된 Access Token은 자체 만료 시각까지 유효하며, 추가 토큰 재발급이 차단됩니다.)"
+    )
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
             @Parameter(hidden = true) @RequestAttribute("userId") Long userId
@@ -61,7 +64,10 @@ public class AuthController {
         return ApiResponse.onSuccess(null);
     }
 
-    @Operation(summary = "회원 탈퇴 API", description = "사용자 계정을 탈퇴 처리하고 관련 인증 정보를 삭제/만료합니다.")
+    @Operation(
+            summary = "회원 탈퇴 API",
+            description = "사용자 계정을 탈퇴 처리하고 저장된 소셜 인증 정보 및 Refresh Token 세션을 완전히 삭제합니다."
+    )
     @PostMapping("/withdraw")
     public ApiResponse<Void> withdraw(
             @Parameter(hidden = true) @RequestAttribute("userId") Long userId
