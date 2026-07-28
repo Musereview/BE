@@ -1,0 +1,240 @@
+package com.mr.domain.statistics.service;
+
+import com.mr.domain.analysis.entity.Analysis;
+import com.mr.domain.analysis.entity.enums.AnalysisStatus;
+import com.mr.domain.analysis.repository.AnalysisRepository;
+import com.mr.domain.playing.entity.Playing;
+import com.mr.domain.playing.entity.enums.PlayingStatus;
+import com.mr.domain.playing.repository.PlayingRepository;
+import com.mr.domain.statistics.dto.req.StatisticsPeriod;
+import com.mr.domain.statistics.dto.res.StatisticsResponseDTO;
+import com.mr.domain.statistics.dto.res.StatisticsResponseDTO.DomainGrowth;
+import com.mr.domain.statistics.dto.res.StatisticsResponseDTO.TrendItem;
+import com.mr.domain.statistics.dto.res.StatisticsResponseDTO.WeeklySummary;
+import com.mr.domain.statistics.dto.res.StatisticsResponseDTO.WeeklyTrend;
+import com.mr.domain.statistics.entity.enums.SkillType;
+import com.mr.domain.statistics.exception.StatisticsErrorStatus;
+import com.mr.domain.user.exception.UserErrorStatus;
+import com.mr.domain.user.repository.UserRepository;
+import com.mr.global.apipayload.exception.GeneralException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class StatisticsService {
+
+    private static final int SCORE_SCALE = 1;
+    private static final int WEEKLY_TREND_WEEKS = 4;
+    private static final int SECONDS_PER_MINUTE = 60;
+
+    private final UserRepository userRepository;
+    private final PlayingRepository playingRepository;
+    private final AnalysisRepository analysisRepository;
+
+    // MVP: period/from/to는 조합 검증만 수행, 집계는 항상 이번 주 vs 지난 주 + 최근 4주 고정(기획 확정 사항)
+    public StatisticsResponseDTO getStatistics(Long userId, StatisticsPeriod period, LocalDate from, LocalDate to) {
+        validateQuery(period, from, to);
+
+        userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
+
+        LocalDateTime thisWeekStart = LocalDate.now().with(DayOfWeek.MONDAY).atStartOfDay();
+        LocalDateTime lastWeekStart = thisWeekStart.minusWeeks(1);
+        LocalDateTime fourWeeksAgoStart = thisWeekStart.minusWeeks(WEEKLY_TREND_WEEKS - 1L);
+
+        List<Playing> playings =
+                playingRepository.findByUserAndStatusSince(userId, PlayingStatus.COMPLETED, lastWeekStart);
+        List<Analysis> analyses =
+                analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, fourWeeksAgoStart);
+
+        ScoreAggregate[] weeklyScoreAggregates = buildWeeklyScoreAggregates(analyses, thisWeekStart);
+
+        return new StatisticsResponseDTO(
+                buildWeeklySummary(playings, weeklyScoreAggregates, thisWeekStart, lastWeekStart),
+                buildDomainGrowth(analyses, thisWeekStart, lastWeekStart),
+                buildWeeklyTrend(weeklyScoreAggregates)
+        );
+    }
+
+    private void validateQuery(StatisticsPeriod period, LocalDate from, LocalDate to) {
+        boolean hasPeriod = period != null;
+        boolean hasFrom = from != null;
+        boolean hasTo = to != null;
+
+        if (hasPeriod && (hasFrom || hasTo)) {
+            throw new GeneralException(StatisticsErrorStatus.STATISTICS_PERIOD_CONFLICT);
+        }
+        if (hasFrom != hasTo) {
+            throw new GeneralException(StatisticsErrorStatus.STATISTICS_INVALID_RANGE);
+        }
+        if (hasFrom && from.isAfter(to)) {
+            throw new GeneralException(StatisticsErrorStatus.STATISTICS_INVALID_RANGE);
+        }
+    }
+
+    // index 0=이번 주, 1=지난 주, 2=2주 전, 3=3주 전
+    private ScoreAggregate[] buildWeeklyScoreAggregates(List<Analysis> analyses, LocalDateTime thisWeekStart) {
+        ScoreAggregate[] aggregates = new ScoreAggregate[WEEKLY_TREND_WEEKS];
+        for (int weeksAgo = 0; weeksAgo < WEEKLY_TREND_WEEKS; weeksAgo++) {
+            LocalDateTime from = thisWeekStart.minusWeeks(weeksAgo);
+            aggregates[weeksAgo] = aggregateTotalScore(analyses, from, from.plusWeeks(1));
+        }
+        return aggregates;
+    }
+
+    private WeeklySummary buildWeeklySummary(List<Playing> playings, ScoreAggregate[] weeklyScoreAggregates,
+            LocalDateTime thisWeekStart, LocalDateTime lastWeekStart) {
+        int thisWeekMinutes = sumMinutes(playings, thisWeekStart, null);
+        int lastWeekMinutes = sumMinutes(playings, lastWeekStart, thisWeekStart);
+        int thisWeekCount = countInRange(playings, thisWeekStart, null);
+        int lastWeekCount = countInRange(playings, lastWeekStart, thisWeekStart);
+
+        ScoreAggregate thisWeekScore = weeklyScoreAggregates[0];
+        ScoreAggregate lastWeekScore = weeklyScoreAggregates[1];
+
+        return new WeeklySummary(
+                thisWeekScore.average(),
+                thisWeekMinutes,
+                thisWeekCount,
+                diffOrZero(thisWeekScore, lastWeekScore),
+                thisWeekMinutes - lastWeekMinutes,
+                thisWeekCount - lastWeekCount
+        );
+    }
+
+    private List<DomainGrowth> buildDomainGrowth(List<Analysis> analyses,
+            LocalDateTime thisWeekStart, LocalDateTime lastWeekStart) {
+        List<DomainGrowth> result = new ArrayList<>();
+        for (SkillType skillType : SkillType.values()) {
+            ScoreAggregate current = aggregateSkillScore(analyses, skillType, thisWeekStart, null);
+            ScoreAggregate previous = aggregateSkillScore(analyses, skillType, lastWeekStart, thisWeekStart);
+
+            result.add(new DomainGrowth(
+                    skillType,
+                    resolveLabel(skillType),
+                    current.average(),
+                    previous.average(),
+                    diffOrZero(current, previous)
+            ));
+        }
+        return result;
+    }
+
+    private WeeklyTrend buildWeeklyTrend(ScoreAggregate[] weeklyScoreAggregates) {
+        List<TrendItem> items = new ArrayList<>();
+        for (int weeksAgo = WEEKLY_TREND_WEEKS - 1; weeksAgo >= 0; weeksAgo--) {
+            items.add(new TrendItem(resolveWeekLabel(weeksAgo), weeklyScoreAggregates[weeksAgo].average()));
+        }
+
+        int diffFromPreviousWeek = diffIntOrZero(weeklyScoreAggregates[0], weeklyScoreAggregates[1]);
+        return new WeeklyTrend(diffFromPreviousWeek, items);
+    }
+
+    private ScoreAggregate aggregateTotalScore(List<Analysis> analyses, LocalDateTime from, LocalDateTime toExclusive) {
+        List<Integer> scores = analyses.stream()
+                .filter(a -> isWithin(a.getCompletedAt(), from, toExclusive))
+                .map(Analysis::getTotalScore)
+                .filter(Objects::nonNull)
+                .toList();
+
+        BigDecimal sum = scores.stream().map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new ScoreAggregate(sum, scores.size());
+    }
+
+    private ScoreAggregate aggregateSkillScore(List<Analysis> analyses, SkillType skillType,
+            LocalDateTime from, LocalDateTime toExclusive) {
+        List<BigDecimal> scores = analyses.stream()
+                .filter(a -> isWithin(a.getCompletedAt(), from, toExclusive))
+                .map(a -> resolveSkillScore(a, skillType))
+                .filter(Objects::nonNull)
+                .toList();
+
+        BigDecimal sum = scores.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new ScoreAggregate(sum, scores.size());
+    }
+
+    private BigDecimal resolveSkillScore(Analysis analysis, SkillType skillType) {
+        return switch (skillType) {
+            case SCALE -> analysis.getScaleScore();
+            case TENSION -> analysis.getTensionScore();
+            case PROGRESSION -> analysis.getProgressionScore();
+            case VOICE_LEADING -> analysis.getVoiceLeadingScore();
+        };
+    }
+
+    private boolean isWithin(LocalDateTime target, LocalDateTime from, LocalDateTime toExclusive) {
+        if (target == null || target.isBefore(from)) {
+            return false;
+        }
+        return toExclusive == null || target.isBefore(toExclusive);
+    }
+
+    private int sumMinutes(List<Playing> playings, LocalDateTime from, LocalDateTime toExclusive) {
+        int totalSeconds = playings.stream()
+                .filter(p -> isWithin(p.getEndedAt(), from, toExclusive))
+                .mapToInt(p -> p.getDurationSec() != null ? p.getDurationSec() : 0)
+                .sum();
+        return totalSeconds / SECONDS_PER_MINUTE;
+    }
+
+    private int countInRange(List<Playing> playings, LocalDateTime from, LocalDateTime toExclusive) {
+        return (int) playings.stream()
+                .filter(p -> isWithin(p.getEndedAt(), from, toExclusive))
+                .count();
+    }
+
+    private String resolveLabel(SkillType skillType) {
+        return switch (skillType) {
+            case SCALE -> "스케일";
+            case TENSION -> "텐션";
+            case PROGRESSION -> "진행";
+            case VOICE_LEADING -> "코드 연결";
+        };
+    }
+
+    private String resolveWeekLabel(int weeksAgo) {
+        return switch (weeksAgo) {
+            case 3 -> "3주 전";
+            case 2 -> "2주 전";
+            case 1 -> "지난주";
+            default -> "이번주";
+        };
+    }
+
+    private BigDecimal diffOrZero(ScoreAggregate current, ScoreAggregate previous) {
+        if (current.count() == 0 || previous.count() == 0) {
+            return BigDecimal.ZERO;
+        }
+        return current.average().subtract(previous.average());
+    }
+
+    private int diffIntOrZero(ScoreAggregate current, ScoreAggregate previous) {
+        if (current.count() == 0 || previous.count() == 0) {
+            return 0;
+        }
+        return current.average().subtract(previous.average())
+                .setScale(0, RoundingMode.HALF_UP)
+                .intValue();
+    }
+
+    // 평균 지표의 분모(count) 0 처리 공통화
+    private record ScoreAggregate(BigDecimal sum, int count) {
+        BigDecimal average() {
+            if (count == 0) {
+                return BigDecimal.ZERO;
+            }
+            return sum.divide(BigDecimal.valueOf(count), SCORE_SCALE, RoundingMode.HALF_UP);
+        }
+    }
+}
