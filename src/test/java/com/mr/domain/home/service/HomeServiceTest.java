@@ -12,6 +12,8 @@ import com.mr.domain.home.dto.res.HomeResponseDTO;
 import com.mr.domain.home.dto.res.HomeResponseDTO.AttendanceStatus;
 import com.mr.domain.home.dto.res.HomeResponseDTO.DayOfWeekCode;
 import com.mr.domain.home.dto.res.HomeResponseDTO.Streak.DayAttendance;
+import com.mr.domain.learning.dto.res.LearningHomeResponseDTO;
+import com.mr.domain.learning.service.LearningService;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
@@ -54,11 +56,15 @@ class HomeServiceTest {
     @Mock
     private PlayingRepository playingRepository;
 
+    @Mock
+    private LearningService learningService;
+
     private HomeService homeService;
 
     @BeforeEach
     void setUp() {
-        homeService = new HomeService(userRepository, studentRepository, studentInstrumentRepository, playingRepository);
+        homeService = new HomeService(
+                userRepository, studentRepository, studentInstrumentRepository, playingRepository, learningService);
     }
 
     private void stubBaseline(Long userId) {
@@ -70,6 +76,7 @@ class HomeServiceTest {
         lenient().when(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).thenReturn(List.of());
         lenient().when(playingRepository.findPlayingsByUserAndStatus(anyLong(), any(), any(), any()))
                 .thenReturn(new SliceImpl<>(List.of()));
+        lenient().when(learningService.getCurrentLearning(anyLong())).thenReturn(null);
     }
 
     private Playing mockPlaying(LocalDateTime endedAt, Integer durationSec) {
@@ -208,6 +215,67 @@ class HomeServiceTest {
 
         assertThat(response.practiceSummary().weeklyPracticeHours()).isEqualTo(2);
         assertThat(response.practiceSummary().monthlyPracticeHours()).isGreaterThanOrEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("getHome - LearningService에 진행 중인 학습이 있으면 currentLearning을 채운다")
+    void getHome_hasCurrentLearning_fillsCurrentLearning() {
+        stubBaseline(1L);
+
+        com.mr.domain.learning.entity.Learning learning = mock(com.mr.domain.learning.entity.Learning.class);
+        given(learning.getId()).willReturn(5L);
+        given(learning.getTitle()).willReturn("Tension Notes");
+        given(learning.getDifficulty()).willReturn(com.mr.domain.learning.entity.enums.LearningDifficulty.ADVANCED);
+
+        LearningHomeResponseDTO.CurrentLearning currentLearning =
+                LearningHomeResponseDTO.CurrentLearning.of(learning, "11th 텐션 노트 활용하기", 10, 13L);
+        given(learningService.getCurrentLearning(1L)).willReturn(currentLearning);
+
+        HomeResponseDTO response = homeService.getHome(1L);
+
+        assertThat(response.currentLearning()).isNotNull();
+        assertThat(response.currentLearning().learningId()).isEqualTo(5L);
+        assertThat(response.currentLearning().subtitle()).isEqualTo("11th 텐션 노트 활용하기");
+        assertThat(response.currentLearning().level()).isEqualTo("ADVANCED");
+        assertThat(response.currentLearning().progressRate()).isEqualTo(10);
+        assertThat(response.currentLearning().nextStepId()).isEqualTo(13L);
+    }
+
+    @Test
+    @DisplayName("getHome - 진행 중인 학습이 없으면 currentLearning은 null이다")
+    void getHome_noCurrentLearning_currentLearningIsNull() {
+        stubBaseline(1L);
+
+        HomeResponseDTO response = homeService.getHome(1L);
+
+        assertThat(response.currentLearning()).isNull();
+    }
+
+    @Test
+    @DisplayName("getHome - LearningService가 추천 학습을 반환하면 recommendedLearnings에 그대로 매핑한다")
+    void getHome_hasRecommendedLearnings_mapsToResponse() {
+        stubBaseline(1L);
+
+        LearningHomeResponseDTO.RecommendedLearning recommended =
+                new LearningHomeResponseDTO.RecommendedLearning(5L, "Tension Notes", "13th 텐션 노트 활용하기", "ADVANCED", 14L);
+        given(learningService.getRecommendedLearnings(1L)).willReturn(List.of(recommended));
+
+        HomeResponseDTO response = homeService.getHome(1L);
+
+        assertThat(response.recommendedLearnings()).hasSize(1);
+        assertThat(response.recommendedLearnings().get(0).learningId()).isEqualTo(5L);
+        assertThat(response.recommendedLearnings().get(0).subtitle()).isEqualTo("13th 텐션 노트 활용하기");
+        assertThat(response.recommendedLearnings().get(0).nextStepId()).isEqualTo(14L);
+    }
+
+    @Test
+    @DisplayName("getHome - LearningService가 추천 학습이 없다고 하면 빈 배열이다")
+    void getHome_noRecommendedLearnings_returnsEmptyList() {
+        stubBaseline(1L);
+
+        HomeResponseDTO response = homeService.getHome(1L);
+
+        assertThat(response.recommendedLearnings()).isEmpty();
     }
 
     @Test
