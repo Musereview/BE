@@ -94,7 +94,7 @@ public class AuthService {
         Long userId = Long.valueOf(tokenProvider.getAuthentication(refreshToken).getName());
         String requestTokenHash = tokenProvider.hashToken(refreshToken);
 
-        SocialAuth socialAuth = socialAuthRepository.findByRefreshTokenHash(requestTokenHash)
+        SocialAuth socialAuth = socialAuthRepository.findByRefreshTokenHashWithLock(requestTokenHash)
                 .filter(auth -> auth.getUser().getUserId().equals(userId))
                 .orElseThrow(() -> new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST));
 
