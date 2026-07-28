@@ -10,7 +10,8 @@ import lombok.Getter;
 public enum StudentInstrumentErrorStatus implements BaseCode {
 
     STUDENT_REQUIRED(HttpStatus.BAD_REQUEST, "STUDENT_INSTRUMENT_400_01", "student는 필수입니다."),
-    INSTRUMENT_REQUIRED(HttpStatus.BAD_REQUEST, "STUDENT_INSTRUMENT_400_02", "instrument는 필수입니다.");
+    INSTRUMENT_REQUIRED(HttpStatus.BAD_REQUEST, "STUDENT_INSTRUMENT_400_02", "instrument는 필수입니다."),
+    PRIMARY_INSTRUMENT_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR, "STUDENT_INSTRUMENT_500_01", "대표 악기 정보가 존재하지 않습니다.");
 
     private final HttpStatus status;
     private final String code;

@@ -1,7 +1,11 @@
 package com.mr.domain.weakness.entity;
 
 import com.mr.domain.analysis.entity.Analysis;
+import com.mr.domain.learning.entity.Learning;
+import com.mr.domain.user.entity.User;
 import com.mr.domain.weakness.entity.enums.Severity;
+import com.mr.domain.weakness.exception.WeaknessErrorStatus;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,7 +20,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -31,9 +34,9 @@ public class WeaknessNote extends BaseTimeEntity {
     @Column(name = "weakness_note_id")
     private Long id;
 
-    /** TODO: User 도메인 엔티티 연관관계 연결 예정 */
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "concept_code", nullable = false, length = 100)
     private String conceptCode;
@@ -55,42 +58,52 @@ public class WeaknessNote extends BaseTimeEntity {
     @Column(name = "severity", nullable = false, length = 20)
     private Severity severity;
 
+    // 아직 최근 분석이 없는 오답노트가 있을 수 있어 nullable, 검증 안 함
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "last_analysis_id")
     private Analysis lastAnalysis;
 
-    /** TODO: Learning 도메인 엔티티 연관관계 연결 예정 */
-    @Column(name = "recommended_learning_content_id")
-    private Long recommendedLearningContentId;
+    // 매칭되는 추천 콘텐츠가 없을 수 있어 nullable, 검증 안 함
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recommended_learning_content_id")
+    private Learning recommendedLearningContent;
 
     @Column(name = "last_detected_at")
     private LocalDateTime lastDetectedAt;
 
-    private WeaknessNote(Long userId, String conceptCode, String conceptName, String weaknessType,
+    private WeaknessNote(User user, String conceptCode, String conceptName, String weaknessType,
                          Integer occurrenceCount, Severity severity, Analysis lastAnalysis,
-                         Long recommendedLearningContentId, LocalDateTime lastDetectedAt) {
-        this.userId = userId;
+                         Learning recommendedLearningContent, LocalDateTime lastDetectedAt) {
+        validateUser(user);
+
+        this.user = user;
         this.conceptCode = conceptCode;
         this.conceptName = conceptName;
         this.weaknessType = weaknessType;
         this.occurrenceCount = occurrenceCount;
         this.severity = severity;
         this.lastAnalysis = lastAnalysis;
-        this.recommendedLearningContentId = recommendedLearningContentId;
+        this.recommendedLearningContent = recommendedLearningContent;
         this.lastDetectedAt = lastDetectedAt;
     }
 
-    public static WeaknessNote create(Long userId, String conceptCode, String conceptName,
-                                      String weaknessType, Analysis lastAnalysis, Long recommendedLearningContentId) {
+    private static void validateUser(User user) {
+        if (user == null) {
+            throw new GeneralException(WeaknessErrorStatus.WEAKNESS_INVALID_REQUEST);
+        }
+    }
+
+    public static WeaknessNote create(User user, String conceptCode, String conceptName,
+                                      String weaknessType, Analysis lastAnalysis, Learning recommendedLearningContent) {
         return new WeaknessNote(
-                userId,
+                user,
                 conceptCode,
                 conceptName,
                 weaknessType,
                 1,
                 Severity.LOW,
                 lastAnalysis,
-                recommendedLearningContentId,
+                recommendedLearningContent,
                 LocalDateTime.now()
         );
     }
