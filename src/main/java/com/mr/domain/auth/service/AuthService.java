@@ -12,8 +12,11 @@ import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -25,14 +28,18 @@ public class AuthService {
     private final JwtTokenProvider tokenProvider;
     private final OAuthClientService oAuthClientService;
 
+    @Value("${app.profile.default-image-url:https://musereview-storage-526426842030-ap-northeast-2.s3.ap-northeast-2.amazonaws.com/profile/default-profile.png}")
+    private String defaultProfileImageUrl;
+
 
 
     @Transactional
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String accessToken, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
 
-        SocialAuth socialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId())
-                .orElseGet(() -> registerNewUser(socialType, userInfo, deviceInfo));
+        Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId());
+        boolean isNewUser = optionalSocialAuth.isEmpty();
+        SocialAuth socialAuth = optionalSocialAuth.orElseGet(() -> registerNewUser(socialType, userInfo, deviceInfo));
 
         User user = socialAuth.getUser();
         String newAccessToken = tokenProvider.createAccessToken(user.getUserId());
@@ -46,8 +53,6 @@ public class AuthService {
                 .accessTokenExpiresInSeconds(tokenProvider.getAccessTokenExpirationSeconds())
                 .build();
 
-        boolean isNewUser = socialAuth.getCreatedAt().isAfter(java.time.LocalDateTime.now().minusMinutes(1));
-
         return AuthResponseDTO.LoginResponse.builder()
                 .userId(user.getUserId())
                 .nickname(user.getNickname())
@@ -60,7 +65,9 @@ public class AuthService {
     private SocialAuth registerNewUser(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
         String profileImgUrl = userInfo.profileImgUrl();
         if (profileImgUrl == null || profileImgUrl.isBlank()) {
-            profileImgUrl = "https://example.com/default-profile.png";
+            profileImgUrl = (defaultProfileImageUrl != null && !defaultProfileImageUrl.isBlank())
+                    ? defaultProfileImageUrl
+                    : "https://musereview-storage-526426842030-ap-northeast-2.s3.ap-northeast-2.amazonaws.com/profile/default-profile.png";
         }
 
         User user = User.createFromOAuth(profileImgUrl);
