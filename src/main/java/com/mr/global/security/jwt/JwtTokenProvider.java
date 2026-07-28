@@ -131,7 +131,7 @@ public class JwtTokenProvider {
             }
             return hexString.toString();
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 알고리즘을 찾을 수 없습니다.", e);
+            throw new IllegalStateException("SHA-256 알고리즘을 찾을 수 없습니다.", e);
         }
     }
 
