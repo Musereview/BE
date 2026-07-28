@@ -4,6 +4,9 @@ import com.mr.domain.auth.dto.OAuthUserInfo;
 import com.mr.domain.auth.entity.enums.SocialType;
 import com.mr.global.apipayload.code.CommonStatus;
 import com.mr.global.apipayload.exception.GeneralException;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.ClientHttpRequestFactories;
+import org.springframework.boot.web.client.ClientHttpRequestFactorySettings;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -11,12 +14,30 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Duration;
 import java.util.Map;
+
 @Slf4j
 @Service
 public class OAuthClientService {
 
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
+
+    public OAuthClientService(
+            @Value("${oauth.connect-timeout:3s}") Duration connectTimeout,
+            @Value("${oauth.read-timeout:5s}") Duration readTimeout) {
+        ClientHttpRequestFactorySettings settings = ClientHttpRequestFactorySettings.DEFAULTS
+                .withConnectTimeout(connectTimeout)
+                .withReadTimeout(readTimeout);
+
+        this.restClient = RestClient.builder()
+                .requestFactory(ClientHttpRequestFactories.get(settings))
+                .build();
+    }
+
+    public OAuthClientService(RestClient restClient) {
+        this.restClient = restClient;
+    }
 
     public OAuthUserInfo getUserInfo(SocialType socialType, String accessToken) {
         return switch (socialType) {
