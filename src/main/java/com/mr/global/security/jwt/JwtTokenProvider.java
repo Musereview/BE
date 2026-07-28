@@ -85,6 +85,11 @@ public class JwtTokenProvider {
         return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
     }
 
+    public Long getUserIdFromToken(String token) {
+        Claims claims = parseClaims(token);
+        return Long.valueOf(claims.getSubject());
+    }
+
     public boolean validateAccessToken(String token) {
         return validateTokenWithType(token, ACCESS_TYPE);
     }
