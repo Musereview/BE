@@ -23,6 +23,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -57,6 +58,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .setClaims(claims)
+                .setId(UUID.randomUUID().toString())
                 .setIssuedAt(now)
                 .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -71,6 +73,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .setClaims(claims)
+                .setId(UUID.randomUUID().toString())
                 .setIssuedAt(now)
                 .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS256)
