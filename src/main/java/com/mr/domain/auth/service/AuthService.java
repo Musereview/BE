@@ -42,7 +42,6 @@ public class AuthService {
         try {
             return executeSocialLogin(socialType, userInfo, deviceInfo);
         } catch (DataIntegrityViolationException e) {
-            // 동시 가입 요청으로 DB Unique 제약조건(uk_social_auth_type_id) 위반 시, 기존 가입된 계정으로 로그인 재시도
             return executeSocialLoginForExistingUser(socialType, userInfo, deviceInfo);
         }
     }

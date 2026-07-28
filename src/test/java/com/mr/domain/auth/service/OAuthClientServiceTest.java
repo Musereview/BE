@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.mr.domain.auth.entity.enums.SocialType;
 import com.mr.domain.auth.exception.AuthErrorStatus;
+import com.mr.domain.auth.exception.OAuthExceptionMapper;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.config.OAuthRestClientConfig;
 import java.time.Duration;
@@ -27,7 +28,7 @@ class OAuthClientServiceTest {
     void setUp() {
         restClientBuilder = RestClient.builder();
         mockServer = MockRestServiceServer.bindTo(restClientBuilder).build();
-        oAuthClientService = new OAuthClientService(restClientBuilder.build());
+        oAuthClientService = new OAuthClientService(restClientBuilder.build(), new OAuthExceptionMapper());
     }
 
     @Test
