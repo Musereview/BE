@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.mr.domain.auth.entity.enums.SocialType;
+import com.mr.domain.auth.exception.AuthErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,13 +41,14 @@ class OAuthClientServiceTest {
     }
 
     @Test
-    @DisplayName("카카오 response의 id가 null이면 GeneralException이 발생한다")
+    @DisplayName("카카오 response의 id가 null이면 GeneralException(INVALID_AUTH_REQUEST)이 발생한다")
     void getKakaoUserInfo_nullId_throwsException() {
         mockServer.expect(MockRestRequestMatchers.requestTo("https://kapi.kakao.com/v2/user/me"))
                 .andRespond(MockRestResponseCreators.withSuccess("{\"id\": null}", MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> oAuthClientService.getUserInfo(SocialType.KAKAO, "token"))
-                .isInstanceOf(GeneralException.class);
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getCode()).isEqualTo(AuthErrorStatus.INVALID_AUTH_REQUEST));
     }
 
     @Test
@@ -56,7 +58,8 @@ class OAuthClientServiceTest {
                 .andRespond(MockRestResponseCreators.withSuccess("{\"id\": \"null\"}", MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> oAuthClientService.getUserInfo(SocialType.KAKAO, "token"))
-                .isInstanceOf(GeneralException.class);
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getCode()).isEqualTo(AuthErrorStatus.INVALID_AUTH_REQUEST));
     }
 
     @Test
@@ -66,6 +69,29 @@ class OAuthClientServiceTest {
                 .andRespond(MockRestResponseCreators.withSuccess("{\"email\": \"test@example.com\"}", MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> oAuthClientService.getUserInfo(SocialType.GOOGLE, "token"))
-                .isInstanceOf(GeneralException.class);
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getCode()).isEqualTo(AuthErrorStatus.INVALID_AUTH_REQUEST));
+    }
+
+    @Test
+    @DisplayName("카카오 OAuth 서버가 401 Unauthorized를 반환하면 OAUTH_CLIENT_ERROR 예외로 매핑된다")
+    void getKakaoUserInfo_401Error_throwsOauthClientError() {
+        mockServer.expect(MockRestRequestMatchers.requestTo("https://kapi.kakao.com/v2/user/me"))
+                .andRespond(MockRestResponseCreators.withUnauthorizedRequest());
+
+        assertThatThrownBy(() -> oAuthClientService.getUserInfo(SocialType.KAKAO, "invalid_token"))
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getCode()).isEqualTo(AuthErrorStatus.OAUTH_CLIENT_ERROR));
+    }
+
+    @Test
+    @DisplayName("구글 OAuth 서버가 500 Internal Server Error를 반환하면 OAUTH_SERVER_ERROR 예외로 매핑된다")
+    void getGoogleUserInfo_500Error_throwsOauthServerError() {
+        mockServer.expect(MockRestRequestMatchers.requestTo("https://www.googleapis.com/oauth2/v2/userinfo"))
+                .andRespond(MockRestResponseCreators.withServerError());
+
+        assertThatThrownBy(() -> oAuthClientService.getUserInfo(SocialType.GOOGLE, "token"))
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getCode()).isEqualTo(AuthErrorStatus.OAUTH_SERVER_ERROR));
     }
 }
