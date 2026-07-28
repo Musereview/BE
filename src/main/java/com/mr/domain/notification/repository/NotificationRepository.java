@@ -22,7 +22,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     void bulkMarkAllAsReadByUserId(@Param("userId") Long userId);
 
     // 유저에게 안 읽은 알림이 단 하나라도 존재하는지 확인 (사이드바 종 아이콘 뱃지용)
-    boolean existsByUserUserIdAndIsReadFalseAndDeletedAtIsNull(Long userId);
+    boolean existsByUser_UserIdAndIsReadFalseAndDeletedAtIsNull(Long userId);
 
     // 중복 알림 방지용 쿼리 메서드
     boolean existsByUser_UserIdAndTitleAndCreatedAtAfter(Long userId, String title, LocalDateTime time);

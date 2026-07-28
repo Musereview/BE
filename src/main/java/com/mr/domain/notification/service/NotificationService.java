@@ -45,6 +45,6 @@ public class NotificationService {
 
     // 안 읽은 알림 존재 여부 확인
     public boolean checkUnreadNotification(Long userId) {
-        return notificationRepository.existsByUserUserIdAndIsReadFalseAndDeletedAtIsNull(userId);
+        return notificationRepository.existsByUser_UserIdAndIsReadFalseAndDeletedAtIsNull(userId);
     }
 }
