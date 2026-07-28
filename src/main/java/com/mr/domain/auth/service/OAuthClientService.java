@@ -7,10 +7,9 @@ import com.mr.domain.auth.entity.enums.SocialType;
 import com.mr.domain.auth.exception.AuthErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.ClientHttpRequestFactories;
-import org.springframework.boot.web.client.ClientHttpRequestFactorySettings;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -18,27 +17,13 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-import java.time.Duration;
-
 @Slf4j
 @Service
 public class OAuthClientService {
 
     private final RestClient restClient;
 
-    public OAuthClientService(
-            @Value("${oauth.connect-timeout:3s}") Duration connectTimeout,
-            @Value("${oauth.read-timeout:5s}") Duration readTimeout) {
-        ClientHttpRequestFactorySettings settings = ClientHttpRequestFactorySettings.DEFAULTS
-                .withConnectTimeout(connectTimeout)
-                .withReadTimeout(readTimeout);
-
-        this.restClient = RestClient.builder()
-                .requestFactory(ClientHttpRequestFactories.get(settings))
-                .build();
-    }
-
-    public OAuthClientService(RestClient restClient) {
+    public OAuthClientService(@Qualifier("oauthRestClient") RestClient restClient) {
         this.restClient = restClient;
     }
 
@@ -54,7 +39,7 @@ public class OAuthClientService {
             KakaoUserResponse response = restClient.get()
                     .uri("https://kapi.kakao.com/v2/user/me")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                    .header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded;charset=utf-8")
+                    .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .body(KakaoUserResponse.class);
 
@@ -87,6 +72,7 @@ public class OAuthClientService {
             GoogleUserResponse response = restClient.get()
                     .uri("https://www.googleapis.com/oauth2/v2/userinfo")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .body(GoogleUserResponse.class);
 

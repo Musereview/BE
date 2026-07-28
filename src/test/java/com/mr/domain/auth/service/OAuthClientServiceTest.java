@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.mr.domain.auth.entity.enums.SocialType;
 import com.mr.domain.auth.exception.AuthErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.config.OAuthRestClientConfig;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,14 +31,15 @@ class OAuthClientServiceTest {
     }
 
     @Test
-    @DisplayName("OAuthClientService 생성 시 connect/read timeout 설정이 정상 적용된다")
-    void createOAuthClientService_withTimeout() {
+    @DisplayName("OAuthRestClientConfig 생성 시 connect/read timeout 설정이 정상 적용된 RestClient가 생성된다")
+    void createOAuthRestClient_withTimeout() {
         Duration connectTimeout = Duration.ofSeconds(3);
         Duration readTimeout = Duration.ofSeconds(5);
 
-        OAuthClientService service = new OAuthClientService(connectTimeout, readTimeout);
+        OAuthRestClientConfig config = new OAuthRestClientConfig();
+        RestClient client = config.oauthRestClient(connectTimeout, readTimeout);
 
-        assertThat(service).isNotNull();
+        assertThat(client).isNotNull();
     }
 
     @Test
