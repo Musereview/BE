@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import com.mr.domain.home.dto.res.HomeResponseDTO;
 import com.mr.domain.home.dto.res.HomeResponseDTO.AttendanceStatus;
@@ -238,8 +239,8 @@ class HomeServiceTest {
 
         LocalDateTime weekStart = LocalDate.now().with(DayOfWeek.MONDAY).atStartOfDay();
         List<Playing> recent = List.of(
-                mockPlaying(weekStart, 3600),                 // 주 시작 시각 포함
-                mockPlaying(weekStart.minusSeconds(1), 3600)  // 주 시작 직전 → 제외
+                mockPlaying(weekStart, 3600),
+                mockPlaying(weekStart.minusSeconds(1), 3600)
         );
         given(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).willReturn(recent);
 
@@ -289,7 +290,7 @@ class HomeServiceTest {
 
         LearningHomeResponseDTO.RecommendedLearning recommended =
                 new LearningHomeResponseDTO.RecommendedLearning(5L, "Tension Notes", "13th 텐션 노트 활용하기", "ADVANCED", 14L);
-        given(learningService.getRecommendedLearnings(1L)).willReturn(List.of(recommended));
+        given(learningService.getRecommendedLearnings(1L, null)).willReturn(List.of(recommended));
 
         HomeResponseDTO response = homeService.getHome(1L);
 
@@ -297,6 +298,26 @@ class HomeServiceTest {
         assertThat(response.recommendedLearnings().get(0).learningId()).isEqualTo(5L);
         assertThat(response.recommendedLearnings().get(0).subtitle()).isEqualTo("13th 텐션 노트 활용하기");
         assertThat(response.recommendedLearnings().get(0).nextStepId()).isEqualTo(14L);
+    }
+
+    @Test
+    @DisplayName("getHome - currentLearning이 있으면 그 nextStepId를 추천 학습 제외 대상으로 전달한다")
+    void getHome_hasCurrentLearning_passesNextStepIdAsExcludeToRecommendedLearnings() {
+        stubBaseline(1L);
+
+        com.mr.domain.learning.entity.Learning learning = mock(com.mr.domain.learning.entity.Learning.class);
+        given(learning.getId()).willReturn(5L);
+        given(learning.getTitle()).willReturn("Tension Notes");
+        given(learning.getDifficulty()).willReturn(com.mr.domain.learning.entity.enums.LearningDifficulty.ADVANCED);
+
+        LearningHomeResponseDTO.CurrentLearning currentLearning =
+                LearningHomeResponseDTO.CurrentLearning.of(learning, "11th 텐션 노트 활용하기", 10, 13L);
+        given(learningService.getCurrentLearning(1L)).willReturn(currentLearning);
+        given(learningService.getRecommendedLearnings(1L, 13L)).willReturn(List.of());
+
+        homeService.getHome(1L);
+
+        verify(learningService).getRecommendedLearnings(1L, 13L);
     }
 
     @Test

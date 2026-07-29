@@ -69,13 +69,16 @@ public class HomeService {
                 buildStreak(practiceDates),
                 buildPracticeSummary(recentCompleted),
                 LearningSummary.from(currentLearning),
-                buildRecommendedLearnings(userId),
+                buildRecommendedLearnings(userId, currentLearning),
                 buildRecentPlayings(userId)
         );
     }
 
-    private List<RecommendedLearning> buildRecommendedLearnings(Long userId) {
-        return learningService.getRecommendedLearnings(userId).stream()
+    private List<RecommendedLearning> buildRecommendedLearnings(
+            Long userId, LearningHomeResponseDTO.CurrentLearning currentLearning) {
+        Long excludeStepId = currentLearning != null ? currentLearning.nextStepId() : null;
+
+        return learningService.getRecommendedLearnings(userId, excludeStepId).stream()
                 .map(RecommendedLearning::from)
                 .toList();
     }

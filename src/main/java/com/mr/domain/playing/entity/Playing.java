@@ -40,7 +40,6 @@ import java.util.Set;
 @Table(
         name = "playing",
         indexes = {
-                // 연속 출석일수 조회 시 유저/상태/종료일 기준 스캔
                 @Index(name = "idx_playing_user_status_ended_at",
                         columnList = "user_id, status, ended_at")
         }
