@@ -2,6 +2,9 @@ package com.mr.domain.mentor.entity;
 
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.mentor.entity.enums.MentorChatStatus;
+import com.mr.domain.mentor.exception.MentorErrorStatus;
+import com.mr.domain.user.entity.User;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 
@@ -27,15 +30,17 @@ public class MentorChatSession extends BaseTimeEntity {
     @Column(name = "mentor_chat_session_id")
     private Long id;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "analysis_id", nullable = false)
     private Analysis analysis;
 
-    /**
-     * TODO: User 도메인 엔티티 연관관계 연결 예정
-     */
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
@@ -47,19 +52,38 @@ public class MentorChatSession extends BaseTimeEntity {
     @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
 
-    private MentorChatSession(Analysis analysis, Long userId, MentorChatStatus status,
+    @Column(name = "question_count", nullable = false)
+    private Integer questionCount;
+
+    private MentorChatSession(Analysis analysis, User user, MentorChatStatus status,
                               String disabledReason, LocalDateTime lastMessageAt) {
+        validateAnalysis(analysis);
+        validateUser(user);
+
         this.analysis = analysis;
-        this.userId = userId;
+        this.user = user;
         this.status = status;
         this.disabledReason = disabledReason;
         this.lastMessageAt = lastMessageAt;
+        this.questionCount = 0;
     }
 
-    public static MentorChatSession createActive(Analysis analysis, Long userId) {
+    private static void validateAnalysis(Analysis analysis) {
+        if (analysis == null) {
+            throw new GeneralException(MentorErrorStatus.MENTOR_INVALID_REQUEST);
+        }
+    }
+
+    private static void validateUser(User user) {
+        if (user == null) {
+            throw new GeneralException(MentorErrorStatus.MENTOR_INVALID_REQUEST);
+        }
+    }
+
+    public static MentorChatSession createActive(Analysis analysis, User user) {
         return new MentorChatSession(
                 analysis,
-                userId,
+                user,
                 MentorChatStatus.ACTIVE,
                 null,
                 null
@@ -77,5 +101,17 @@ public class MentorChatSession extends BaseTimeEntity {
 
     public void updateLastMessageAt() {
         this.lastMessageAt = LocalDateTime.now();
+    }
+
+    // TODO: 질문 횟수 3회 제한(MENTOR_429_01) 체크는 질문 전송 API 구현 시 추가
+    public void increaseQuestionCount() {
+        validateActive();
+        this.questionCount += 1;
+    }
+
+    private void validateActive() {
+        if (this.status != MentorChatStatus.ACTIVE) {
+            throw new GeneralException(MentorErrorStatus.MENTOR_SESSION_NOT_ACTIVE);
+        }
     }
 }

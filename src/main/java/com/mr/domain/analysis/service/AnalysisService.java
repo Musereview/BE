@@ -77,7 +77,7 @@ public class AnalysisService {
     }
 
     private void validateOwner(Analysis analysis, Long userId) {
-        if (!Objects.equals(analysis.getUserId(), userId)) {
+        if (!Objects.equals(analysis.getUser().getUserId(), userId)) {
             throw new GeneralException(AnalysisErrorStatus.ANALYSIS_ACCESS_DENIED);
         }
     }

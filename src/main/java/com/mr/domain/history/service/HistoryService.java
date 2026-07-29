@@ -98,7 +98,7 @@ public class HistoryService {
                 .findByPlayingIdInAndStatusOrderByCreatedAtDescIdDesc(playingIds, AnalysisStatus.COMPLETED)
                 .stream()
                 .collect(Collectors.toMap(
-                        Analysis::getPlayingId,
+                        analysis -> analysis.getPlaying().getId(),
                         analysis -> analysis,
                         (latest, older) -> latest // createdAt DESC 정렬이라 먼저 온 값이 최신
                 ));
