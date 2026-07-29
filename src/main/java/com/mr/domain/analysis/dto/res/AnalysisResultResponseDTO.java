@@ -32,7 +32,7 @@ public record AnalysisResultResponseDTO(
     ) {
         return new AnalysisResultResponseDTO(
                 analysis.getId(),
-                analysis.getPlayingId(),
+                analysis.getPlaying().getId(),
                 analysis.getStartBar(),
                 analysis.getEndBar(),
                 analysis.getTotalScore(),
