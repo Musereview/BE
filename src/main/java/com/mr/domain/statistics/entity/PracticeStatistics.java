@@ -16,16 +16,22 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// TODO: (user, periodType, periodStart, periodEnd) 유니크 제약 필요한지 집계 로직 구현 시 확인
 @Getter
 @Entity
-@Table(name = "practice_statistics")
+@Table(
+        name = "practice_statistics",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_practice_statistics_user_period",
+                        columnNames = {"user_id", "period_type", "period_start", "period_end"})
+        }
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PracticeStatistics extends BaseCreatedEntity {
 
@@ -54,9 +60,11 @@ public class PracticeStatistics extends BaseCreatedEntity {
     @Column(name = "session_count", nullable = false)
     private Integer sessionCount;
 
+    // 산출 기준 미확정(PM 확인 필요) - 집계 로직에서 채우지 않음
     @Column(name = "average_score", precision = 5, scale = 2)
     private BigDecimal averageScore;
 
+    // COMPLETED Analysis의 totalScore 평균 (해당 기간)
     @Column(name = "average_accuracy", precision = 5, scale = 2)
     private BigDecimal averageAccuracy;
 
@@ -95,11 +103,9 @@ public class PracticeStatistics extends BaseCreatedEntity {
         );
     }
 
-    public void update(Integer practiceMinutes, Integer sessionCount,
-                       BigDecimal averageScore, BigDecimal averageAccuracy) {
+    public void update(Integer practiceMinutes, Integer sessionCount, BigDecimal averageAccuracy) {
         this.practiceMinutes = practiceMinutes;
         this.sessionCount = sessionCount;
-        this.averageScore = averageScore;
         this.averageAccuracy = averageAccuracy;
     }
 }

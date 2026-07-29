@@ -156,21 +156,12 @@ public class StatisticsService {
             LocalDateTime from, LocalDateTime toExclusive) {
         List<BigDecimal> scores = analyses.stream()
                 .filter(a -> isWithin(a.getCompletedAt(), from, toExclusive))
-                .map(a -> resolveSkillScore(a, skillType))
+                .map(a -> AnalysisSkillScoreResolver.resolve(a, skillType))
                 .filter(Objects::nonNull)
                 .toList();
 
         BigDecimal sum = scores.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         return new ScoreAggregate(sum, scores.size());
-    }
-
-    private BigDecimal resolveSkillScore(Analysis analysis, SkillType skillType) {
-        return switch (skillType) {
-            case SCALE -> analysis.getScaleScore();
-            case TENSION -> analysis.getTensionScore();
-            case PROGRESSION -> analysis.getProgressionScore();
-            case VOICE_LEADING -> analysis.getVoiceLeadingScore();
-        };
     }
 
     private boolean isWithin(LocalDateTime target, LocalDateTime from, LocalDateTime toExclusive) {

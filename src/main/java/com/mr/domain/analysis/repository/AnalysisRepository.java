@@ -39,4 +39,21 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
             @Param("status") AnalysisStatus status,
             @Param("since") LocalDateTime since
     );
+
+    // 통계 집계용 전체 기간 요약 - row를 끌어오지 않고 단일 행으로 집계
+    @Query("""
+            select count(a) as analysisCount, avg(a.totalScore) as averageTotalScore
+            from Analysis a
+            where a.user.userId = :userId
+              and a.status = :status
+            """)
+    AnalysisTotals aggregateTotalsByUserAndStatus(
+            @Param("userId") Long userId,
+            @Param("status") AnalysisStatus status
+    );
+
+    interface AnalysisTotals {
+        Long getAnalysisCount();
+        Double getAverageTotalScore();
+    }
 }
