@@ -107,9 +107,11 @@ public class OAuthClientService {
                 throw new GeneralException(AuthErrorStatus.OAUTH_CLIENT_ERROR);
             }
             return response.accessToken();
+        } catch (GeneralException ge) {
+            throw ge;
         } catch (Exception e) {
-            log.warn("Kakao Authorization Code exchange failed. Trying raw value.");
-            return code;
+            log.warn("Kakao Authorization Code exchange failed for code: {}", code, e);
+            throw exceptionMapper.map(e, "Kakao Token Exchange");
         }
     }
 
@@ -178,9 +180,11 @@ public class OAuthClientService {
                 throw new GeneralException(AuthErrorStatus.OAUTH_CLIENT_ERROR);
             }
             return response.accessToken();
+        } catch (GeneralException ge) {
+            throw ge;
         } catch (Exception e) {
-            log.warn("Google Authorization Code exchange failed. Trying raw value.");
-            return code;
+            log.warn("Google Authorization Code exchange failed for code: {}", code, e);
+            throw exceptionMapper.map(e, "Google Token Exchange");
         }
     }
 
