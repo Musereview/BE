@@ -22,8 +22,12 @@ public enum AuthErrorStatus implements BaseCode {
     // 리소스 부재
     SOCIAL_AUTH_NOT_FOUND(HttpStatus.NOT_FOUND, "AUTH_404_01", "해당 사용자의 소셜 인증 기록을 찾을 수 없습니다."),
 
-    // 데이터 무결성ㅇ
-    ALREADY_LINKED_SOCIAL_ACCOUNT(HttpStatus.CONFLICT, "AUTH_409_01", "이미 다른 계정에 연동되어 있는 소셜 계정입니다.");
+    // 데이터 무결성
+    ALREADY_LINKED_SOCIAL_ACCOUNT(HttpStatus.CONFLICT, "AUTH_409_01", "이미 다른 계정에 연동되어 있는 소셜 계정입니다."),
+
+    // 외부 소셜 연동 오류
+    OAUTH_CLIENT_ERROR(HttpStatus.UNAUTHORIZED, "AUTH_401_04", "소셜 로그인 인증에 실패했거나 유효하지 않은 소셜 액세스 토큰입니다."),
+    OAUTH_SERVER_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "AUTH_503_01", "소셜 인증 제공자(카카오/구글) 서버와의 통신에 실패했습니다.");
 
     private final HttpStatus status;
     private final String code;
