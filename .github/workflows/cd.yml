@@ -57,12 +57,39 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -euo pipefail
+
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login \
               -u "${{ secrets.DOCKERHUB_USERNAME }}" \
               --password-stdin
 
-            cd ~/BE
-            docker compose pull
-            docker compose down    # 기존 서비스 완전히 내리고 새로 올리기
-            docker compose up -d
+            echo "===Updating ANALYSIS Repository==="  
+            if [ ! -d "$HOME/ANALYSIS/.git" ]; then
+              git clone https://github.com/Musereview/ANALYSIS.git "$HOME/ANALYSIS"
+            else
+              cd "$HOME/ANALYSIS"
+              git fetch origin 
+              git checkout main
+              git reset --hard origin/main
+            fi
+
+            echo "===Updating BE Repository==="
+            if [ ! -d "$HOME/BE/.git" ]; then
+              git clone https://github.com/Musereview/BE.git "$HOME/BE"
+            else
+              cd "$HOME/BE"
+              git fetch origin
+              git checkout main
+              git reset --hard origin/main
+            fi
+
+            echo "===Docker Compose Deploy==="
+            cd "$HOME/BE"
+
+            docker compose config
+            docker compose pull backend
+            docker compose build analysis
+            docker compose up -d --remove-orphans
+
+            docker compose ps
             docker image prune -f
