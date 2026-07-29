@@ -2,6 +2,7 @@ package com.mr.domain.playing.repository;
 
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -51,14 +52,15 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
             @Param("since") LocalDateTime since
     );
 
-    // 연속 출석일수는 상한이 없어 기간 제한 없이 날짜만 가볍게 조회
+    // 연속 출석일수는 상한이 없어 기간 제한 없이 날짜 단위 distinct 조회
     @Query("""
-            select p.endedAt from Playing p
+            select distinct function('date', p.endedAt) from Playing p
             where p.user.userId = :userId
               and p.status = :status
               and p.deletedAt is null
+              and p.endedAt is not null
             """)
-    List<LocalDateTime> findEndedAtsByUserAndStatus(
+    List<LocalDate> findDistinctEndedDatesByUserAndStatus(
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status
     );

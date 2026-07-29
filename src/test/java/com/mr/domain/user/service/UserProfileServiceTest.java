@@ -212,7 +212,7 @@ class UserProfileServiceTest {
                 .findFirstByUserAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(
                         any(), any(), any()))
                 .willReturn(Optional.of(subscription));
-        given(userStatisticsRepository.findByUserId(USER_ID)).willReturn(Optional.empty());
+        given(userStatisticsRepository.findByUser_UserId(USER_ID)).willReturn(Optional.empty());
         given(userLearningProgressRepository.countDistinctCompletedLearningsByUserId(USER_ID)).willReturn(8L);
 
         UserProfileResponseDTO.ProfileResponse response = userProfileService.getMyProfile();

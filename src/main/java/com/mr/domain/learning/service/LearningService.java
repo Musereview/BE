@@ -31,9 +31,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -214,7 +217,7 @@ public class LearningService {
     }
 
     public LearningHomeResponseDTO.CurrentLearning getCurrentLearning(Long userId) {
-        return userLearningProgressRepository.findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId)
+        return findLatestActiveProgress(userId)
                 .map(latest -> {
                     Learning learning = latest.getLearning();
                     long totalStepCount = learningStepRepository.countByLearningId(learning.getId());
@@ -238,13 +241,45 @@ public class LearningService {
                 .orElse(null);
     }
 
+    private Optional<UserLearningProgress> findLatestActiveProgress(Long userId) {
+        return userLearningProgressRepository
+                .findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId);
+    }
+
     public List<LearningHomeResponseDTO.RecommendedLearning> getRecommendedLearnings(Long userId) {
+        return getRecommendedLearnings(userId, null);
+    }
+
+    public List<LearningHomeResponseDTO.RecommendedLearning> getRecommendedLearnings(Long userId, Long excludeStepId) {
         List<Learning> orderedPackages = RECOMMENDATION_DIFFICULTY_ORDER.stream()
                 .flatMap(difficulty -> learningRepository
                         .findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(LearningCategory.THEORY, difficulty)
                         .stream())
                 .toList();
 
+        List<LearningHomeResponseDTO.RecommendedLearning> incompleteCandidates =
+                buildIncompleteRecommendations(userId, orderedPackages, excludeStepId);
+
+        if (incompleteCandidates.size() >= RECOMMENDED_LEARNING_LIMIT) {
+            return incompleteCandidates;
+        }
+
+        // 제외/완료로 인해 추천 후보가 부족하면 최근 학습 단계와 인접한 단계로 보충
+        List<Long> excludedStepIds = new ArrayList<>(incompleteCandidates.stream()
+                .map(LearningHomeResponseDTO.RecommendedLearning::nextStepId)
+                .toList());
+        if (excludeStepId != null) {
+            excludedStepIds.add(excludeStepId);
+        }
+        int shortage = RECOMMENDED_LEARNING_LIMIT - incompleteCandidates.size();
+        List<LearningHomeResponseDTO.RecommendedLearning> fallback =
+                buildAdjacentFallbackRecommendations(userId, excludedStepIds, shortage);
+
+        return Stream.concat(incompleteCandidates.stream(), fallback.stream()).toList();
+    }
+
+    private List<LearningHomeResponseDTO.RecommendedLearning> buildIncompleteRecommendations(
+            Long userId, List<Learning> orderedPackages, Long excludeStepId) {
         if (orderedPackages.isEmpty()) {
             return List.of();
         }
@@ -265,8 +300,49 @@ public class LearningService {
 
         return orderedSteps.stream()
                 .filter(step -> isStepIncomplete(scoreByStepId.get(step.getId())))
+                .filter(step -> excludeStepId == null || !step.getId().equals(excludeStepId))
                 .limit(RECOMMENDED_LEARNING_LIMIT)
                 .map(step -> LearningHomeResponseDTO.RecommendedLearning.of(learningById.get(step.getLearning().getId()), step))
+                .toList();
+    }
+
+    private List<LearningHomeResponseDTO.RecommendedLearning> buildAdjacentFallbackRecommendations(
+            Long userId, List<Long> excludedStepIds, int needed) {
+        if (needed <= 0) {
+            return List.of();
+        }
+
+        return findLatestActiveProgress(userId)
+                .filter(latest -> latest.getLearning().getCategory() == LearningCategory.THEORY)
+                .map(latest -> buildAdjacentStepRecommendations(latest, excludedStepIds, needed))
+                .orElse(List.of());
+    }
+
+    // 완료 여부와 무관하게 최근 학습 단계와 인접한 단계로 보충(콘텐츠 노출 목적)
+    private List<LearningHomeResponseDTO.RecommendedLearning> buildAdjacentStepRecommendations(
+            UserLearningProgress latest, List<Long> excludedStepIds, int needed) {
+        Learning learning = latest.getLearning();
+        LearningStep referenceStep = latest.getLearningStep();
+        List<LearningStep> steps = learningStepRepository.findByLearning_IdOrderByStepNoAsc(learning.getId());
+
+        List<LearningStep> forward = steps.stream()
+                .filter(step -> step.getStepNo() > referenceStep.getStepNo())
+                .filter(step -> !excludedStepIds.contains(step.getId()))
+                .toList();
+
+        List<LearningStep> backward = new ArrayList<>(steps.stream()
+                .filter(step -> step.getStepNo() < referenceStep.getStepNo())
+                .filter(step -> !excludedStepIds.contains(step.getId()))
+                .toList());
+        Collections.reverse(backward);
+
+        List<LearningStep> adjacentSteps = new ArrayList<>(forward.stream().limit(needed).toList());
+        if (adjacentSteps.size() < needed) {
+            adjacentSteps.addAll(backward.stream().limit(needed - adjacentSteps.size()).toList());
+        }
+
+        return adjacentSteps.stream()
+                .map(step -> LearningHomeResponseDTO.RecommendedLearning.of(learning, step))
                 .toList();
     }
 
