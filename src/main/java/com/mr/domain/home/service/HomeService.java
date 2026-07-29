@@ -28,10 +28,9 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
@@ -81,13 +80,10 @@ public class HomeService {
                 .toList();
     }
 
-    // 연속 출석일수는 기간 상한이 없어야 하므로 별도로 전체 기간 조회
+    // 연속 출석일수는 기간 상한이 없어야 하므로 별도로 전체 기간 날짜만 조회
     private Set<LocalDate> fetchPracticeDates(Long userId) {
-        return playingRepository.findEndedAtsByUserAndStatus(userId, PlayingStatus.COMPLETED)
-                .stream()
-                .filter(Objects::nonNull)
-                .map(LocalDateTime::toLocalDate)
-                .collect(Collectors.toSet());
+        return new HashSet<>(
+                playingRepository.findDistinctEndedDatesByUserAndStatus(userId, PlayingStatus.COMPLETED));
     }
 
     private UserSummary buildUserSummary(User user) {

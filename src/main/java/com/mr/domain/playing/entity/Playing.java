@@ -15,6 +15,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -36,7 +37,14 @@ import java.util.Objects;
 import java.util.Set;
 
 @Entity
-@Table(name = "playing")
+@Table(
+        name = "playing",
+        indexes = {
+                // 연속 출석일수 조회 시 유저/상태/종료일 기준 스캔
+                @Index(name = "idx_playing_user_status_ended_at",
+                        columnList = "user_id, status, ended_at")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Playing extends BaseCreatedDeletedEntity {
