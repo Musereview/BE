@@ -72,7 +72,7 @@ class HomeServiceTest {
         lenient().when(user.getUserId()).thenReturn(userId);
         lenient().when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         lenient().when(studentRepository.findByUser(user)).thenReturn(Optional.empty());
-        lenient().when(playingRepository.findEndedAtsByUserAndStatus(anyLong(), any())).thenReturn(List.of());
+        lenient().when(playingRepository.findDistinctEndedDatesByUserAndStatus(anyLong(), any())).thenReturn(List.of());
         lenient().when(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).thenReturn(List.of());
         lenient().when(playingRepository.findPlayingsByUserAndStatus(anyLong(), any(), any(), any()))
                 .thenReturn(new SliceImpl<>(List.of()));
@@ -137,8 +137,8 @@ class HomeServiceTest {
     void getHome_threeConsecutiveDaysIncludingToday_currentDaysIsThree() {
         stubBaseline(1L);
 
-        LocalDateTime today = LocalDateTime.now();
-        given(playingRepository.findEndedAtsByUserAndStatus(1L, PlayingStatus.COMPLETED)).willReturn(List.of(
+        LocalDate today = LocalDate.now();
+        given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED)).willReturn(List.of(
                 today, today.minusDays(1), today.minusDays(2), today.minusDays(5) // 연속 끊김
         ));
 
@@ -152,11 +152,11 @@ class HomeServiceTest {
     void getHome_longStreak_notCappedByLookbackWindow() {
         stubBaseline(1L);
 
-        LocalDateTime today = LocalDateTime.now();
-        List<LocalDateTime> endedAts = java.util.stream.IntStream.range(0, 65)
+        LocalDate today = LocalDate.now();
+        List<LocalDate> endedDates = java.util.stream.IntStream.range(0, 65)
                 .mapToObj(today::minusDays)
                 .toList();
-        given(playingRepository.findEndedAtsByUserAndStatus(1L, PlayingStatus.COMPLETED)).willReturn(endedAts);
+        given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED)).willReturn(endedDates);
 
         HomeResponseDTO response = homeService.getHome(1L);
 
@@ -168,9 +168,23 @@ class HomeServiceTest {
     void getHome_noPracticeToday_countsFromYesterday() {
         stubBaseline(1L);
 
-        LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
-        given(playingRepository.findEndedAtsByUserAndStatus(1L, PlayingStatus.COMPLETED))
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED))
                 .willReturn(List.of(yesterday));
+
+        HomeResponseDTO response = homeService.getHome(1L);
+
+        assertThat(response.streak().currentDays()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("getHome - 같은 날짜가 중복 반환돼도 연속일수는 하루로만 카운트된다")
+    void getHome_duplicateDateFromRepository_countsOnce() {
+        stubBaseline(1L);
+
+        LocalDate today = LocalDate.now();
+        given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED))
+                .willReturn(List.of(today, today, today));
 
         HomeResponseDTO response = homeService.getHome(1L);
 
@@ -204,17 +218,34 @@ class HomeServiceTest {
     void getHome_practiceSummary_sumsDurationInHours() {
         stubBaseline(1L);
 
-        LocalDateTime today = LocalDateTime.now();
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         List<Playing> recent = List.of(
-                mockPlaying(today, 3600),
-                mockPlaying(today.minusDays(1), 3600)
+                mockPlaying(todayStart, 3600),
+                mockPlaying(todayStart.plusHours(2), 3600)
         );
         given(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).willReturn(recent);
 
         HomeResponseDTO response = homeService.getHome(1L);
 
         assertThat(response.practiceSummary().weeklyPracticeHours()).isEqualTo(2);
-        assertThat(response.practiceSummary().monthlyPracticeHours()).isGreaterThanOrEqualTo(2);
+        assertThat(response.practiceSummary().monthlyPracticeHours()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("getHome - 이번 주 시작 직전 연습 시간은 weeklyPracticeHours에서 제외된다")
+    void getHome_practiceSummary_excludesRecordsBeforeWeekStart() {
+        stubBaseline(1L);
+
+        LocalDateTime weekStart = LocalDate.now().with(DayOfWeek.MONDAY).atStartOfDay();
+        List<Playing> recent = List.of(
+                mockPlaying(weekStart, 3600),                 // 주 시작 시각 포함
+                mockPlaying(weekStart.minusSeconds(1), 3600)  // 주 시작 직전 → 제외
+        );
+        given(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).willReturn(recent);
+
+        HomeResponseDTO response = homeService.getHome(1L);
+
+        assertThat(response.practiceSummary().weeklyPracticeHours()).isEqualTo(1);
     }
 
     @Test
