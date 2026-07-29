@@ -1,12 +1,12 @@
 package com.mr.domain.auth.entity;
 
-import com.mr.domain.auth.exception.AuthErrorStatus;
 import com.mr.domain.auth.entity.enums.SocialType;
+import com.mr.domain.auth.exception.AuthErrorStatus;
+import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseCreatedEntity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,7 +14,6 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-// TODO: 추후 User 도메인 완성 시 인덱스 추가
 @Table(
         name = "social_auth",
         uniqueConstraints = {
@@ -29,9 +28,9 @@ public class SocialAuth extends BaseCreatedEntity {
     @Column(name = "social_auth_id")
     private Long id;
 
-    // TODO: User연결 예정
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "social_type", nullable = false, length = 20)
@@ -39,9 +38,6 @@ public class SocialAuth extends BaseCreatedEntity {
 
     @Column(name = "social_id", nullable = false, length = 100)
     private String socialId;
-
-    @Column(name = "refresh_token", length = 1000)
-    private String refreshToken;
 
     @Column(name = "refresh_token_hash", length = 64, unique = true)
     private String refreshTokenHash;
@@ -53,72 +49,91 @@ public class SocialAuth extends BaseCreatedEntity {
     private String deviceInfo;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private SocialAuth(Long userId, SocialType socialType, String socialId, String refreshToken,
+    private SocialAuth(User user, SocialType socialType, String socialId,
                        String refreshTokenHash, LocalDateTime expiredAt, String deviceInfo) {
 
-        validateUserAccount(userId);
-        validateUserAccount(socialType);
-        validateUserAccount(socialId);
+        validateUser(user);
+        validateSocialType(socialType);
+        validateSocialId(socialId);
 
-        this.userId = userId;
+        this.user = user;
         this.socialType = socialType;
         this.socialId = socialId;
-        this.refreshToken = refreshToken;
         this.refreshTokenHash = refreshTokenHash;
         this.expiredAt = expiredAt;
-        this.deviceInfo = deviceInfo;
+        this.deviceInfo = sanitizeDeviceInfo(deviceInfo);
     }
 
-    public static SocialAuth create(Long userId, SocialType socialType, String socialId,
-                                    String encryptedToken, String tokenHash, LocalDateTime expiredAt, String deviceInfo) {
+    private static String sanitizeDeviceInfo(String deviceInfo) {
+        if (deviceInfo == null || deviceInfo.isBlank()) {
+            return "Unknown Device";
+        }
+        String trimmed = deviceInfo.trim();
+        return trimmed.length() > 255 ? trimmed.substring(0, 255) : trimmed;
+    }
 
-        validateTokenValue(encryptedToken);
+    public static SocialAuth create(User user, SocialType socialType, String socialId,
+                                    String tokenHash, LocalDateTime expiredAt, String deviceInfo) {
+
         validateTokenValue(tokenHash);
         validateExpiryTime(expiredAt);
 
         return SocialAuth.builder()
-                .userId(userId)
+                .user(user)
                 .socialType(socialType)
                 .socialId(socialId)
-                .refreshToken(encryptedToken)
                 .refreshTokenHash(tokenHash)
                 .expiredAt(expiredAt)
                 .deviceInfo(deviceInfo)
                 .build();
     }
 
-    private static void validateUserAccount(Object value) {
-        if (value == null || (value instanceof String && ((String) value).trim().isEmpty())) {
+    private static void validateUser(User user) {
+        if (user == null) {
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        }
+    }
+
+    private static void validateSocialType(SocialType socialType) {
+        if (socialType == null) {
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        }
+    }
+
+    private static void validateSocialId(String socialId) {
+        if (socialId == null || socialId.isBlank()) {
             throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
         }
     }
 
     private static void validateTokenValue(String token) {
-        if (token == null || token.trim().isEmpty()) {
+        if (token == null || token.isBlank()) {
             throw new GeneralException(AuthErrorStatus.TOKEN_MISSING);
         }
     }
 
     private static void validateExpiryTime(LocalDateTime expiredAt) {
-        if (expiredAt == null || !expiredAt.isAfter(LocalDateTime.now(ZoneId.of("Asia/Seoul")))) {
+        if (expiredAt == null || !expiredAt.isAfter(LocalDateTime.now())) {
             throw new GeneralException(AuthErrorStatus.INVALID_TOKEN_EXPIRY);
         }
     }
 
-    public void updateRefreshToken(String encryptedToken, String tokenHash, LocalDateTime newExpiredAt, String deviceInfo) {
-        validateTokenValue(encryptedToken);
+    public void updateRefreshToken(String tokenHash, LocalDateTime newExpiredAt, String deviceInfo) {
         validateTokenValue(tokenHash);
         validateExpiryTime(newExpiredAt);
 
-        this.refreshToken = encryptedToken;
         this.refreshTokenHash = tokenHash;
         this.expiredAt = newExpiredAt;
-        this.deviceInfo = deviceInfo;
+        this.deviceInfo = sanitizeDeviceInfo(deviceInfo);
     }
 
     public void expireToken() {
-        this.refreshToken = null;
         this.refreshTokenHash = null;
-        this.expiredAt = LocalDateTime.now(ZoneId.of("Asia/Seoul")); // null 대신 현재 시각 기록
+        this.deviceInfo = null;
+        this.expiredAt = LocalDateTime.now();
+    }
+
+    public boolean isExpired() {
+        return this.expiredAt == null || !this.expiredAt.isAfter(LocalDateTime.now());
     }
 }

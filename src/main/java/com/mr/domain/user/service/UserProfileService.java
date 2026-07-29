@@ -184,7 +184,7 @@ public class UserProfileService {
     }
 
     private UserProfileResponseDTO.StatisticsResponse buildStatistics(Long userId) {
-        UserStatistics stats = userStatisticsRepository.findByUserId(userId).orElse(null);
+        UserStatistics stats = userStatisticsRepository.findByUser_UserId(userId).orElse(null);
 
         return UserProfileResponseDTO.StatisticsResponse.builder()
                 .practiceSessionCount(stats == null ? 0L : stats.getTotalPracticeCount().longValue())
