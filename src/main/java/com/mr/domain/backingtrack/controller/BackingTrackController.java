@@ -49,7 +49,7 @@ public class BackingTrackController {
     @PutMapping("/{backingTrackId}")
     public ApiResponse<BackingTrackUpdateResponseDTO.UpdateResultDTO> updateBackingTrack(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long backingTrackId,
+            @PathVariable @Min(value = 1, message = "BACKING_TRACK_400_23") Long backingTrackId,
             @Valid @RequestBody BackingTrackSaveRequestDTO.SaveDTO request
     ) {
         Long userId = userDetails.getUserId();

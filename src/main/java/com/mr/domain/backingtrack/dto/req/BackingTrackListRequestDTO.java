@@ -1,5 +1,6 @@
 package com.mr.domain.backingtrack.dto.req;
 
+import com.mr.domain.backingtrack.entity.enums.ScaleType;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
@@ -9,7 +10,7 @@ public class BackingTrackListRequestDTO {
             String sort,
             String genre,
             String keySignature,
-            String scaleType,
+            ScaleType scaleType,
             Integer bpmMin,
             Integer bpmMax,
 

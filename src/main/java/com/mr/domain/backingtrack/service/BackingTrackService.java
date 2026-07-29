@@ -25,6 +25,7 @@ import com.mr.global.apipayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,11 +51,11 @@ public class BackingTrackService {
             Long userId,
             BackingTrackSaveRequestDTO.SaveDTO request
     ){
-        User user = userRepository.findById(userId)
-                .orElseThrow(()-> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
-
         validateChordDuplicates(request.chordProgression());
         validateChordSequence(request.timeSignature(), request.chordProgression());
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(()-> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
         BackingTrack backingTrack = BackingTrack.create(
                 user,
@@ -79,6 +80,7 @@ public class BackingTrackService {
                     chordDTO.measureNo(),
                     chordDTO.chordName()
             );
+            backingTrack.addChordProgression(chord);
         });
 
         BackingTrack savedTrack = backingTrackRepository.save(backingTrack);
@@ -104,9 +106,7 @@ public class BackingTrackService {
                 .orElseThrow(() -> new GeneralException(BackingTrackErrorStatus.BACKING_TRACK_NOT_FOUND));
 
         // 수정 권한 검증 (작성자 본인 확인)
-        if (!backingTrack.getUser().getUserId().equals(userId)) {
-            throw new GeneralException(BackingTrackErrorStatus.FORBIDDEN_UPDATE);
-        }
+        backingTrack.validateOwner(userId);
 
         // 엔티티 데이터 업데이트
         backingTrack.updateTrackInfo(
@@ -134,6 +134,7 @@ public class BackingTrackService {
                     chordDTO.measureNo(),
                     chordDTO.chordName()
             );
+            backingTrack.addChordProgression(chord);
         });
 
         return BackingTrackUpdateResponseDTO.UpdateResultDTO.of(
@@ -175,7 +176,7 @@ public class BackingTrackService {
     ) {
 
         // 백킹트랙 존재 여부 확인
-        BackingTrack backingTrack = backingTrackRepository.findById(backingTrackId)
+        BackingTrack backingTrack = backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId)
                 .orElseThrow(() -> new GeneralException(BackingTrackErrorStatus.BACKING_TRACK_NOT_FOUND));
 
         // AI 분석 결과 조회
@@ -201,10 +202,26 @@ public class BackingTrackService {
             BackingTrackListRequestDTO.ListRequestDTO request,
             Long userId
     ) {
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");  // 정렬 조건 처리
+        if (request.sort() != null) {
+            if ("popular".equalsIgnoreCase(request.sort())) {
+                sort = Sort.by(Sort.Direction.DESC, "playCount", "createdAt");
+            } else if ("oldest".equalsIgnoreCase(request.sort())) {
+                sort = Sort.by(Sort.Direction.ASC, "createdAt");
+            }
+        }
 
-        PageRequest pageRequest = PageRequest.of(request.page(), request.size());
+        PageRequest pageRequest = PageRequest.of(request.page(), request.size(), sort);
 
-        Page<BackingTrack> trackPage = backingTrackRepository.findAll(pageRequest);
+        Page<BackingTrack> trackPage = backingTrackRepository.findFilteredTracks(   // findAll 대신 동적 필터링 쿼리 사용 (PUBLIC 및 삭제되지 않은 트랙만 조회)
+                AccessLevel.PUBLIC,
+                request.genre(),
+                request.keySignature(),
+                request.scaleType(),
+                request.bpmMin(),
+                request.bpmMax(),
+                pageRequest
+        );
 
         Page<BackingTrackListResponseDTO.TrackInfo> mappedPage = trackPage.map(track -> {
             List<String> chordNames = track.getChordProgressions().stream()

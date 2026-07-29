@@ -2,6 +2,8 @@ package com.mr.domain.backingtrack.repository;
 
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.backingtrack.entity.enums.AccessLevel;
+import com.mr.domain.backingtrack.entity.enums.ScaleType;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -37,4 +39,25 @@ public interface BackingTrackRepository extends JpaRepository<BackingTrack, Long
                 org.springframework.data.domain.PageRequest.of(0, 3)
         );
     }
+
+    // 장르, 키, 스케일, BPM 범위까지 모두 지원하는 동적 필터링 쿼리
+    @Query("""
+            SELECT b FROM BackingTrack b 
+            WHERE b.accessLevel = :accessLevel 
+              AND b.deletedAt IS NULL 
+              AND (:genre IS NULL OR b.genre = :genre) 
+              AND (:keySignature IS NULL OR b.keySignature = :keySignature)
+              AND (:scaleType IS NULL OR b.scaleType = :scaleType)
+              AND (:bpmMin IS NULL OR b.bpm >= :bpmMin)
+              AND (:bpmMax IS NULL OR b.bpm <= :bpmMax)
+            """)
+    Page<BackingTrack> findFilteredTracks(
+            @Param("accessLevel") AccessLevel accessLevel,
+            @Param("genre") String genre,
+            @Param("keySignature") String keySignature,
+            @Param("scaleType") ScaleType scaleType,
+            @Param("bpmMin") Integer bpmMin,
+            @Param("bpmMax") Integer bpmMax,
+            Pageable pageable
+    );
 }

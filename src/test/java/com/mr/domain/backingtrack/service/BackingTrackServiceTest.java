@@ -8,7 +8,6 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.backingtrack.dto.req.BackingTrackSaveRequestDTO;
 import com.mr.domain.backingtrack.dto.res.BackingTrackCreateResponseDTO;
 import com.mr.domain.backingtrack.dto.res.BackingTrackUpdateResponseDTO;
@@ -40,14 +39,12 @@ class BackingTrackServiceTest {
 
     @Mock
     private UserRepository userRepository;
-    @Mock
-    private AnalysisRepository analysisRepository;
 
     private BackingTrackService backingTrackService;
 
     @BeforeEach
     void setUp() {
-        backingTrackService = new BackingTrackService(backingTrackRepository, userRepository, analysisRepository);
+        backingTrackService = new BackingTrackService(backingTrackRepository, userRepository);
     }
 
     private User createMockUser(Long userId) {
