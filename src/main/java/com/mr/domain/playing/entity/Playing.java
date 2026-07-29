@@ -3,6 +3,7 @@ package com.mr.domain.playing.entity;
 import com.mr.domain.backingTrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.enums.PlayingMode;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
+import com.mr.domain.playing.exception.MidiEventErrorStatus;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
@@ -201,7 +202,7 @@ public class Playing extends BaseCreatedDeletedEntity {
 
         if (sortedMidiData.isEmpty()) {
             throw new GeneralException(
-                    PlayingErrorStatus.EMPTY_MIDI_EVENTS
+                    MidiEventErrorStatus.EMPTY_MIDI_EVENTS
             );
         }
 
@@ -213,9 +214,15 @@ public class Playing extends BaseCreatedDeletedEntity {
         this.status = PlayingStatus.COMPLETED;
     }
 
+    public void validateOwner(Long userId) {
+        if (userId == null || this.user == null || !Objects.equals(this.user.getUserId(), userId)) {
+            throw new GeneralException(MidiEventErrorStatus.MIDI_EVENT_SAVE_FORBIDDEN);
+        }
+    }
+
     private void validateCompletableStatus() {
         if (this.status != PlayingStatus.IN_PROGRESS) {
-            throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_STATUS);
+            throw new GeneralException(MidiEventErrorStatus.PLAYING_NOT_IN_PROGRESS);
         }
 
         if (startedAt == null) {
@@ -225,15 +232,15 @@ public class Playing extends BaseCreatedDeletedEntity {
 
     private static void validateMidiData(List<MidiEventData> midiData) {
         if (midiData == null || midiData.isEmpty()) {
-            throw new GeneralException(PlayingErrorStatus.EMPTY_MIDI_EVENTS);
+            throw new GeneralException(MidiEventErrorStatus.EMPTY_MIDI_EVENTS);
         }
 
         if (midiData.size() > MAX_MIDI_EVENT_COUNT) {
-            throw new GeneralException(PlayingErrorStatus.EXCEEDED_MIDI_EVENT_COUNT);
+            throw new GeneralException(MidiEventErrorStatus.EXCEEDED_MIDI_EVENT_COUNT);
         }
 
         if (midiData.stream().anyMatch(Objects::isNull)) {
-            throw new GeneralException(PlayingErrorStatus.INVALID_MIDI_EVENT);
+            throw new GeneralException(MidiEventErrorStatus.INVALID_MIDI_EVENT);
         }
 
         Set<MidiEventOrder> seenOrders = new HashSet<>();
@@ -246,7 +253,7 @@ public class Playing extends BaseCreatedDeletedEntity {
 
             if (!seenOrders.add(order)) {
                 throw new GeneralException(
-                        PlayingErrorStatus.DUPLICATE_MIDI_SEQUENCE
+                        MidiEventErrorStatus.DUPLICATE_MIDI_SEQUENCE
                 );
             }
         }
