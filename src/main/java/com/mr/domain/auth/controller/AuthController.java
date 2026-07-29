@@ -42,7 +42,7 @@ public class AuthController {
     ) {
         AuthResponseDTO.LoginResponse response = authService.socialLogin(
                 socialType,
-                request.getEffectiveCodeOrToken(),
+                request.getCredential(),
                 request.redirectUri(),
                 deviceInfo
         );
@@ -74,7 +74,7 @@ public class AuthController {
         AuthResponseDTO.TokenInfo tokenInfo = authService.linkSocialAccount(
                 userId,
                 socialType,
-                request.getEffectiveCodeOrToken(),
+                request.getCredential(),
                 request.redirectUri(),
                 deviceInfo
         );

@@ -1,5 +1,6 @@
 package com.mr.domain.auth.service;
 
+import com.mr.domain.auth.dto.OAuthCredential;
 import com.mr.domain.auth.dto.OAuthUserInfo;
 import com.mr.domain.auth.dto.res.AuthResponseDTO;
 import com.mr.domain.auth.entity.SocialAuth;
@@ -36,16 +37,31 @@ public class AuthService {
     @Value("${app.profile.default-image-url}")
     private String defaultProfileImageUrl;
 
-    public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String codeOrToken, String redirectUri, String deviceInfo) {
-        OAuthUserInfo userInfo = (redirectUri != null && !redirectUri.isBlank())
-                ? oAuthClientService.getUserInfo(socialType, codeOrToken, redirectUri)
-                : oAuthClientService.getUserInfo(socialType, codeOrToken);
+    public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, OAuthCredential credential, String redirectUri, String deviceInfo) {
+        OAuthUserInfo userInfo = fetchOAuthUserInfo(socialType, credential, redirectUri);
 
         try {
             return executeSocialLogin(socialType, userInfo, deviceInfo);
         } catch (DataIntegrityViolationException e) {
             return executeSocialLoginForExistingUser(socialType, userInfo, deviceInfo);
         }
+    }
+
+    private OAuthUserInfo fetchOAuthUserInfo(SocialType socialType, OAuthCredential credential, String redirectUri) {
+        if (credential.type() == OAuthCredential.CredentialType.ACCESS_TOKEN) {
+            if (redirectUri != null && !redirectUri.isBlank()) {
+                return oAuthClientService.getUserInfo(socialType, credential.value(), redirectUri);
+            }
+            return oAuthClientService.getUserInfo(socialType, credential.value());
+        }
+        if (redirectUri != null && !redirectUri.isBlank()) {
+            return oAuthClientService.getUserInfo(socialType, credential, redirectUri);
+        }
+        return oAuthClientService.getUserInfo(socialType, credential);
+    }
+
+    public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String codeOrToken, String redirectUri, String deviceInfo) {
+        return socialLogin(socialType, new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, codeOrToken), redirectUri, deviceInfo);
     }
 
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String codeOrToken, String deviceInfo) {
@@ -133,10 +149,8 @@ public class AuthService {
         });
     }
 
-    public AuthResponseDTO.TokenInfo linkSocialAccount(Long userId, SocialType socialType, String codeOrToken, String redirectUri, String deviceInfo) {
-        OAuthUserInfo userInfo = (redirectUri != null && !redirectUri.isBlank())
-                ? oAuthClientService.getUserInfo(socialType, codeOrToken, redirectUri)
-                : oAuthClientService.getUserInfo(socialType, codeOrToken);
+    public AuthResponseDTO.TokenInfo linkSocialAccount(Long userId, SocialType socialType, OAuthCredential credential, String redirectUri, String deviceInfo) {
+        OAuthUserInfo userInfo = fetchOAuthUserInfo(socialType, credential, redirectUri);
 
         return transactionTemplate.execute(status -> {
             User user = userRepository.findById(userId)
@@ -179,7 +193,7 @@ public class AuthService {
     }
 
     public AuthResponseDTO.TokenInfo linkSocialAccount(Long userId, SocialType socialType, String codeOrToken, String deviceInfo) {
-        return linkSocialAccount(userId, socialType, codeOrToken, null, deviceInfo);
+        return linkSocialAccount(userId, socialType, new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, codeOrToken), null, deviceInfo);
     }
 
     private User registerNewUser(OAuthUserInfo userInfo) {
