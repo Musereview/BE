@@ -10,6 +10,7 @@ services:
     environment:
       TZ: Asia/Seoul
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      APP_PROFILE_DEFAULT-IMAGE-URL: ${DEFAULT_PROFILE_IMAGE_URL}
         
     ports:
       - "127.0.0.1:8080:8080"
