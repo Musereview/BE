@@ -12,6 +12,8 @@ import com.mr.domain.backingtrack.dto.res.PlayCountIncreaseResponseDTO;
 import com.mr.domain.backingtrack.service.BackingTrackService;
 import com.mr.global.apipayload.ApiResponse;
 import com.mr.global.security.principal.CustomUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -31,10 +33,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/backing-tracks")
+@Tag(name = "백킹트랙(BackinTrack)", description = "백킹트랙 생성, 수정 및 조회 api")
 public class BackingTrackController {
 
     private final BackingTrackService backingTrackService;
 
+    @Operation(
+            summary = "백킹트랙 생성",
+            description = "트랙명, 장르, Key, 조성, BPM, 트랙 유형, 공개 범위, 난이도 등의 정보를 입력받아 저장"
+    )
     @PostMapping
     public ApiResponse<BackingTrackCreateResponseDTO.CreateResultDTO> createBackingTrack(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -46,6 +53,10 @@ public class BackingTrackController {
         return ApiResponse.onSuccess(result);
     }
 
+    @Operation(
+            summary = "백킹트랙 수정",
+            description = "트랙의 생성자가 본인일 때, 트랙의 정보를 수정"
+    )
     @PutMapping("/{backingTrackId}")
     public ApiResponse<BackingTrackUpdateResponseDTO.UpdateResultDTO> updateBackingTrack(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -58,7 +69,10 @@ public class BackingTrackController {
         return ApiResponse.onSuccess(result);
     }
 
-    // 재생 수 증가
+    @Operation(
+            summary = "백킹트랙 재생 수 증가",
+            description = "백킹트랙 기반 연주 후 AI 분석 응답 생성이 완료된 경우, 해당 백킹트랙의 재생 수를 1 증가"
+    )
     @PatchMapping("/{backingTrackId}/play-count")
     public ApiResponse<PlayCountIncreaseResponseDTO.IncreaseResponseDTO> increasePlayCount(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -70,7 +84,11 @@ public class BackingTrackController {
         );
     }
 
-    // 백킹트랙 목록 조회
+    @Operation(
+            summary = "백킹트랙 목록 조회",
+            description = "사용자가 연주 가능한 백킹트랙 목록을 카드뷰 형태로 조회하는 API\n" +
+                    "인기순 정렬, 장르, Key + 조성, BPM 조건으로 필터링할 수 있습니다."
+    )
     @GetMapping
     public ApiResponse<BackingTrackListResponseDTO.ListResponseDTO> getBackingTracks(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -81,7 +99,10 @@ public class BackingTrackController {
         );
     }
 
-    // 백킹트랙 상세 조회
+    @Operation(
+            summary = "백킹트랙 상세 조회",
+            description = "사용자가 선택한 백킹트랙의 상세 정보를 조회"
+    )
     @GetMapping("/{backingTrackId}")
     public ApiResponse<BackingTrackDetailResponseDTO.DetailResponseDTO> getBackingTrackDetail(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -92,7 +113,11 @@ public class BackingTrackController {
         );
     }
 
-    // 일주간 인기 추천 백킹트랙 조회
+    @Operation(
+            summary = "추천 백킹크랙 조회",
+            description = "최근 1주일 기준으로 AI 분석이 완료(COMPLETED)된 백킹트랙 중 playCount가 높은 TOP3 백킹트랙을 조회\n" +
+                    "playCount 내림차순으로 정렬"
+    )
     @GetMapping("/recommended")
     public ApiResponse<BackingTrackRecommendedResponseDTO.RecommendedResponseDTO> getRecommendedTracks() {
         return ApiResponse.onSuccess(
