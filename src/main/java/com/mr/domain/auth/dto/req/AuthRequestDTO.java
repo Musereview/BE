@@ -1,7 +1,8 @@
-package com.mr.domain.auth.dto;
+package com.mr.domain.auth.dto.req;
 
 import com.mr.domain.auth.exception.AuthErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
+import jakarta.validation.constraints.NotBlank;
 
 public class AuthRequestDTO {
 
@@ -26,6 +27,12 @@ public class AuthRequestDTO {
     }
 
     public record TokenRefreshRequest(
+            @NotBlank(message = "Refresh Token은 필수 입력값입니다.")
+            String refreshToken
+    ) {}
+
+    public record LogoutRequest(
+            @NotBlank(message = "Refresh Token은 필수 입력값입니다.")
             String refreshToken
     ) {}
 }

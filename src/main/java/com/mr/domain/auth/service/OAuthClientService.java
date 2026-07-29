@@ -36,9 +36,19 @@ public class OAuthClientService {
     }
 
     public OAuthUserInfo getUserInfo(SocialType socialType, String codeOrToken, String customRedirectUri) {
+        if (customRedirectUri == null || customRedirectUri.isBlank()) {
+            return getUserInfo(socialType, codeOrToken);
+        }
         return switch (socialType) {
-            case kakao -> getKakaoUserInfo(codeOrToken, customRedirectUri);
-            case google -> getGoogleUserInfo(codeOrToken, customRedirectUri);
+            case KAKAO -> getKakaoUserInfo(codeOrToken, customRedirectUri);
+            case GOOGLE -> getGoogleUserInfo(codeOrToken, customRedirectUri);
+        };
+    }
+
+    public OAuthUserInfo getUserInfo(SocialType socialType, String codeOrToken) {
+        return switch (socialType) {
+            case KAKAO -> getKakaoUserInfo(codeOrToken, null);
+            case GOOGLE -> getGoogleUserInfo(codeOrToken, null);
         };
     }
 

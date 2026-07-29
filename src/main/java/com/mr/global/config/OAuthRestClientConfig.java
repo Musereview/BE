@@ -15,8 +15,8 @@ public class OAuthRestClientConfig {
 
     @Bean(name = "oauthRestClient")
     public RestClient oauthRestClient(
-            @Value("${oauth.rest-client.connect-timeout:3s}") Duration connectTimeout,
-            @Value("${oauth.rest-client.read-timeout:5s}") Duration readTimeout
+            @Value("${oauth.connect-timeout:3s}") Duration connectTimeout,
+            @Value("${oauth.read-timeout:5s}") Duration readTimeout
     ) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(connectTimeout);

@@ -16,8 +16,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -51,6 +56,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .setClaims(claims)
+                .setId(UUID.randomUUID().toString())
                 .setIssuedAt(now)
                 .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -65,6 +71,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .setClaims(claims)
+                .setId(UUID.randomUUID().toString())
                 .setIssuedAt(now)
                 .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -77,6 +84,11 @@ public class JwtTokenProvider {
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(userId);
         return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
+    }
+
+    public Long getUserIdFromToken(String token) {
+        Claims claims = parseClaims(token);
+        return Long.valueOf(claims.getSubject());
     }
 
     public boolean validateAccessToken(String token) {
@@ -103,5 +115,32 @@ public class JwtTokenProvider {
         } catch (ExpiredJwtException e) {
             throw new JwtException("만료된 토큰입니다.", e);
         }
+    }
+
+    public String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encodedHash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder(2 * encodedHash.length);
+            for (byte b : encodedHash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 알고리즘을 찾을 수 없습니다.", e);
+        }
+    }
+
+    public LocalDateTime getRefreshTokenExpiryTime() {
+        return LocalDateTime.now()
+                .plusSeconds(jwtProperties.refreshTokenValidityInSeconds());
+    }
+
+    public Long getAccessTokenExpirationSeconds() {
+        return jwtProperties.accessTokenValidityInSeconds();
     }
 }
