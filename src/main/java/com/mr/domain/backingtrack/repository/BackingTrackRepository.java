@@ -6,6 +6,7 @@ import com.mr.domain.backingtrack.entity.enums.ScaleType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -60,4 +61,10 @@ public interface BackingTrackRepository extends JpaRepository<BackingTrack, Long
             @Param("bpmMax") Integer bpmMax,
             Pageable pageable
     );
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE BackingTrack b SET b.playCount = b.playCount + 1 " +
+            "WHERE b.id = :id AND b.deletedAt IS NULL")
+    int increasePlayCount(@Param("id") Long id);
+
 }
