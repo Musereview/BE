@@ -54,4 +54,11 @@ public class AuthRequestDTO {
             @NotBlank(message = "Refresh Token은 필수 입력값입니다.")
             String refreshToken
     ) {}
+
+    @Schema(description = "임시 교환 코드를 통한 JWT 토큰 발급 요청 DTO")
+    public record TokenExchangeRequest(
+            @Schema(description = "소셜 로그인 콜백에서 전달받은 1회성 임시 코드", example = "sample_temp_exchange_code")
+            @NotBlank(message = "임시 교환 코드는 필수 입력값입니다.")
+            String code
+    ) {}
 }
