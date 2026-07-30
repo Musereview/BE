@@ -22,11 +22,14 @@ class AnalysisProcessingServiceTest {
     @Mock
     private AiServerClient aiServerClient;
 
+    @Mock
+    private ReportGenerationService reportGenerationService;
+
     @Test
     void process_doesNotCallAiWhenAnotherWorkerAlreadyClaimedAnalysis() {
         given(analysisStateService.startProcessing(1L)).willReturn(Optional.empty());
         AnalysisProcessingService service = new AnalysisProcessingService(
-                analysisStateService, aiServerClient, new ObjectMapper()
+                analysisStateService, aiServerClient, reportGenerationService, new ObjectMapper()
         );
 
         service.process(1L);
@@ -39,7 +42,7 @@ class AnalysisProcessingServiceTest {
         LocalDateTime cutoff = LocalDateTime.now().minusMinutes(2);
         given(analysisStateService.restartStaleProcessing(1L, cutoff)).willReturn(Optional.empty());
         AnalysisProcessingService service = new AnalysisProcessingService(
-                analysisStateService, aiServerClient, new ObjectMapper()
+                analysisStateService, aiServerClient, reportGenerationService, new ObjectMapper()
         );
 
         service.recoverStaleProcessing(1L, cutoff);

@@ -18,6 +18,7 @@ public class AnalysisProcessingService {
 
     private final AnalysisStateService analysisStateService;
     private final AiServerClient aiServerClient;
+    private final ReportGenerationService reportGenerationService;
     private final ObjectMapper objectMapper;
 
     public void process(Long analysisId) {
@@ -39,7 +40,13 @@ public class AnalysisProcessingService {
             String requestJson = claimedRequest.get();
             AiAnalysisRequest request = objectMapper.readValue(requestJson, AiAnalysisRequest.class);
             JsonNode result = aiServerClient.requestAnalysis(request);
-            analysisStateService.complete(analysisId, result, objectMapper.writeValueAsString(result));
+            GeneratedAnalysisReport report = reportGenerationService.generate(result);
+            analysisStateService.complete(
+                    analysisId,
+                    result,
+                    objectMapper.writeValueAsString(result),
+                    report
+            );
         } catch (Exception exception) {
             log.error("AI analysis failed. analysisId={}", analysisId, exception);
             if (processingStarted) {

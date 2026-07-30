@@ -10,7 +10,10 @@ import static org.mockito.Mockito.verify;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.domain.analysis.entity.Analysis;
+import com.mr.domain.analysis.entity.AnalysisReport;
+import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
+import com.mr.domain.analysis.repository.AnalysisReportRepository;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import java.math.BigDecimal;
@@ -27,13 +30,16 @@ class AnalysisStateServiceTest {
     @Mock
     private AnalysisRepository analysisRepository;
 
+    @Mock
+    private AnalysisReportRepository analysisReportRepository;
+
     private AnalysisStateService service;
     private Analysis analysis;
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
-        service = new AnalysisStateService(analysisRepository);
+        service = new AnalysisStateService(analysisRepository, analysisReportRepository);
         analysis = mock(Analysis.class);
         objectMapper = new ObjectMapper();
         given(analysisRepository.findById(1L)).willReturn(Optional.of(analysis));
@@ -57,7 +63,7 @@ class AnalysisStateServiceTest {
                 }
                 """);
 
-        service.complete(1L, result, result.toString());
+        service.complete(1L, result, result.toString(), generatedReport());
 
         verify(analysis).complete(
                 81,
@@ -69,6 +75,7 @@ class AnalysisStateServiceTest {
                 new BigDecimal("84.0"),
                 result.toString()
         );
+        verify(analysisReportRepository).save(any(AnalysisReport.class));
     }
 
     @Test
@@ -132,9 +139,18 @@ class AnalysisStateServiceTest {
     }
 
     private void assertInvalidRawResult(JsonNode result) {
-        assertThatThrownBy(() -> service.complete(1L, result, result.toString()))
+        assertThatThrownBy(() -> service.complete(1L, result, result.toString(), generatedReport()))
                 .isInstanceOf(GeneralException.class)
                 .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.INVALID_RAW_RESULT);
         verify(analysis, never()).complete(any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    private GeneratedAnalysisReport generatedReport() {
+        return new GeneratedAnalysisReport(
+                ReportGenerationType.RULE_BASED,
+                "리포트",
+                null,
+                "analysis-report-v1"
+        );
     }
 }

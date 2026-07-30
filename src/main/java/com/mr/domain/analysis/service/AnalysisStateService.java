@@ -2,9 +2,12 @@ package com.mr.domain.analysis.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mr.domain.analysis.entity.Analysis;
+import com.mr.domain.analysis.entity.AnalysisReport;
 import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
+import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
+import com.mr.domain.analysis.repository.AnalysisReportRepository;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import java.math.BigDecimal;
@@ -27,6 +30,7 @@ public class AnalysisStateService {
     private static final String VOICE_LEADING = "\uCF54\uB4DC \uC5F0\uACB0";
 
     private final AnalysisRepository analysisRepository;
+    private final AnalysisReportRepository analysisReportRepository;
 
     @Transactional
     public Optional<String> startProcessing(Long analysisId) {
@@ -53,7 +57,12 @@ public class AnalysisStateService {
     }
 
     @Transactional
-    public void complete(Long analysisId, JsonNode result, String rawResultJson) {
+    public void complete(
+            Long analysisId,
+            JsonNode result,
+            String rawResultJson,
+            GeneratedAnalysisReport generatedReport
+    ) {
         Analysis analysis = getAnalysis(analysisId);
         if (result == null || !result.isObject()) {
             throw invalidRawResult();
@@ -77,6 +86,15 @@ public class AnalysisStateService {
                 requiredScore(domains, VOICE_LEADING),
                 rawResultJson
         );
+        AnalysisReport report = generatedReport.generationType() == ReportGenerationType.LLM
+                ? AnalysisReport.createLlmReport(
+                        analysis,
+                        generatedReport.content(),
+                        generatedReport.modelName(),
+                        generatedReport.promptVersion()
+                )
+                : AnalysisReport.createRuleBasedReport(analysis, generatedReport.content());
+        analysisReportRepository.save(report);
     }
 
     @Transactional
