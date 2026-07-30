@@ -9,6 +9,7 @@ import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,19 @@ public class AnalysisStateService {
             return Optional.empty();
         }
         analysis.startProcessing();
+        return Optional.of(analysis.getAnalysisRequestJson());
+    }
+
+    @Transactional
+    public Optional<String> restartStaleProcessing(Long analysisId, LocalDateTime cutoff) {
+        Analysis analysis = analysisRepository.findByIdForUpdate(analysisId)
+                .orElseThrow(() -> new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_FOUND));
+        if (analysis.getStatus() != AnalysisStatus.PROCESSING
+                || analysis.getProcessingStartedAt() == null
+                || analysis.getProcessingStartedAt().isAfter(cutoff)) {
+            return Optional.empty();
+        }
+        analysis.restartProcessing();
         return Optional.of(analysis.getAnalysisRequestJson());
     }
 

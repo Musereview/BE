@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.global.client.ai.AiAnalysisRequest;
 import com.mr.global.client.ai.AiServerClient;
+import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,9 +21,17 @@ public class AnalysisProcessingService {
     private final ObjectMapper objectMapper;
 
     public void process(Long analysisId) {
+        processClaimed(analysisId, () -> analysisStateService.startProcessing(analysisId));
+    }
+
+    public void recoverStaleProcessing(Long analysisId, LocalDateTime cutoff) {
+        processClaimed(analysisId, () -> analysisStateService.restartStaleProcessing(analysisId, cutoff));
+    }
+
+    private void processClaimed(Long analysisId, Supplier<Optional<String>> claim) {
         boolean processingStarted = false;
         try {
-            Optional<String> claimedRequest = analysisStateService.startProcessing(analysisId);
+            Optional<String> claimedRequest = claim.get();
             if (claimedRequest.isEmpty()) {
                 return;
             }

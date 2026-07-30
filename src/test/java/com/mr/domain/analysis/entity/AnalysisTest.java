@@ -59,6 +59,20 @@ class AnalysisTest {
     }
 
     @Test
+    @DisplayName("startProcessing - 처리 시작 시각을 기록한다")
+    void startProcessing_recordsProcessingStartedAt() {
+        User user = mock(User.class);
+        Playing playing = mock(Playing.class);
+        given(playing.getUser()).willReturn(user);
+        Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
+
+        analysis.startProcessing();
+
+        assertThat(analysis.getProcessingStartedAt()).isNotNull();
+        assertThat(analysis.getStatus()).isEqualTo(AnalysisStatus.PROCESSING);
+    }
+
+    @Test
     @DisplayName("createPending - playing 소유자와 user가 다르면 예외가 발생한다")
     void createPending_ownerMismatch_throwsException() {
         User user = mock(User.class);

@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.global.client.ai.AiServerClient;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +30,19 @@ class AnalysisProcessingServiceTest {
         );
 
         service.process(1L);
+
+        verify(aiServerClient, never()).requestAnalysis(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void recoverStaleProcessing_doesNotCallAiWhenWorkIsNoLongerStale() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(2);
+        given(analysisStateService.restartStaleProcessing(1L, cutoff)).willReturn(Optional.empty());
+        AnalysisProcessingService service = new AnalysisProcessingService(
+                analysisStateService, aiServerClient, new ObjectMapper()
+        );
+
+        service.recoverStaleProcessing(1L, cutoff);
 
         verify(aiServerClient, never()).requestAnalysis(org.mockito.ArgumentMatchers.any());
     }

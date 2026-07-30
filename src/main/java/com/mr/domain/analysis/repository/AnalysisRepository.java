@@ -32,6 +32,17 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
     );
 
     @Query("""
+            select a.id from Analysis a
+            where a.status = :status and a.processingStartedAt <= :cutoff
+            order by a.processingStartedAt asc, a.id asc
+            """)
+    List<Long> findIdsByStatusAndProcessingStartedAtBefore(
+            @Param("status") AnalysisStatus status,
+            @Param("cutoff") LocalDateTime cutoff,
+            Pageable pageable
+    );
+
+    @Query("""
             select a from Analysis a
             where a.playing.id in :playingIds and a.status = :status
             order by a.createdAt desc, a.id desc

@@ -30,11 +30,15 @@ class AnalysisRecoverySchedulerTest {
         given(analysisRepository.findIdsByStatusAndCreatedAtBefore(
                 eq(AnalysisStatus.PENDING), any(), any(Pageable.class)
         )).willReturn(List.of(11L, 12L));
+        given(analysisRepository.findIdsByStatusAndProcessingStartedAtBefore(
+                eq(AnalysisStatus.PROCESSING), any(), any(Pageable.class)
+        )).willReturn(List.of());
         AnalysisRecoveryScheduler scheduler = new AnalysisRecoveryScheduler(
                 analysisRepository,
                 analysisProcessingService,
                 new SyncTaskExecutor(),
                 Duration.ofMinutes(1),
+                Duration.ofMinutes(2),
                 20
         );
 
@@ -42,5 +46,27 @@ class AnalysisRecoverySchedulerTest {
 
         verify(analysisProcessingService).process(11L);
         verify(analysisProcessingService).process(12L);
+    }
+
+    @Test
+    void recoverPendingAnalyses_resubmitsOnlyPersistedStaleProcessingWork() {
+        given(analysisRepository.findIdsByStatusAndCreatedAtBefore(
+                eq(AnalysisStatus.PENDING), any(), any(Pageable.class)
+        )).willReturn(List.of());
+        given(analysisRepository.findIdsByStatusAndProcessingStartedAtBefore(
+                eq(AnalysisStatus.PROCESSING), any(), any(Pageable.class)
+        )).willReturn(List.of(21L));
+        AnalysisRecoveryScheduler scheduler = new AnalysisRecoveryScheduler(
+                analysisRepository,
+                analysisProcessingService,
+                new SyncTaskExecutor(),
+                Duration.ofMinutes(1),
+                Duration.ofMinutes(2),
+                20
+        );
+
+        scheduler.recoverPendingAnalyses();
+
+        verify(analysisProcessingService).recoverStaleProcessing(eq(21L), any());
     }
 }

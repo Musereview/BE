@@ -21,6 +21,7 @@ public class AnalysisRecoveryScheduler {
     private final AnalysisProcessingService analysisProcessingService;
     private final TaskExecutor taskExecutor;
     private final Duration pendingThreshold;
+    private final Duration processingThreshold;
     private final int batchSize;
 
     public AnalysisRecoveryScheduler(
@@ -28,12 +29,14 @@ public class AnalysisRecoveryScheduler {
             AnalysisProcessingService analysisProcessingService,
             @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
             @Value("${analysis.recovery.pending-threshold:1m}") Duration pendingThreshold,
+            @Value("${analysis.recovery.processing-threshold:2m}") Duration processingThreshold,
             @Value("${analysis.recovery.batch-size:20}") int batchSize
     ) {
         this.analysisRepository = analysisRepository;
         this.analysisProcessingService = analysisProcessingService;
         this.taskExecutor = taskExecutor;
         this.pendingThreshold = pendingThreshold;
+        this.processingThreshold = processingThreshold;
         this.batchSize = batchSize;
     }
 
@@ -42,18 +45,40 @@ public class AnalysisRecoveryScheduler {
             fixedDelayString = "${analysis.recovery.fixed-delay-ms:30000}"
     )
     public void recoverPendingAnalyses() {
-        LocalDateTime cutoff = LocalDateTime.now().minus(pendingThreshold);
-        List<Long> analysisIds = analysisRepository.findIdsByStatusAndCreatedAtBefore(
+        LocalDateTime now = LocalDateTime.now();
+        List<Long> pendingIds = analysisRepository.findIdsByStatusAndCreatedAtBefore(
                 AnalysisStatus.PENDING,
-                cutoff,
+                now.minus(pendingThreshold),
                 PageRequest.of(0, batchSize)
         );
+        submitPending(pendingIds);
 
+        LocalDateTime processingCutoff = now.minus(processingThreshold);
+        List<Long> processingIds = analysisRepository.findIdsByStatusAndProcessingStartedAtBefore(
+                AnalysisStatus.PROCESSING,
+                processingCutoff,
+                PageRequest.of(0, batchSize)
+        );
+        submitStaleProcessing(processingIds, processingCutoff);
+    }
+
+    private void submitPending(List<Long> analysisIds) {
         for (Long analysisId : analysisIds) {
             try {
                 taskExecutor.execute(() -> analysisProcessingService.process(analysisId));
             } catch (RuntimeException exception) {
                 log.warn("Recovered AI analysis submission failed; it will be retried. analysisId={}",
+                        analysisId, exception);
+            }
+        }
+    }
+
+    private void submitStaleProcessing(List<Long> analysisIds, LocalDateTime cutoff) {
+        for (Long analysisId : analysisIds) {
+            try {
+                taskExecutor.execute(() -> analysisProcessingService.recoverStaleProcessing(analysisId, cutoff));
+            } catch (RuntimeException exception) {
+                log.warn("Stale AI analysis submission failed; it will be retried. analysisId={}",
                         analysisId, exception);
             }
         }

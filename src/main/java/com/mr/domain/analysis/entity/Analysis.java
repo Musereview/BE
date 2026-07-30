@@ -86,6 +86,9 @@ public class Analysis extends BaseCreatedEntity {
     @Column(name = "failed_reason", columnDefinition = "text")
     private String failedReason;
 
+    @Column(name = "processing_started_at")
+    private LocalDateTime processingStartedAt;
+
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
@@ -169,6 +172,14 @@ public class Analysis extends BaseCreatedEntity {
             throw new IllegalStateException("PENDING 상태의 분석만 PROCESSING으로 변경할 수 있습니다.");
         }
         this.status = AnalysisStatus.PROCESSING;
+        this.processingStartedAt = LocalDateTime.now();
+    }
+
+    public void restartProcessing() {
+        if (this.status != AnalysisStatus.PROCESSING) {
+            throw new IllegalStateException("PROCESSING 상태의 분석만 다시 시작할 수 있습니다.");
+        }
+        this.processingStartedAt = LocalDateTime.now();
     }
 
     public void complete(Integer totalScore, AnalysisGrade grade, String summary, BigDecimal scaleScore,
