@@ -34,9 +34,15 @@ public class SecurityConfig {
             "/api/auth/login/**",
             "/api/auth/**/callback",
             "/api/auth/*/callback",
-            "/api/auth/reissue"
+            "/api/auth/reissue",
+            "/api/auth/token/exchange"
     };
 
+    /**
+     * AntPathRequestMatcher를 명시적으로 사용하는 이유:
+     * Spring Security 6 환경에서와일드카드 패턴 경로(/swagger-ui/**, /api/auth/** 등)에 대해
+     * Ant 매칭 규칙을 명시적으로 지정하여 URL 패턴 정규화 모호성을 방지하기 위함입니다.
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -54,7 +60,8 @@ public class SecurityConfig {
                                 org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher("/api/auth/login/**"),
                                 org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher("/api/auth/**/callback"),
                                 org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher("/api/auth/*/callback"),
-                                org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher("/api/auth/reissue")
+                                org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher("/api/auth/reissue"),
+                                org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher("/api/auth/token/exchange")
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
