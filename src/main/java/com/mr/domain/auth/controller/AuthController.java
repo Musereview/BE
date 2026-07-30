@@ -135,7 +135,8 @@ public class AuthController {
                     deviceInfo
             );
 
-            String targetFrontendUrl = oAuthClientService.buildFrontendRedirectUrl(loginResponse);
+            String tempCode = authService.generateTempExchangeCode(loginResponse);
+            String targetFrontendUrl = oAuthClientService.buildFrontendRedirectUrl(tempCode);
             response.sendRedirect(targetFrontendUrl);
         } catch (Exception e) {
             String errorCode = (e instanceof GeneralException ge && ge.getCode() != null)
@@ -153,6 +154,20 @@ public class AuthController {
                 .maxAge(0)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    @SecurityRequirements
+    @Operation(
+            summary = "임시 교환 코드로 JWT 토큰 발급 API",
+            description = "소셜 로그인 리다이렉트 콜백에서 전달받은 1회성 임시 코드(code)를 사용하여 서비스 전용 JWT 토큰 및 회원 정보를 수신합니다.<br/>"
+                    + "<i>※ 주의: 임시 교환 코드는 2분간 유효하며, 1회 사용 후 즉시 파기됩니다.</i>"
+    )
+    @PostMapping("/token/exchange")
+    public ApiResponse<AuthResponseDTO.LoginResponse> exchangeToken(
+            @RequestBody @Valid AuthRequestDTO.TokenExchangeRequest request
+    ) {
+        AuthResponseDTO.LoginResponse response = authService.exchangeTempCode(request.code());
+        return ApiResponse.onSuccess(response);
     }
 
     @SecurityRequirements
