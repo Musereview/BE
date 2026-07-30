@@ -159,4 +159,24 @@ class AuthServiceTest {
         List<SocialAuth> userSocialAuths = socialAuthRepository.findAllByUser_UserId(userId);
         assertThat(userSocialAuths).hasSize(2);
     }
+
+    @Test
+    @DisplayName("generateTempExchangeCode / exchangeTempCode - 일회성 교환 코드로 로그인 정보를 정상 교환하며, 1회 교환 후 재사용 시 예외가 발생한다")
+    void tempExchangeCode_oneTimeUseSuccessAndFailsOnReuse() {
+        // given
+        given(oAuthClientService.getUserInfo(SocialType.KAKAO, "access_token")).willReturn(kakaoUserInfo);
+        AuthResponseDTO.LoginResponse loginResponse = authService.socialLogin(SocialType.KAKAO, "access_token", "deviceInfo");
+
+        // when - 코드 생성
+        String tempCode = authService.generateTempExchangeCode(loginResponse);
+        assertThat(tempCode).isNotBlank();
+
+        // when - 1차 교환 성공
+        AuthResponseDTO.LoginResponse exchangedResponse = authService.exchangeTempCode(tempCode);
+        assertThat(exchangedResponse.userId()).isEqualTo(loginResponse.userId());
+
+        // then - 2차 재사용 시 예외 발생
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> authService.exchangeTempCode(tempCode))
+                .isInstanceOf(com.mr.global.apipayload.exception.GeneralException.class);
+    }
 }
