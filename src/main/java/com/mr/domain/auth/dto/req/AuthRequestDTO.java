@@ -28,16 +28,22 @@ public class AuthRequestDTO {
          * 필수 입력값 누락 검증도 본 메서드에서 수행합니다.
          */
         public OAuthCredential getCredential() {
+            int count = 0;
+            if (code != null && !code.isBlank()) count++;
+            if (authorizationCode != null && !authorizationCode.isBlank()) count++;
+            if (accessToken != null && !accessToken.isBlank()) count++;
+
+            if (count != 1) {
+                throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+            }
+
             if (code != null && !code.isBlank()) {
                 return new OAuthCredential(OAuthCredential.CredentialType.AUTHORIZATION_CODE, code.trim());
             }
             if (authorizationCode != null && !authorizationCode.isBlank()) {
                 return new OAuthCredential(OAuthCredential.CredentialType.AUTHORIZATION_CODE, authorizationCode.trim());
             }
-            if (accessToken != null && !accessToken.isBlank()) {
-                return new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, accessToken.trim());
-            }
-            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+            return new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, accessToken.trim());
         }
     }
 
