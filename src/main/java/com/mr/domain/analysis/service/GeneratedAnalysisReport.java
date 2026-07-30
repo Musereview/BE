@@ -6,6 +6,7 @@ public record GeneratedAnalysisReport(
         ReportGenerationType generationType,
         String content,
         String modelName,
-        String promptVersion
+        String promptVersion,
+        LlmCallMetadata llmCall
 ) {
 }

@@ -15,6 +15,10 @@ import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.analysis.repository.AnalysisReportRepository;
 import com.mr.domain.analysis.repository.AnalysisRepository;
+import com.mr.domain.mentor.entity.enums.LlmCallStatus;
+import com.mr.domain.mentor.entity.LlmCallLog;
+import com.mr.domain.mentor.repository.LlmCallLogRepository;
+import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -33,14 +37,22 @@ class AnalysisStateServiceTest {
     @Mock
     private AnalysisReportRepository analysisReportRepository;
 
+    @Mock
+    private LlmCallLogRepository llmCallLogRepository;
+
     private AnalysisStateService service;
     private Analysis analysis;
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
-        service = new AnalysisStateService(analysisRepository, analysisReportRepository);
+        service = new AnalysisStateService(
+                analysisRepository,
+                analysisReportRepository,
+                llmCallLogRepository
+        );
         analysis = mock(Analysis.class);
+        org.mockito.Mockito.lenient().when(analysis.getUser()).thenReturn(mock(User.class));
         objectMapper = new ObjectMapper();
         given(analysisRepository.findById(1L)).willReturn(Optional.of(analysis));
     }
@@ -76,6 +88,7 @@ class AnalysisStateServiceTest {
                 result.toString()
         );
         verify(analysisReportRepository).save(any(AnalysisReport.class));
+        verify(llmCallLogRepository).save(any(LlmCallLog.class));
     }
 
     @Test
@@ -150,7 +163,21 @@ class AnalysisStateServiceTest {
                 ReportGenerationType.RULE_BASED,
                 "리포트",
                 null,
-                "analysis-report-v1"
+                "analysis-report-v1",
+                new LlmCallMetadata(
+                        LlmCallStatus.FAILED,
+                        "gemini-3-flash-preview",
+                        "analysis-report-v1",
+                        objectMapper.createObjectNode(),
+                        null,
+                        null,
+                        null,
+                        new BigDecimal("0.30"),
+                        100,
+                        false,
+                        "hash",
+                        "failed"
+                )
         );
     }
 }

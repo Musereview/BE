@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import com.mr.global.client.gemini.GeminiClient;
+import com.mr.global.client.gemini.GeminiGenerationResult;
 import com.mr.global.config.GeminiProperties;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +37,8 @@ class ReportGenerationServiceTest {
         service = new ReportGenerationService(
                 geminiClient,
                 properties,
-                new RuleBasedReportGenerator()
+                new RuleBasedReportGenerator(),
+                new ObjectMapper()
         );
         result = new ObjectMapper().readTree("""
                 {
@@ -54,13 +56,17 @@ class ReportGenerationServiceTest {
         given(geminiClient.generateReport(
                 org.mockito.ArgumentMatchers.anyString(),
                 org.mockito.ArgumentMatchers.anyString()
-        )).willReturn("# 생성된 리포트");
+        )).willReturn(new GeminiGenerationResult(
+                "# 생성된 리포트", 100, 50, 150, false
+        ));
 
         GeneratedAnalysisReport report = service.generate(result);
 
         assertThat(report.generationType()).isEqualTo(ReportGenerationType.LLM);
         assertThat(report.content()).isEqualTo("# 생성된 리포트");
         assertThat(report.modelName()).isEqualTo("gemini-3-flash-preview");
+        assertThat(report.llmCall().promptTokens()).isEqualTo(100);
+        assertThat(report.llmCall().totalTokens()).isEqualTo(150);
     }
 
     @Test
@@ -75,5 +81,7 @@ class ReportGenerationServiceTest {
         assertThat(report.generationType()).isEqualTo(ReportGenerationType.RULE_BASED);
         assertThat(report.content()).contains("# 연주 분석 리포트", "## 개선 제안", "80 / 100");
         assertThat(report.modelName()).isNull();
+        assertThat(report.llmCall().status())
+                .isEqualTo(com.mr.domain.mentor.entity.enums.LlmCallStatus.FAILED);
     }
 }

@@ -48,13 +48,23 @@ class GeminiClientTest {
                                 {"text":"내용"}
                               ]
                             }
-                          }]
+                          }],
+                          "usageMetadata": {
+                            "promptTokenCount": 100,
+                            "candidatesTokenCount": 50,
+                            "totalTokenCount": 150,
+                            "cachedContentTokenCount": 20
+                          }
                         }
                         """, MediaType.APPLICATION_JSON));
 
-        String report = client.generateReport("system", "{}");
+        GeminiGenerationResult report = client.generateReport("system", "{}");
 
-        assertThat(report).isEqualTo("# 리포트\n내용");
+        assertThat(report.content()).isEqualTo("# 리포트\n내용");
+        assertThat(report.promptTokens()).isEqualTo(100);
+        assertThat(report.completionTokens()).isEqualTo(50);
+        assertThat(report.totalTokens()).isEqualTo(150);
+        assertThat(report.cacheHit()).isTrue();
         server.verify();
     }
 }

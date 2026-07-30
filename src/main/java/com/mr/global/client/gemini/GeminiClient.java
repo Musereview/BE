@@ -15,7 +15,7 @@ public class GeminiClient {
     private final RestClient geminiRestClient;
     private final GeminiProperties properties;
 
-    public String generateReport(String systemPrompt, String analysisJson) {
+    public GeminiGenerationResult generateReport(String systemPrompt, String analysisJson) {
         if (properties.apiKey() == null || properties.apiKey().isBlank()) {
             throw new IllegalStateException("Gemini API key is not configured.");
         }
@@ -43,7 +43,14 @@ public class GeminiClient {
         if (content == null || content.isBlank()) {
             throw new IllegalStateException("Gemini returned an empty report.");
         }
-        return content.trim();
+        JsonNode usage = response.path("usageMetadata");
+        return new GeminiGenerationResult(
+                content.trim(),
+                integerOrNull(usage.path("promptTokenCount")),
+                integerOrNull(usage.path("candidatesTokenCount")),
+                integerOrNull(usage.path("totalTokenCount")),
+                usage.path("cachedContentTokenCount").asInt(0) > 0
+        );
     }
 
     private Map<String, Object> content(String text) {
@@ -65,5 +72,9 @@ public class GeminiClient {
             }
         }
         return text.toString();
+    }
+
+    private Integer integerOrNull(JsonNode node) {
+        return node.canConvertToInt() ? node.intValue() : null;
     }
 }
