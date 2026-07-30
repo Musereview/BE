@@ -189,36 +189,20 @@ public class Playing extends BaseCreatedDeletedEntity {
 
     // 연주 완료 시 전체 MIDI 데이터를 저장하고 완료 상태로 전환
     public void completeWithMidiData(
-            List<MidiEventData> midiData
+            List<MidiEventData> requestedMidiData
     ) {
         validateCompletableStatus();
-        validateMidiData(midiData);
+        validateMidiData(requestedMidiData);
 
         LocalDateTime completedAt = LocalDateTime.now();
         long savedDurationMs = calculateDurationMs(this.startedAt, completedAt);
 
-        // 실제 연주 시간에 500ms의 오차를 허용하되, 최대 10분까지만 저장
-        long allowedTimestampMs = Math.min(savedDurationMs + MIDI_TIMESTAMP_TOLERANCE_MS,
-                MAX_DURATION_MS);
+        List<MidiEventData> normalizedMidiData = normalizeMidiData(requestedMidiData, savedDurationMs);
+        validateNormalizedMidiData(normalizedMidiData);
 
-        List<MidiEventData> sortedMidiData = midiData.stream()
-                .filter(event -> event.getTimestampMs() <= allowedTimestampMs)
-                .sorted(
-                        Comparator.comparingLong(MidiEventData::getTimestampMs)
-                        .thenComparingInt(MidiEventData::getSequence))
-                .toList();
-
-        if (sortedMidiData.isEmpty()) {
-            throw new GeneralException(
-                    MidiEventErrorStatus.EMPTY_MIDI_EVENTS
-            );
-        }
-
-        LocalDateTime maxEndedAt = this.startedAt.plusSeconds(MAX_DURATION_SEC);
-
-        this.midiData = new ArrayList<>(sortedMidiData);
-        this.endedAt = completedAt.isAfter(maxEndedAt) ? maxEndedAt : completedAt;
-        this.durationSec = Math.toIntExact(Duration.ofMillis(savedDurationMs).toSeconds());
+        this.midiData = new ArrayList<>(normalizedMidiData);
+        this.endedAt = calculateEndedAt(completedAt);
+        this.durationSec = convertToDurationSec(savedDurationMs);
         this.status = PlayingStatus.COMPLETED;
     }
 
@@ -251,6 +235,10 @@ public class Playing extends BaseCreatedDeletedEntity {
             throw new GeneralException(MidiEventErrorStatus.INVALID_MIDI_EVENT);
         }
 
+        if (midiData.stream().anyMatch(Playing::hasInvalidEventOrder)) {
+            throw new GeneralException(MidiEventErrorStatus.INVALID_MIDI_EVENT);
+        }
+
         Set<MidiEventOrder> seenOrders = new HashSet<>();
 
         for (MidiEventData event : midiData) {
@@ -264,6 +252,16 @@ public class Playing extends BaseCreatedDeletedEntity {
                         MidiEventErrorStatus.DUPLICATE_MIDI_SEQUENCE
                 );
             }
+        }
+    }
+
+    private static void validateNormalizedMidiData(
+            List<MidiEventData> normalizedMidiData
+    ) {
+        if (normalizedMidiData.isEmpty()) {
+            throw new GeneralException(
+                    MidiEventErrorStatus.EMPTY_MIDI_EVENTS
+            );
         }
     }
 
@@ -285,6 +283,25 @@ public class Playing extends BaseCreatedDeletedEntity {
         return Math.min(durationMs, MAX_DURATION_MS);
     }
 
+    private LocalDateTime calculateEndedAt(
+            LocalDateTime completedAt
+    ) {
+        LocalDateTime maxEndedAt =
+                this.startedAt.plusSeconds(MAX_DURATION_SEC);
+
+        return completedAt.isAfter(maxEndedAt)
+                ? maxEndedAt
+                : completedAt;
+    }
+
+    private static int convertToDurationSec(
+            long durationMs
+    ) {
+        return Math.toIntExact(
+                Duration.ofMillis(durationMs).toSeconds()
+        );
+    }
+
     public List<MidiEventData> getMidiData() {
 
         if (this.midiData == null) {
@@ -304,5 +321,26 @@ public class Playing extends BaseCreatedDeletedEntity {
         if (status != PlayingStatus.READY) {
             throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_STATUS);
         }
+    }
+
+    private static List<MidiEventData> normalizeMidiData(
+            List<MidiEventData> midiData, long savedDurationMs) {
+        long allowedTimestampMs =
+                Math.min(savedDurationMs + MIDI_TIMESTAMP_TOLERANCE_MS, MAX_DURATION_MS);
+
+        return midiData.stream()
+                .filter(event -> event.getTimestampMs() <= allowedTimestampMs)
+                .sorted(Comparator.comparingLong(MidiEventData::getTimestampMs)
+                                .thenComparingInt(MidiEventData::getSequence)
+                ).toList();
+    }
+
+    private static boolean hasInvalidEventOrder(
+            MidiEventData event
+    ) {
+        return event.getTimestampMs() == null
+                || event.getTimestampMs() < 0
+                || event.getSequence() == null
+                || event.getSequence() < 0;
     }
 }
