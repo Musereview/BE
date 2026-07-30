@@ -337,7 +337,7 @@ public class LearningService {
 
         return orderedSteps.stream()
                 .filter(step -> isStepIncomplete(scoreByStepId.get(step.getId())))
-                .filter(step -> excludeStepId == null || !step.getId().equals(excludeStepId))
+                .filter(step -> !step.getId().equals(excludeStepId))
                 .limit(RECOMMENDED_LEARNING_LIMIT)
                 .map(step -> LearningHomeResponseDTO.RecommendedLearning.of(learningById.get(step.getLearning().getId()), step))
                 .toList();
