@@ -71,10 +71,13 @@ src/main/resources/application.yml
 src/main/resources/application.yml
 src/main/resources/application.example.yml
 
-# docs
-docs/*
-### ETC ###
-.claude
-CLAUDE.md
-.agents
-AGENTS.md
+# Docs
+/docs/
+
+# Claude
+/.claude/
+/CLAUDE.md
+
+# Agents
+/.agents/
+/AGENTS.md
