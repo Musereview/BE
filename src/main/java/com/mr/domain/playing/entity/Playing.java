@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import static com.mr.domain.playing.constant.MidiEventConstants.MAX_MIDI_EVENT_COUNT;
+
 @Entity
 @Table(
         name = "playing",
@@ -56,7 +58,6 @@ public class Playing extends BaseCreatedDeletedEntity {
     private static final long MAX_DURATION_MS = MAX_DURATION_SEC * 1000L;
 
     private static final long MIDI_TIMESTAMP_TOLERANCE_MS = 500L;       // 실제 연주 시간과 MIDI 이벤트 수집 종료 시점 간 허용 오차
-    private static final int MAX_MIDI_EVENT_COUNT = 100_000;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -2,13 +2,19 @@ package com.mr.domain.playing.dto.req;
 
 import com.mr.domain.playing.entity.enums.MidiType;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
+import static com.mr.domain.playing.constant.MidiEventConstants.MAX_MIDI_EVENT_COUNT;
+
 public record MidiEventSaveRequest (
         @NotEmpty(message = "MIDI 이벤트 목록은 필수입니다")
-        @Size(max = 100_000, message = "MIDI 이벤트 개수가 허용 범위를 초과했습니다.")
+        @Size(max = MAX_MIDI_EVENT_COUNT, message = "MIDI 이벤트는 최대 100,000개까지 저장할 수 있습니다.")
         List<@Valid MidiEventRequest> events
 ) {
 
