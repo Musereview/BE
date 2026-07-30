@@ -57,4 +57,33 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
             """)
     List<Analysis> findByPlayingIdAndUserIdOrderByStartBarAscIdAsc(
             @Param("playingId") Long playingId, @Param("userId") Long userId);
+
+    @Query("""
+            select a from Analysis a
+            where a.user.userId = :userId
+              and a.status = :status
+              and a.completedAt >= :since
+            order by a.completedAt asc
+            """)
+    List<Analysis> findByUserAndStatusSince(
+            @Param("userId") Long userId,
+            @Param("status") AnalysisStatus status,
+            @Param("since") LocalDateTime since
+    );
+
+    @Query("""
+            select count(a) as analysisCount, avg(a.totalScore) as averageTotalScore
+            from Analysis a
+            where a.user.userId = :userId
+              and a.status = :status
+            """)
+    AnalysisTotals aggregateTotalsByUserAndStatus(
+            @Param("userId") Long userId,
+            @Param("status") AnalysisStatus status
+    );
+
+    interface AnalysisTotals {
+        Long getAnalysisCount();
+        Double getAverageTotalScore();
+    }
 }

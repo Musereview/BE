@@ -14,11 +14,13 @@ import com.mr.domain.mentor.entity.enums.LlmCallStatus;
 import com.mr.domain.mentor.entity.enums.LlmPurpose;
 import com.mr.domain.mentor.repository.LlmCallLogRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.event.AnalysisCompletedEvent;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,7 @@ public class AnalysisStateService {
     private final AnalysisRepository analysisRepository;
     private final AnalysisReportRepository analysisReportRepository;
     private final LlmCallLogRepository llmCallLogRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Optional<String> startProcessing(Long analysisId) {
@@ -93,6 +96,9 @@ public class AnalysisStateService {
                 : AnalysisReport.createRuleBasedReport(analysis, generatedReport.content());
         analysisReportRepository.save(report);
         saveLlmCallLog(analysis, report, generatedReport.llmCall());
+        eventPublisher.publishEvent(
+                AnalysisCompletedEvent.of(analysis.getUser().getUserId())
+        );
     }
 
     public void validateResult(JsonNode result) {

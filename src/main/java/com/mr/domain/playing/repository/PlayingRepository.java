@@ -63,7 +63,6 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
             @Param("since") LocalDateTime since
     );
 
-    // 연속 출석일수는 상한이 없어 기간 제한 없이 날짜 단위 distinct 조회
     @Query("""
             select distinct function('date', p.endedAt) from Playing p
             where p.user.userId = :userId
@@ -75,4 +74,24 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status
     );
+
+    @Query("""
+            select count(p) as sessionCount,
+                   coalesce(sum(p.durationSec), 0) as totalDurationSec,
+                   max(p.endedAt) as lastEndedAt
+            from Playing p
+            where p.user.userId = :userId
+              and p.status = :status
+              and p.deletedAt is null
+            """)
+    PracticeTotals aggregateTotalsByUserAndStatus(
+            @Param("userId") Long userId,
+            @Param("status") PlayingStatus status
+    );
+
+    interface PracticeTotals {
+        Long getSessionCount();
+        Long getTotalDurationSec();
+        LocalDateTime getLastEndedAt();
+    }
 }

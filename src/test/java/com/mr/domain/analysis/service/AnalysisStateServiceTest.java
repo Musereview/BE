@@ -20,6 +20,7 @@ import com.mr.domain.mentor.entity.LlmCallLog;
 import com.mr.domain.mentor.repository.LlmCallLogRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.event.AnalysisCompletedEvent;
 import java.math.BigDecimal;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class AnalysisStateServiceTest {
@@ -40,8 +42,12 @@ class AnalysisStateServiceTest {
     @Mock
     private LlmCallLogRepository llmCallLogRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private AnalysisStateService service;
     private Analysis analysis;
+    private User user;
     private ObjectMapper objectMapper;
 
     @BeforeEach
@@ -49,10 +55,13 @@ class AnalysisStateServiceTest {
         service = new AnalysisStateService(
                 analysisRepository,
                 analysisReportRepository,
-                llmCallLogRepository
+                llmCallLogRepository,
+                eventPublisher
         );
         analysis = mock(Analysis.class);
-        org.mockito.Mockito.lenient().when(analysis.getUser()).thenReturn(mock(User.class));
+        user = mock(User.class);
+        org.mockito.Mockito.lenient().when(user.getUserId()).thenReturn(1L);
+        org.mockito.Mockito.lenient().when(analysis.getUser()).thenReturn(user);
         objectMapper = new ObjectMapper();
         given(analysisRepository.findById(1L)).willReturn(Optional.of(analysis));
     }
@@ -89,6 +98,12 @@ class AnalysisStateServiceTest {
         );
         verify(analysisReportRepository).save(any(AnalysisReport.class));
         verify(llmCallLogRepository).save(any(LlmCallLog.class));
+        verify(eventPublisher).publishEvent(
+                org.mockito.ArgumentMatchers.<Object>argThat(event ->
+                        event instanceof AnalysisCompletedEvent completedEvent
+                                && completedEvent.getUserId().equals(1L)
+                )
+        );
     }
 
     @Test

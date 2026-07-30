@@ -9,7 +9,10 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 public enum StatisticsErrorStatus implements BaseCode {
 
-    // 400_01/02는 스펙상 다른 용도로 예약되어 있어 03부터 사용
+    STATISTICS_PERIOD_CONFLICT(HttpStatus.BAD_REQUEST, "STATISTICS_400_01", "period와 from/to는 동시에 사용할 수 없습니다."),
+
+    STATISTICS_INVALID_RANGE(HttpStatus.BAD_REQUEST, "STATISTICS_400_02", "조회 기간이 올바르지 않습니다."),
+
     STATISTICS_INVALID_REQUEST(HttpStatus.BAD_REQUEST, "STATISTICS_400_03", "필수 정보가 누락되었습니다."),
     ;
 
