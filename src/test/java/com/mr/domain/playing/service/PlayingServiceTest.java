@@ -5,6 +5,7 @@ import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.MidiType;
+import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.exception.MidiEventErrorStatus;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
@@ -18,16 +19,21 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 
 @ExtendWith(MockitoExtension.class)
 class PlayingServiceTest {
@@ -60,7 +66,7 @@ class PlayingServiceTest {
             // given
             MidiEventSaveRequest request = createRequest();
 
-            when(playingRepository.findById(playingId))
+            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
                     .thenReturn(Optional.of(playing));
 
             when(playing.getId())
@@ -97,12 +103,103 @@ class PlayingServiceTest {
                     .isEqualTo(2);
 
             verify(playingRepository)
-                    .findById(playingId);
+                    .findByIdAndDeletedAtIsNull(playingId);
 
             verify(playing)
-                    .validateOwner(userId);
+                    .validatePlayingOwner(userId);
 
             verify(playing)
+                    .completeWithMidiData(anyList());
+        }
+
+        @Test
+        @DisplayName("본인의 연주가 아니면 MIDI 이벤트를 저장하지 않는다")
+        void saveMidiEvents_accessDenied() {
+            MidiEventSaveRequest request =
+                    createRequest();
+
+            when(
+                    playingRepository
+                            .findByIdAndDeletedAtIsNull(playingId)
+            )
+                    .thenReturn(Optional.of(playing));
+
+            doThrow(
+                    new GeneralException(
+                            PlayingErrorStatus.PLAYING_ACCESS_DENIED
+                    )
+            )
+                    .when(playing)
+                    .validatePlayingOwner(userId);
+
+            assertThatThrownBy(() ->
+                    playingService.saveMidiEvents(
+                            userId,
+                            playingId,
+                            request
+                    )
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(exception -> {
+                        GeneralException generalException =
+                                (GeneralException) exception;
+
+                        assertThat(generalException.getCode())
+                                .isEqualTo(
+                                        PlayingErrorStatus.PLAYING_ACCESS_DENIED
+                                );
+                    });
+
+            verify(playing, never())
+                    .completeWithMidiData(anyList());
+        }
+
+        @Test
+        @DisplayName("동일 사용자가 1분 이내에 다시 완료 요청하면 예외가 발생한다")
+        void saveMidiEvents_requestedAgainWithinOneMinute() {
+            // given
+            MidiEventSaveRequest request = createRequest();
+
+            when(
+                    playingRepository
+                            .findByIdAndDeletedAtIsNull(playingId)
+            )
+                    .thenReturn(Optional.of(playing));
+
+            when(
+                    playingRepository
+                            .existsByUser_UserIdAndStatusAndEndedAtAfterAndDeletedAtIsNull(
+                                    eq(userId),
+                                    eq(PlayingStatus.COMPLETED),
+                                    any(LocalDateTime.class)
+                            )
+            )
+                    .thenReturn(true);
+
+            // when & then
+            assertThatThrownBy(() ->
+                    playingService.saveMidiEvents(
+                            userId,
+                            playingId,
+                            request
+                    )
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(exception -> {
+                        GeneralException generalException =
+                                (GeneralException) exception;
+
+                        assertThat(generalException.getCode())
+                                .isEqualTo(
+                                        MidiEventErrorStatus
+                                                .MIDI_SAVE_REQUEST_TOO_FREQUENT
+                                );
+                    });
+
+            verify(playing)
+                    .validatePlayingOwner(userId);
+
+            verify(playing, never())
                     .completeWithMidiData(anyList());
         }
 
@@ -112,7 +209,7 @@ class PlayingServiceTest {
             // given
             MidiEventSaveRequest request = createRequest();
 
-            when(playingRepository.findById(playingId))
+            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
                     .thenReturn(Optional.of(playing));
 
             when(playing.getId())
@@ -161,6 +258,45 @@ class PlayingServiceTest {
         }
 
         @Test
+        @DisplayName("진행 중이 아닌 연주에는 MIDI 이벤트를 저장할 수 없다")
+        void saveMidiEvents_notInProgress() {
+            MidiEventSaveRequest request =
+                    createRequest();
+
+            when(
+                    playingRepository
+                            .findByIdAndDeletedAtIsNull(playingId)
+            )
+                    .thenReturn(Optional.of(playing));
+
+            doThrow(
+                    new GeneralException(
+                            MidiEventErrorStatus.PLAYING_NOT_IN_PROGRESS
+                    )
+            )
+                    .when(playing)
+                    .completeWithMidiData(anyList());
+
+            assertThatThrownBy(() ->
+                    playingService.saveMidiEvents(
+                            userId,
+                            playingId,
+                            request
+                    )
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(exception -> {
+                        GeneralException generalException =
+                                (GeneralException) exception;
+
+                        assertThat(generalException.getCode())
+                                .isEqualTo(
+                                        MidiEventErrorStatus.PLAYING_NOT_IN_PROGRESS
+                                );
+                    });
+        }
+
+        @Test
         @DisplayName("playingId가 null이면 예외가 발생한다")
         void saveMidiEvents_nullPlayingId() {
             // given
@@ -187,7 +323,7 @@ class PlayingServiceTest {
                     });
 
             verify(playingRepository, never())
-                    .findById(org.mockito.ArgumentMatchers.any());
+                    .findByIdAndDeletedAtIsNull(any());
         }
 
         @Test
@@ -217,7 +353,7 @@ class PlayingServiceTest {
                     });
 
             verify(playingRepository, never())
-                    .findById(org.mockito.ArgumentMatchers.any());
+                    .findByIdAndDeletedAtIsNull(any());
         }
 
         @Test
@@ -226,7 +362,7 @@ class PlayingServiceTest {
             // given
             MidiEventSaveRequest request = createRequest();
 
-            when(playingRepository.findById(playingId))
+            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
                     .thenReturn(Optional.empty());
 
             // when & then
@@ -250,7 +386,7 @@ class PlayingServiceTest {
                     });
 
             verify(playing, never())
-                    .validateOwner(userId);
+                    .validatePlayingOwner(userId);
 
             verify(playing, never())
                     .completeWithMidiData(anyList());
