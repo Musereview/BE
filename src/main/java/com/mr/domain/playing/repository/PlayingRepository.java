@@ -64,4 +64,6 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status
     );
+
+    Optional<Playing> findByIdAndDeletedAtIsNull(Long playingId);
 }

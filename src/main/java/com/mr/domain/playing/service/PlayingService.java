@@ -27,7 +27,7 @@ public class PlayingService {
     ) {
         validatePlayingId(playingId);
 
-        Playing playing = playingRepository.findById(playingId)
+        Playing playing = playingRepository.findByIdAndDeletedAtIsNull(playingId)
                 .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
 
         playing.validateOwner(userId);
