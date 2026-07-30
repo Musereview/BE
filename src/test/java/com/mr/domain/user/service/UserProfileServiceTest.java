@@ -206,7 +206,7 @@ class UserProfileServiceTest {
 
         given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
         given(studentRepository.findByUser(user)).willReturn(Optional.of(student));
-        given(studentInstrumentRepository.findByStudentAndPrimaryTrue(student))
+        given(studentInstrumentRepository.findFirstByStudentAndPrimaryTrue(student))
                 .willReturn(Optional.of(primaryInstrument));
         given(subscriptionRepository
                 .findFirstByUserAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(

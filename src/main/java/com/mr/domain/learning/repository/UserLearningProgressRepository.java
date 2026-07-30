@@ -19,6 +19,9 @@ public interface UserLearningProgressRepository extends JpaRepository<UserLearni
     // 특정 학습의 단계별 진행 기록 전체 조회 (커리큘럼 조회에서 단계별 status/score 매핑용)
     List<UserLearningProgress> findByUser_UserIdAndLearning_Id(Long userId, Long learningId);
 
+    // 여러 학습의 단계별 진행 기록 전체 조회 (추천 학습 계산 시 N+1 방지용)
+    List<UserLearningProgress> findByUser_UserIdAndLearning_IdIn(Long userId, List<Long> learningIds);
+
     // 유저가 가장 최근에 학습한 진행 기록 1건 (학습 홈의 "최근 학습 이어서 하기"용).
     // 패키지가 비활성화(is_active=false)됐으면 건너뛰고 그다음으로 최근인 활성 패키지를 찾음(동시각 충돌 방지용 id 2차 정렬)
     Optional<UserLearningProgress> findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(Long userId);

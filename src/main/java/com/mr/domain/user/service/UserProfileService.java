@@ -52,7 +52,7 @@ public class UserProfileService {
         User user = getUser(userId);
         Student student = getStudent(user);
 
-        String instrumentType = studentInstrumentRepository.findByStudentAndPrimaryTrue(student)
+        String instrumentType = studentInstrumentRepository.findFirstByStudentAndPrimaryTrue(student)
                 .map(StudentInstrument::getInstrument)
                 .map(Instrument::getCode)
                 .orElseThrow(() -> new GeneralException(StudentInstrumentErrorStatus.PRIMARY_INSTRUMENT_NOT_FOUND));
