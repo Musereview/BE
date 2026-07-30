@@ -233,6 +233,10 @@ public class OAuthClientService {
     }
 
     public String getAuthorizationUrl(SocialType socialType, String customRedirectUri) {
+        return getAuthorizationUrl(socialType, customRedirectUri, null);
+    }
+
+    public String getAuthorizationUrl(SocialType socialType, String customRedirectUri, String state) {
         OAuthProperties.ProviderProperties props = oAuthProperties != null ? switch (socialType) {
             case KAKAO -> oAuthProperties.kakao();
             case GOOGLE -> oAuthProperties.google();
@@ -246,19 +250,23 @@ public class OAuthClientService {
 
         String redirectUri = resolveRedirectUri(props, customRedirectUri, socialType.name());
 
-        return switch (socialType) {
+        org.springframework.web.util.UriComponentsBuilder builder = switch (socialType) {
             case KAKAO -> org.springframework.web.util.UriComponentsBuilder.fromUriString("https://kauth.kakao.com/oauth/authorize")
                     .queryParam("response_type", "code")
                     .queryParam("client_id", clientId)
-                    .queryParam("redirect_uri", redirectUri)
-                    .build().toUriString();
+                    .queryParam("redirect_uri", redirectUri);
             case GOOGLE -> org.springframework.web.util.UriComponentsBuilder.fromUriString("https://accounts.google.com/o/oauth2/v2/auth")
                     .queryParam("response_type", "code")
                     .queryParam("client_id", clientId)
                     .queryParam("redirect_uri", redirectUri)
-                    .queryParam("scope", "email profile openid")
-                    .build().toUriString();
+                    .queryParam("scope", "email profile openid");
         };
+
+        if (state != null && !state.isBlank()) {
+            builder.queryParam("state", state);
+        }
+
+        return builder.build().toUriString();
     }
 
     public String buildFrontendRedirectUrl(com.mr.domain.auth.dto.res.AuthResponseDTO.LoginResponse loginResponse) {

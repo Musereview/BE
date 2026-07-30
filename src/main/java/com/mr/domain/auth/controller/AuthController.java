@@ -18,7 +18,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
+import java.time.Duration;
+import java.util.UUID;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -50,7 +54,27 @@ public class AuthController {
             @RequestParam(name = "redirectUri", required = false) String customRedirectUri,
             HttpServletResponse response
     ) throws IOException {
-        String authUrl = oAuthClientService.getAuthorizationUrl(socialType, customRedirectUri);
+        String state = UUID.randomUUID().toString();
+
+        ResponseCookie stateCookie = ResponseCookie.from("oauth_state", state)
+                .httpOnly(true)
+                .path("/")
+                .maxAge(Duration.ofMinutes(5))
+                .sameSite("Lax")
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, stateCookie.toString());
+
+        if (customRedirectUri != null && !customRedirectUri.isBlank()) {
+            ResponseCookie redirectCookie = ResponseCookie.from("oauth_redirect_uri", customRedirectUri.trim())
+                    .httpOnly(true)
+                    .path("/")
+                    .maxAge(Duration.ofMinutes(5))
+                    .sameSite("Lax")
+                    .build();
+            response.addHeader(HttpHeaders.SET_COOKIE, redirectCookie.toString());
+        }
+
+        String authUrl = oAuthClientService.getAuthorizationUrl(socialType, customRedirectUri, state);
         response.sendRedirect(authUrl);
     }
 
@@ -64,25 +88,48 @@ public class AuthController {
             @Parameter(description = "소셜 로그인 제공자 (KAKAO, GOOGLE)", example = "KAKAO")
             @PathVariable(name = "socialType") SocialType socialType,
             @RequestParam(name = "code", required = false) String code,
+            @RequestParam(name = "state", required = false) String state,
             @RequestParam(name = "error", required = false) String error,
+            @CookieValue(name = "oauth_state", required = false) String cookieState,
+            @CookieValue(name = "oauth_redirect_uri", required = false) String savedCustomRedirectUri,
             @RequestParam(name = "redirectUri", required = false) String customRedirectUri,
             @RequestHeader(value = HttpHeaders.USER_AGENT, defaultValue = "Unknown Device") String deviceInfo,
             HttpServletResponse response
     ) throws IOException {
+        if (state == null || cookieState == null || !state.equals(cookieState)) {
+            throw new GeneralException(AuthErrorStatus.INVALID_STATE);
+        }
+
+        deleteCookie(response, "oauth_state");
+        deleteCookie(response, "oauth_redirect_uri");
+
         if (error != null || code == null || code.isBlank()) {
             throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
         }
+
+        String effectiveRedirectUri = (savedCustomRedirectUri != null && !savedCustomRedirectUri.isBlank())
+                ? savedCustomRedirectUri
+                : customRedirectUri;
 
         OAuthCredential credential = new OAuthCredential(OAuthCredential.CredentialType.AUTHORIZATION_CODE, code);
         AuthResponseDTO.LoginResponse loginResponse = authService.socialLogin(
                 socialType,
                 credential,
-                customRedirectUri,
+                effectiveRedirectUri,
                 deviceInfo
         );
 
         String targetFrontendUrl = oAuthClientService.buildFrontendRedirectUrl(loginResponse);
         response.sendRedirect(targetFrontendUrl);
+    }
+
+    private void deleteCookie(HttpServletResponse response, String name) {
+        ResponseCookie cookie = ResponseCookie.from(name, "")
+                .httpOnly(true)
+                .path("/")
+                .maxAge(0)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     @SecurityRequirements
