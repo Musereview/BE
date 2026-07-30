@@ -222,9 +222,9 @@ public class Playing extends BaseCreatedDeletedEntity {
         this.status = PlayingStatus.COMPLETED;
     }
 
-    public void validateOwner(Long userId) {
+    public void validatePlayingOwner(Long userId) {
         if (userId == null || this.user == null || !Objects.equals(this.user.getUserId(), userId)) {
-            throw new GeneralException(MidiEventErrorStatus.MIDI_EVENT_SAVE_FORBIDDEN);
+            throw new GeneralException(PlayingErrorStatus.PLAYING_ACCESS_DENIED);
         }
     }
 

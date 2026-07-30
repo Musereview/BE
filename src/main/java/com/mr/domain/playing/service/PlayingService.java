@@ -30,7 +30,7 @@ public class PlayingService {
         Playing playing = playingRepository.findByIdAndDeletedAtIsNull(playingId)
                 .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
 
-        playing.validateOwner(userId);
+        playing.validatePlayingOwner(userId);
 
         List<MidiEventData> midiEvents = request.events()
                 .stream()
