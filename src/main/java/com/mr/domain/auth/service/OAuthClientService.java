@@ -84,7 +84,12 @@ public class OAuthClientService {
 
         String redirectUri = (customRedirectUri != null && !customRedirectUri.isBlank())
                 ? customRedirectUri
-                : (kakaoProps != null ? kakaoProps.redirectUri() : "");
+                : (kakaoProps != null ? kakaoProps.redirectUri() : null);
+
+        if (redirectUri == null || redirectUri.isBlank()) {
+            log.error("Kakao OAuth configuration is missing (redirect_uri is not set)");
+            throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
+        }
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("grant_type", "authorization_code");
@@ -161,7 +166,12 @@ public class OAuthClientService {
 
         String redirectUri = (customRedirectUri != null && !customRedirectUri.isBlank())
                 ? customRedirectUri
-                : (googleProps != null ? googleProps.redirectUri() : "");
+                : (googleProps != null ? googleProps.redirectUri() : null);
+
+        if (redirectUri == null || redirectUri.isBlank()) {
+            log.error("Google OAuth configuration is missing (redirect_uri is not set)");
+            throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
+        }
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("grant_type", "authorization_code");
