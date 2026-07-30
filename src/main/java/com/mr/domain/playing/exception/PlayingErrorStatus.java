@@ -18,11 +18,11 @@ public enum PlayingErrorStatus implements BaseCode {
     MISSING_PLAYING_MODE(HttpStatus.BAD_REQUEST, "PLAYING_400_11", "연주 모드는 필수 입력값입니다."),
     MISSING_PLAYING_STATUS(HttpStatus.BAD_REQUEST, "PLAYING_400_12", "연주 상태는 필수 입력값입니다."),
     UNSUPPORTED_PLAYING_MODE(HttpStatus.BAD_REQUEST, "PLAYING_400_13", "현재 지원하지 않는 연주 모드입니다."),
+    PLAYING_ACCESS_DENIED(HttpStatus.FORBIDDEN, "PLAYING_403_01", "해당 연주에 대한 접근 권한이 없습니다."),
     PLAYING_NOT_FOUND(HttpStatus.NOT_FOUND, "PLAYING_404_01", "연주 세션을 찾을 수 없습니다."),
     INVALID_PLAYING_STATUS(HttpStatus.CONFLICT, "PLAYING_409_01", "현재 연주 상태에서는 요청한 작업을 수행할 수 없습니다."),
     MISSING_PLAYING_START_TIME(HttpStatus.CONFLICT, "PLAYING_409_02", "연주 시작 시간이 기록되지 않았습니다."),
     INVALID_PLAYING_DURATION(HttpStatus.CONFLICT, "PLAYING_409_03", "연주 종료 시간이 시작 시간보다 이전일 수 없습니다."),
-    PLAYING_ACCESS_DENIED(HttpStatus.FORBIDDEN, "PLAYING_409_04", "해당 연주에 대한 접근 권한이 없습니다."),
 
     ;
 
