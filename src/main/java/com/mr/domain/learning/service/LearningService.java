@@ -80,15 +80,13 @@ public class LearningService {
 
         learningStep.validateBelongsTo(learning);
 
-        // 이번 저장으로 패키지가 막 100% 완료되는지 판정하기 위해, 갱신 전 상태를 먼저 스냅샷
+        // 이번 저장으로 패키지가 막 100% 완료되는지 판정하기 위해, 갱신 전 완료 개수를 먼저 스냅샷
         long totalStepCount = learningStepRepository.countByLearningId(learningId);
         long completedStepCountBefore = userLearningProgressRepository
                 .countCompletedStepsByUserIdAndLearningId(userId, learningId);
-        Optional<UserLearningProgress> existingProgress = userLearningProgressRepository
-                .findByUser_UserIdAndLearningStep_Id(userId, request.learningStepId());
-        Integer previousScore = existingProgress.map(UserLearningProgress::getScore).orElse(null);
 
-        UserLearningProgress progress = existingProgress
+        UserLearningProgress progress = userLearningProgressRepository
+                .findByUser_UserIdAndLearningStep_Id(userId, request.learningStepId())
                 .map(p -> {
                     p.updateProgress(request.score(), LocalDateTime.now());
                     return p;
@@ -99,30 +97,25 @@ public class LearningService {
                     return userLearningProgressRepository.save(newProgress);
                 });
 
-        notifyIfPackageJustCompleted(userId, learning, totalStepCount, completedStepCountBefore, previousScore, request.score());
+        notifyIfPackageJustCompleted(userId, learningId, learning, totalStepCount, completedStepCountBefore);
 
         return LearningResultResponseDTO.SaveResultResultDTO.from(progress);
     }
 
-    // 이번 점수 저장으로 패키지가 미완료 → 완료(100%)로 막 전환된 경우에만 완료 알림 발행
+    // 이번 저장으로 패키지가 미완료 → 완료(100%)로 막 전환된 경우에만 완료 알림 발행.
+    // 완료 여부는 저장 전/후 스냅샷을 산술로 조합하지 않고, 저장 이후 시점의 완료 개수를 다시 조회해 판정한다
+    // (다른 단계가 동시에 저장되는 경우까지 고려해 실제 커밋된 값 기준으로 확인)
     private void notifyIfPackageJustCompleted(
-            Long userId, Learning learning, long totalStepCount,
-            long completedStepCountBefore, Integer previousScore, Integer newScore
+            Long userId, Long learningId, Learning learning, long totalStepCount, long completedStepCountBefore
     ) {
-        if (totalStepCount == 0) {
+        if (totalStepCount == 0 || completedStepCountBefore == totalStepCount) {
             return;
         }
 
-        boolean wasStepCompleted = previousScore != null && previousScore >= 90;
-        boolean isStepCompletedNow = newScore != null && newScore >= 90;
-        long completedStepCountAfter = completedStepCountBefore
-                + (isStepCompletedNow ? 1 : 0)
-                - (wasStepCompleted ? 1 : 0);
+        long completedStepCountAfter = userLearningProgressRepository
+                .countCompletedStepsByUserIdAndLearningId(userId, learningId);
 
-        boolean wasPackageComplete = completedStepCountBefore == totalStepCount;
-        boolean isPackageCompleteNow = completedStepCountAfter == totalStepCount;
-
-        if (!wasPackageComplete && isPackageCompleteNow) {
+        if (completedStepCountAfter == totalStepCount) {
             String topicName = learning.getTitle() + " (" + learning.getDifficulty().getLabel() + ")";
             eventPublisher.publishEvent(NotificationEvent.forLearning(userId, topicName));
         }
