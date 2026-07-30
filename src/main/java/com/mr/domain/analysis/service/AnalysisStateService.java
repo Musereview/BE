@@ -18,6 +18,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AnalysisStateService {
 
+    private static final BigDecimal MIN_SCORE = BigDecimal.ZERO;
+    private static final BigDecimal MAX_SCORE = new BigDecimal("100");
+    private static final String SCALE = "\uC2A4\uCF00\uC77C";
+    private static final String TENSION = "\uD150\uC158";
+    private static final String PROGRESSION = "\uC9C4\uD589";
+    private static final String VOICE_LEADING = "\uCF54\uB4DC \uC5F0\uACB0";
+
     private final AnalysisRepository analysisRepository;
 
     @Transactional
@@ -34,21 +41,26 @@ public class AnalysisStateService {
     @Transactional
     public void complete(Long analysisId, JsonNode result, String rawResultJson) {
         Analysis analysis = getAnalysis(analysisId);
-        JsonNode scores = result.path("scores");
-        JsonNode finalScoreNode = scores.path("final_score");
-        if (!finalScoreNode.isNumber()) {
-            throw new GeneralException(AnalysisErrorStatus.INVALID_RAW_RESULT);
+        if (result == null || !result.isObject()) {
+            throw invalidRawResult();
         }
-        BigDecimal finalScore = finalScoreNode.decimalValue();
+        JsonNode scores = result.path("scores");
+        if (!scores.isObject()) {
+            throw invalidRawResult();
+        }
+        BigDecimal finalScore = requiredScore(scores, "final_score");
         JsonNode domains = scores.path("domains");
+        if (!domains.isObject()) {
+            throw invalidRawResult();
+        }
         analysis.complete(
                 finalScore.setScale(0, RoundingMode.HALF_UP).intValueExact(),
                 resolveGrade(scores.path("grade").asText(), finalScore),
                 result.path("summary").asText(null),
-                decimal(domains.path("\uC2A4\uCF00\uC77C")),
-                decimal(domains.path("\uD150\uC158")),
-                decimal(domains.path("\uC9C4\uD589")),
-                decimal(domains.path("\uCF54\uB4DC \uC5F0\uACB0")),
+                requiredScore(domains, SCALE),
+                requiredScore(domains, TENSION),
+                requiredScore(domains, PROGRESSION),
+                requiredScore(domains, VOICE_LEADING),
                 rawResultJson
         );
     }
@@ -64,8 +76,20 @@ public class AnalysisStateService {
                 .orElseThrow(() -> new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_FOUND));
     }
 
-    private BigDecimal decimal(JsonNode node) {
-        return node.isNumber() ? node.decimalValue() : BigDecimal.ZERO;
+    private BigDecimal requiredScore(JsonNode parent, String fieldName) {
+        JsonNode node = parent.path(fieldName);
+        if (!node.isNumber()) {
+            throw invalidRawResult();
+        }
+        BigDecimal score = node.decimalValue();
+        if (score.compareTo(MIN_SCORE) < 0 || score.compareTo(MAX_SCORE) > 0) {
+            throw invalidRawResult();
+        }
+        return score;
+    }
+
+    private GeneralException invalidRawResult() {
+        return new GeneralException(AnalysisErrorStatus.INVALID_RAW_RESULT);
     }
 
     private AnalysisGrade resolveGrade(String value, BigDecimal score) {
