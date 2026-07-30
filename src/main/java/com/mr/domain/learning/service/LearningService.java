@@ -26,7 +26,9 @@ import com.mr.domain.user.entity.User;
 import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.event.NotificationEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,6 +60,7 @@ public class LearningService {
     private final ChordExampleRepository chordExampleRepository;
     // 임시 작명
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // 학습 결과 저장
     @Transactional
@@ -77,8 +80,15 @@ public class LearningService {
 
         learningStep.validateBelongsTo(learning);
 
-        UserLearningProgress progress = userLearningProgressRepository
-                .findByUser_UserIdAndLearningStep_Id(userId, request.learningStepId())
+        // 이번 저장으로 패키지가 막 100% 완료되는지 판정하기 위해, 갱신 전 상태를 먼저 스냅샷
+        long totalStepCount = learningStepRepository.countByLearningId(learningId);
+        long completedStepCountBefore = userLearningProgressRepository
+                .countCompletedStepsByUserIdAndLearningId(userId, learningId);
+        Optional<UserLearningProgress> existingProgress = userLearningProgressRepository
+                .findByUser_UserIdAndLearningStep_Id(userId, request.learningStepId());
+        Integer previousScore = existingProgress.map(UserLearningProgress::getScore).orElse(null);
+
+        UserLearningProgress progress = existingProgress
                 .map(p -> {
                     p.updateProgress(request.score(), LocalDateTime.now());
                     return p;
@@ -88,7 +98,34 @@ public class LearningService {
                     newProgress.updateProgress(request.score(), LocalDateTime.now());
                     return userLearningProgressRepository.save(newProgress);
                 });
+
+        notifyIfPackageJustCompleted(userId, learning, totalStepCount, completedStepCountBefore, previousScore, request.score());
+
         return LearningResultResponseDTO.SaveResultResultDTO.from(progress);
+    }
+
+    // 이번 점수 저장으로 패키지가 미완료 → 완료(100%)로 막 전환된 경우에만 완료 알림 발행
+    private void notifyIfPackageJustCompleted(
+            Long userId, Learning learning, long totalStepCount,
+            long completedStepCountBefore, Integer previousScore, Integer newScore
+    ) {
+        if (totalStepCount == 0) {
+            return;
+        }
+
+        boolean wasStepCompleted = previousScore != null && previousScore >= 90;
+        boolean isStepCompletedNow = newScore != null && newScore >= 90;
+        long completedStepCountAfter = completedStepCountBefore
+                + (isStepCompletedNow ? 1 : 0)
+                - (wasStepCompleted ? 1 : 0);
+
+        boolean wasPackageComplete = completedStepCountBefore == totalStepCount;
+        boolean isPackageCompleteNow = completedStepCountAfter == totalStepCount;
+
+        if (!wasPackageComplete && isPackageCompleteNow) {
+            String topicName = learning.getTitle() + " (" + learning.getDifficulty().getLabel() + ")";
+            eventPublisher.publishEvent(NotificationEvent.forLearning(userId, topicName));
+        }
     }
 
     // 학습 진행률 조회 로직
