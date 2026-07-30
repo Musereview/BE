@@ -225,8 +225,8 @@ public class OAuthClientService {
 
         String trimmedCustomUri = customRedirectUri.trim();
         if (!allowedUris.contains(trimmedCustomUri)) {
-            log.warn("{} OAuth invalid redirect_uri requested: {}", providerName, trimmedCustomUri);
-            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+            log.warn("{} custom redirect_uri [{}] is not in allowed list. Falling back to default [{}]", providerName, trimmedCustomUri, allowedUris.get(0));
+            return allowedUris.get(0);
         }
 
         return trimmedCustomUri;

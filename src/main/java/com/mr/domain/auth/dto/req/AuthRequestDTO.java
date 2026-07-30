@@ -20,7 +20,7 @@ public class AuthRequestDTO {
             @Schema(description = "소셜 Access Token (인가 코드 대신 직접 액세스 토큰 전송 시 사용)", example = "sample_access_token")
             String accessToken,
 
-            @Schema(description = "커스텀 Redirect URI (생략 시 백엔드 기본값 자동 적용)", example = "http://localhost:8080/api/auth/kakao/callback")
+            @Schema(description = "커스텀 Redirect URI (생략 시 백엔드 기본값 자동 적용)")
             String redirectUri
     ) {
         /**

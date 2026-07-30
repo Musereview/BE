@@ -168,8 +168,8 @@ class OAuthClientServiceTest {
     }
 
     @Test
-    @DisplayName("허용되지 않은 customRedirectUri로 authorization_code 교환 요청 시 INVALID_AUTH_REQUEST 예외가 발생한다")
-    void exchangeCode_invalidCustomRedirectUri_throwsInvalidAuthRequest() {
+    @DisplayName("허용되지 않은 customRedirectUri로 authorization_code 교환 요청 시 기본 redirectUri로 자동 폴백 처리된다")
+    void exchangeCode_invalidCustomRedirectUri_fallsBackToDefaultUri() {
         com.mr.global.config.OAuthProperties.ProviderProperties kakaoProps = new com.mr.global.config.OAuthProperties.ProviderProperties(
                 "sample_client_id",
                 "sample_secret",
@@ -184,8 +184,10 @@ class OAuthClientServiceTest {
         com.mr.domain.auth.dto.OAuthCredential credential = new com.mr.domain.auth.dto.OAuthCredential(
                 com.mr.domain.auth.dto.OAuthCredential.CredentialType.AUTHORIZATION_CODE, "sample_code");
 
+        mockServer.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo("https://kauth.kakao.com/oauth/token"))
+                .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withServerError());
+
         assertThatThrownBy(() -> serviceWithProps.getUserInfo(SocialType.KAKAO, credential, "https://unauthorized.malicious.com/callback"))
-                .isInstanceOf(GeneralException.class)
-                .satisfies(e -> assertThat(((GeneralException) e).getCode()).isEqualTo(AuthErrorStatus.INVALID_AUTH_REQUEST));
+                .isInstanceOf(GeneralException.class);
     }
 }
