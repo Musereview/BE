@@ -16,6 +16,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @Entity
@@ -65,6 +67,7 @@ public class Analysis extends BaseCreatedEntity {
     @Column(name = "summary", columnDefinition = "text")
     private String summary;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "analysis_request_json", nullable = false, columnDefinition = "json")
     private String analysisRequestJson;
 
@@ -80,6 +83,7 @@ public class Analysis extends BaseCreatedEntity {
     @Column(name = "voice_leading_score", precision = 5, scale = 2)
     private BigDecimal voiceLeadingScore;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "raw_result_json", columnDefinition = "json")
     private String rawResultJson;
 
