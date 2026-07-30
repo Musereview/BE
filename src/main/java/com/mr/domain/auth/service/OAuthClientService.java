@@ -78,7 +78,8 @@ public class OAuthClientService {
         OAuthProperties.ProviderProperties kakaoProps = oAuthProperties != null ? oAuthProperties.kakao() : null;
         String clientId = kakaoProps != null ? kakaoProps.clientId() : null;
         if (clientId == null || clientId.isBlank()) {
-            return code;
+            log.error("Kakao OAuth configuration is missing (client_id is not set)");
+            throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
         }
 
         String redirectUri = (customRedirectUri != null && !customRedirectUri.isBlank())
@@ -154,7 +155,8 @@ public class OAuthClientService {
         OAuthProperties.ProviderProperties googleProps = oAuthProperties != null ? oAuthProperties.google() : null;
         String clientId = googleProps != null ? googleProps.clientId() : null;
         if (clientId == null || clientId.isBlank()) {
-            return code;
+            log.error("Google OAuth configuration is missing (client_id is not set)");
+            throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
         }
 
         String redirectUri = (customRedirectUri != null && !customRedirectUri.isBlank())

@@ -155,4 +155,15 @@ class OAuthClientServiceTest {
         assertThat(userInfo.socialId()).isEqualTo("google_987654321");
         assertThat(userInfo.profileImgUrl()).isEqualTo("https://example.com/google_profile.png");
     }
+
+    @Test
+    @DisplayName("OAuth 설정(clientId)이 누락된 경우 authorization_code 교환 요청 시 OAUTH_SERVER_ERROR 예외가 발생한다")
+    void exchangeCode_missingConfig_throwsOauthServerError() {
+        com.mr.domain.auth.dto.OAuthCredential credential = new com.mr.domain.auth.dto.OAuthCredential(
+                com.mr.domain.auth.dto.OAuthCredential.CredentialType.AUTHORIZATION_CODE, "sample_code");
+
+        assertThatThrownBy(() -> oAuthClientService.getUserInfo(SocialType.KAKAO, credential, null))
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getCode()).isEqualTo(AuthErrorStatus.OAUTH_SERVER_ERROR));
+    }
 }
