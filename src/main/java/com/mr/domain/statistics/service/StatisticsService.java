@@ -17,6 +17,7 @@ import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -33,18 +34,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class StatisticsService {
 
     private static final int SCORE_SCALE = 1;
+    private static final BigDecimal ZERO_SCORE = BigDecimal.ZERO.setScale(SCORE_SCALE);
     private static final int WEEKLY_TREND_WEEKS = 4;
     private static final int SECONDS_PER_MINUTE = 60;
 
     private final UserRepository userRepository;
     private final PlayingRepository playingRepository;
     private final AnalysisRepository analysisRepository;
+    private final Clock clock;
 
     public StatisticsResponseDTO getStatistics(Long userId) {
         userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
-        LocalDateTime thisWeekStart = LocalDate.now().with(DayOfWeek.MONDAY).atStartOfDay();
+        LocalDateTime thisWeekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY).atStartOfDay();
         LocalDateTime lastWeekStart = thisWeekStart.minusWeeks(1);
         LocalDateTime fourWeeksAgoStart = thisWeekStart.minusWeeks(WEEKLY_TREND_WEEKS - 1L);
 
@@ -184,7 +187,7 @@ public class StatisticsService {
 
     private BigDecimal diffOrZero(ScoreAggregate current, ScoreAggregate previous) {
         if (current.count() == 0 || previous.count() == 0) {
-            return BigDecimal.ZERO;
+            return ZERO_SCORE;
         }
         return current.average().subtract(previous.average());
     }
@@ -202,7 +205,7 @@ public class StatisticsService {
     private record ScoreAggregate(BigDecimal sum, int count) {
         BigDecimal average() {
             if (count == 0) {
-                return BigDecimal.ZERO;
+                return ZERO_SCORE;
             }
             return sum.divide(BigDecimal.valueOf(count), SCORE_SCALE, RoundingMode.HALF_UP);
         }

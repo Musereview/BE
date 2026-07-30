@@ -20,9 +20,9 @@ import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +45,7 @@ public class StatisticsAggregationService {
     private final SkillStatisticsRepository skillStatisticsRepository;
     private final PlayingRepository playingRepository;
     private final AnalysisRepository analysisRepository;
+    private final Clock clock;
 
     // 리스너의 @Retryable과 같은 메서드에 두면 advice 순서가 불명확해지므로,
     // 트랜잭션 경계는 반드시 이 별도 빈의 메서드에서 열어 재시도마다 새 트랜잭션이 보장되도록 함
@@ -89,7 +90,7 @@ public class StatisticsAggregationService {
     }
 
     private void refreshWeeklyPracticeStatistics(Long userId) {
-        LocalDate weekStart = LocalDate.now().with(DayOfWeek.MONDAY);
+        LocalDate weekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY);
         LocalDate weekEnd = weekStart.plusDays(6);
 
         List<Playing> playings = playingRepository.findByUserAndStatusSince(
@@ -110,7 +111,7 @@ public class StatisticsAggregationService {
     }
 
     private void refreshWeeklySkillStatistics(Long userId) {
-        LocalDate weekStart = LocalDate.now().with(DayOfWeek.MONDAY);
+        LocalDate weekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY);
         LocalDate weekEnd = weekStart.plusDays(6);
         LocalDate lastWeekStart = weekStart.minusWeeks(1);
 
