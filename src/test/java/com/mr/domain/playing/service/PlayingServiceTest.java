@@ -591,11 +591,15 @@ class PlayingServiceTest {
         @Test
         @DisplayName("백킹트랙 ID가 null이면 연주 세션을 생성하지 않는다")
         void startPlaying_nullBackingTrackId() {
+
+            // given
+            PlayingStartRequest request = new PlayingStartRequest(null); // 백킹트랙 ID만 null인 DTO 생성
+
             // when & then
             assertThatThrownBy(() ->
                     playingService.startPlaying(
                             userId,
-                            null
+                            request
                     )
             )
                     .isInstanceOf(GeneralException.class);
