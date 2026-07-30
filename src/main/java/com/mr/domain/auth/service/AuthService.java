@@ -37,6 +37,7 @@ public class AuthService {
     @Value("${app.profile.default-image-url}")
     private String defaultProfileImageUrl;
 
+    @Transactional
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, OAuthCredential credential, String redirectUri, String deviceInfo) {
         OAuthUserInfo userInfo = fetchOAuthUserInfo(socialType, credential, redirectUri);
 
