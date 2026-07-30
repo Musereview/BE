@@ -64,4 +64,25 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status
     );
+
+    // 통계 집계용 전체 기간 요약 - row를 끌어오지 않고 단일 행으로 집계
+    @Query("""
+            select count(p) as sessionCount,
+                   coalesce(sum(p.durationSec), 0) as totalDurationSec,
+                   max(p.endedAt) as lastEndedAt
+            from Playing p
+            where p.user.userId = :userId
+              and p.status = :status
+              and p.deletedAt is null
+            """)
+    PracticeTotals aggregateTotalsByUserAndStatus(
+            @Param("userId") Long userId,
+            @Param("status") PlayingStatus status
+    );
+
+    interface PracticeTotals {
+        Long getSessionCount();
+        Long getTotalDurationSec();
+        LocalDateTime getLastEndedAt();
+    }
 }
