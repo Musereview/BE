@@ -6,14 +6,12 @@ import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
-import com.mr.domain.statistics.dto.req.StatisticsPeriod;
 import com.mr.domain.statistics.dto.res.StatisticsResponseDTO;
 import com.mr.domain.statistics.dto.res.StatisticsResponseDTO.DomainGrowth;
 import com.mr.domain.statistics.dto.res.StatisticsResponseDTO.TrendItem;
 import com.mr.domain.statistics.dto.res.StatisticsResponseDTO.WeeklySummary;
 import com.mr.domain.statistics.dto.res.StatisticsResponseDTO.WeeklyTrend;
 import com.mr.domain.statistics.entity.enums.SkillType;
-import com.mr.domain.statistics.exception.StatisticsErrorStatus;
 import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
@@ -42,10 +40,7 @@ public class StatisticsService {
     private final PlayingRepository playingRepository;
     private final AnalysisRepository analysisRepository;
 
-    // MVP: period/from/to는 조합 검증만 수행, 집계는 항상 이번 주 vs 지난 주 + 최근 4주 고정(기획 확정 사항)
-    public StatisticsResponseDTO getStatistics(Long userId, StatisticsPeriod period, LocalDate from, LocalDate to) {
-        validateQuery(period, from, to);
-
+    public StatisticsResponseDTO getStatistics(Long userId) {
         userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
@@ -65,22 +60,6 @@ public class StatisticsService {
                 buildDomainGrowth(analyses, thisWeekStart, lastWeekStart),
                 buildWeeklyTrend(weeklyScoreAggregates)
         );
-    }
-
-    private void validateQuery(StatisticsPeriod period, LocalDate from, LocalDate to) {
-        boolean hasPeriod = period != null;
-        boolean hasFrom = from != null;
-        boolean hasTo = to != null;
-
-        if (hasPeriod && (hasFrom || hasTo)) {
-            throw new GeneralException(StatisticsErrorStatus.STATISTICS_PERIOD_CONFLICT);
-        }
-        if (hasFrom != hasTo) {
-            throw new GeneralException(StatisticsErrorStatus.STATISTICS_INVALID_RANGE);
-        }
-        if (hasFrom && from.isAfter(to)) {
-            throw new GeneralException(StatisticsErrorStatus.STATISTICS_INVALID_RANGE);
-        }
     }
 
     // index 0=이번 주, 1=지난 주, 2=2주 전, 3=3주 전

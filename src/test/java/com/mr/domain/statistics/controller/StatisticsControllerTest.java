@@ -1,7 +1,5 @@
 package com.mr.domain.statistics.controller;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -15,7 +13,6 @@ import com.mr.domain.statistics.dto.res.StatisticsResponseDTO.TrendItem;
 import com.mr.domain.statistics.dto.res.StatisticsResponseDTO.WeeklySummary;
 import com.mr.domain.statistics.dto.res.StatisticsResponseDTO.WeeklyTrend;
 import com.mr.domain.statistics.entity.enums.SkillType;
-import com.mr.domain.statistics.exception.StatisticsErrorStatus;
 import com.mr.domain.statistics.service.StatisticsService;
 import com.mr.domain.user.entity.enums.UserRole;
 import com.mr.domain.user.exception.UserErrorStatus;
@@ -80,7 +77,7 @@ class StatisticsControllerTest {
     @Test
     @DisplayName("GET /api/users/me/statistics - 조회 성공")
     void getStatistics_success() throws Exception {
-        given(statisticsService.getStatistics(anyLong(), any(), any(), any())).willReturn(sampleResponse());
+        given(statisticsService.getStatistics(1L)).willReturn(sampleResponse());
 
         mockMvc.perform(get("/api/users/me/statistics"))
                 .andExpect(status().isOk())
@@ -91,40 +88,10 @@ class StatisticsControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/users/me/statistics - period와 from 동시 전달 시 400")
-    void getStatistics_periodAndFromTogether_returns400() throws Exception {
-        willThrow(new GeneralException(StatisticsErrorStatus.STATISTICS_PERIOD_CONFLICT))
-                .given(statisticsService).getStatistics(anyLong(), any(), any(), any());
-
-        mockMvc.perform(get("/api/users/me/statistics").param("period", "WEEKLY").param("from", "2026-07-01"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("STATISTICS_400_01"));
-    }
-
-    @Test
-    @DisplayName("GET /api/users/me/statistics - from만 있고 to가 없으면 400")
-    void getStatistics_fromWithoutTo_returns400() throws Exception {
-        willThrow(new GeneralException(StatisticsErrorStatus.STATISTICS_INVALID_RANGE))
-                .given(statisticsService).getStatistics(anyLong(), any(), any(), any());
-
-        mockMvc.perform(get("/api/users/me/statistics").param("from", "2026-07-01"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("STATISTICS_400_02"));
-    }
-
-    @Test
-    @DisplayName("GET /api/users/me/statistics - period에 정의되지 않은 값이 오면 400(500 아님)")
-    void getStatistics_invalidPeriodEnum_returns400() throws Exception {
-        mockMvc.perform(get("/api/users/me/statistics").param("period", "INVALID"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_400_01"));
-    }
-
-    @Test
     @DisplayName("GET /api/users/me/statistics - 존재하지 않는 사용자면 404")
     void getStatistics_userNotFound_returns404() throws Exception {
         willThrow(new GeneralException(UserErrorStatus.USER_NOT_FOUND))
-                .given(statisticsService).getStatistics(anyLong(), any(), any(), any());
+                .given(statisticsService).getStatistics(1L);
 
         mockMvc.perform(get("/api/users/me/statistics"))
                 .andExpect(status().isNotFound())

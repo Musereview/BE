@@ -15,12 +15,10 @@ import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
-import com.mr.domain.statistics.dto.req.StatisticsPeriod;
 import com.mr.domain.statistics.dto.res.StatisticsResponseDTO;
 import com.mr.domain.statistics.dto.res.StatisticsResponseDTO.DomainGrowth;
 import com.mr.domain.statistics.dto.res.StatisticsResponseDTO.TrendItem;
 import com.mr.domain.statistics.entity.enums.SkillType;
-import com.mr.domain.statistics.exception.StatisticsErrorStatus;
 import com.mr.domain.user.entity.User;
 import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.UserRepository;
@@ -35,8 +33,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -99,56 +95,9 @@ class StatisticsServiceTest {
     void getStatistics_userNotFound_throws404() {
         given(userRepository.findById(1L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> statisticsService.getStatistics(1L, null, null, null))
+        assertThatThrownBy(() -> statisticsService.getStatistics(1L))
                 .isInstanceOf(GeneralException.class)
                 .hasFieldOrPropertyWithValue("code", UserErrorStatus.USER_NOT_FOUND);
-    }
-
-    @Test
-    @DisplayName("getStatistics - period와 from을 동시에 지정하면 400")
-    void getStatistics_periodAndFromTogether_throws400() {
-        assertThatThrownBy(() -> statisticsService.getStatistics(
-                1L, StatisticsPeriod.WEEKLY, LocalDate.now(), null))
-                .isInstanceOf(GeneralException.class)
-                .hasFieldOrPropertyWithValue("code", StatisticsErrorStatus.STATISTICS_PERIOD_CONFLICT);
-    }
-
-    @Test
-    @DisplayName("getStatistics - from만 있고 to가 없으면 400")
-    void getStatistics_fromWithoutTo_throws400() {
-        assertThatThrownBy(() -> statisticsService.getStatistics(1L, null, LocalDate.now(), null))
-                .isInstanceOf(GeneralException.class)
-                .hasFieldOrPropertyWithValue("code", StatisticsErrorStatus.STATISTICS_INVALID_RANGE);
-    }
-
-    @Test
-    @DisplayName("getStatistics - to만 있고 from이 없으면 400")
-    void getStatistics_toWithoutFrom_throws400() {
-        assertThatThrownBy(() -> statisticsService.getStatistics(1L, null, null, LocalDate.now()))
-                .isInstanceOf(GeneralException.class)
-                .hasFieldOrPropertyWithValue("code", StatisticsErrorStatus.STATISTICS_INVALID_RANGE);
-    }
-
-    @Test
-    @DisplayName("getStatistics - from이 to보다 미래면 400")
-    void getStatistics_fromAfterTo_throws400() {
-        LocalDate to = LocalDate.now();
-        LocalDate from = to.plusDays(1);
-
-        assertThatThrownBy(() -> statisticsService.getStatistics(1L, null, from, to))
-                .isInstanceOf(GeneralException.class)
-                .hasFieldOrPropertyWithValue("code", StatisticsErrorStatus.STATISTICS_INVALID_RANGE);
-    }
-
-    @Test
-    @DisplayName("getStatistics - from과 to가 같은 날짜면 정상 조회된다(경계값)")
-    void getStatistics_fromEqualsTo_succeeds() {
-        stubBaseline(1L);
-        LocalDate day = LocalDate.now();
-
-        StatisticsResponseDTO response = statisticsService.getStatistics(1L, null, day, day);
-
-        assertThat(response).isNotNull();
     }
 
     @Test
@@ -156,7 +105,7 @@ class StatisticsServiceTest {
     void getStatistics_noData_allZero() {
         stubBaseline(1L);
 
-        StatisticsResponseDTO response = statisticsService.getStatistics(1L, null, null, null);
+        StatisticsResponseDTO response = statisticsService.getStatistics(1L);
 
         assertThat(response.weeklySummary().accuracy()).isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(response.weeklySummary().practiceMinutes()).isZero();
@@ -187,7 +136,7 @@ class StatisticsServiceTest {
         given(playingRepository.findByUserAndStatusSince(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(playings);
 
-        StatisticsResponseDTO response = statisticsService.getStatistics(1L, null, null, null);
+        StatisticsResponseDTO response = statisticsService.getStatistics(1L);
 
         assertThat(response.weeklySummary().practiceMinutes()).isEqualTo(20); // (600+600)초 = 20분
         assertThat(response.weeklySummary().completedSessionCount()).isEqualTo(2);
@@ -203,7 +152,7 @@ class StatisticsServiceTest {
         given(playingRepository.findByUserAndStatusSince(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(playings);
 
-        StatisticsResponseDTO response = statisticsService.getStatistics(1L, null, null, null);
+        StatisticsResponseDTO response = statisticsService.getStatistics(1L);
 
         assertThat(response.weeklySummary().practiceMinutesDiff()).isEqualTo(10);
         assertThat(response.weeklySummary().completedSessionCountDiff()).isEqualTo(1);
@@ -223,7 +172,7 @@ class StatisticsServiceTest {
         given(analysisRepository.findByUserAndStatusSince(eq(1L), eq(AnalysisStatus.COMPLETED), any()))
                 .willReturn(analyses);
 
-        StatisticsResponseDTO response = statisticsService.getStatistics(1L, null, null, null);
+        StatisticsResponseDTO response = statisticsService.getStatistics(1L);
 
         assertThat(response.weeklySummary().accuracy()).isEqualByComparingTo(BigDecimal.valueOf(90.0));
         assertThat(response.weeklySummary().accuracyDiff()).isEqualByComparingTo(BigDecimal.valueOf(10.0));
@@ -249,7 +198,7 @@ class StatisticsServiceTest {
         given(analysisRepository.findByUserAndStatusSince(eq(1L), eq(AnalysisStatus.COMPLETED), any()))
                 .willReturn(analyses);
 
-        StatisticsResponseDTO response = statisticsService.getStatistics(1L, null, null, null);
+        StatisticsResponseDTO response = statisticsService.getStatistics(1L);
 
         assertThat(response.weeklySummary().accuracy()).isEqualByComparingTo(BigDecimal.valueOf(90.0));
         assertThat(response.weeklySummary().accuracyDiff()).isEqualByComparingTo(BigDecimal.ZERO);
@@ -268,7 +217,7 @@ class StatisticsServiceTest {
         given(analysisRepository.findByUserAndStatusSince(eq(1L), eq(AnalysisStatus.COMPLETED), any()))
                 .willReturn(analyses);
 
-        StatisticsResponseDTO response = statisticsService.getStatistics(1L, null, null, null);
+        StatisticsResponseDTO response = statisticsService.getStatistics(1L);
 
         assertThat(response.weeklySummary().accuracy()).isEqualByComparingTo(BigDecimal.valueOf(80.0));
     }
@@ -290,7 +239,7 @@ class StatisticsServiceTest {
         given(analysisRepository.findByUserAndStatusSince(eq(1L), eq(AnalysisStatus.COMPLETED), any()))
                 .willReturn(analyses);
 
-        StatisticsResponseDTO response = statisticsService.getStatistics(1L, null, null, null);
+        StatisticsResponseDTO response = statisticsService.getStatistics(1L);
 
         assertThat(response.weeklySummary().completedSessionCount()).isEqualTo(1);
         assertThat(response.weeklySummary().accuracy()).isEqualByComparingTo(BigDecimal.valueOf(90.0)); // (80+90+100)/3
@@ -310,7 +259,7 @@ class StatisticsServiceTest {
         given(analysisRepository.findByUserAndStatusSince(eq(1L), eq(AnalysisStatus.COMPLETED), any()))
                 .willReturn(analyses);
 
-        StatisticsResponseDTO response = statisticsService.getStatistics(1L, null, null, null);
+        StatisticsResponseDTO response = statisticsService.getStatistics(1L);
 
         List<TrendItem> items = response.weeklyTrend().items();
         assertThat(items).hasSize(4);
@@ -334,23 +283,10 @@ class StatisticsServiceTest {
         given(analysisRepository.findByUserAndStatusSince(eq(1L), eq(AnalysisStatus.COMPLETED), any()))
                 .willReturn(analyses);
 
-        StatisticsResponseDTO response = statisticsService.getStatistics(1L, null, null, null);
+        StatisticsResponseDTO response = statisticsService.getStatistics(1L);
 
         assertThat(response.weeklyTrend().items()).allSatisfy(
                 item -> assertThat(item.averageScore()).isEqualByComparingTo(BigDecimal.ZERO));
     }
 
-    @ParameterizedTest
-    @DisplayName("getStatistics - period 값과 무관하게 이번주 vs 지난주 고정 결과를 반환한다(MVP 확정 사항)")
-    @EnumSource(StatisticsPeriod.class)
-    void getStatistics_periodValueIgnored_returnsSameResult(StatisticsPeriod period) {
-        stubBaseline(1L);
-        List<Playing> playings = List.of(mockPlaying(thisWeekStart.plusDays(1), 600));
-        given(playingRepository.findByUserAndStatusSince(eq(1L), eq(PlayingStatus.COMPLETED), any()))
-                .willReturn(playings);
-
-        StatisticsResponseDTO response = statisticsService.getStatistics(1L, period, null, null);
-
-        assertThat(response.weeklySummary().practiceMinutes()).isEqualTo(10);
-    }
 }
