@@ -269,6 +269,17 @@ public class OAuthClientService {
         return builder.build().toUriString();
     }
 
+    public String buildFrontendRedirectUrl(String code) {
+        String baseUrl = (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
+                ? oAuthProperties.frontendRedirectUri()
+                : "http://localhost:3000/oauth/callback";
+
+        return org.springframework.web.util.UriComponentsBuilder.fromUriString(baseUrl)
+                .queryParam("code", code)
+                .build()
+                .toUriString();
+    }
+
     public String buildFrontendRedirectUrl(com.mr.domain.auth.dto.res.AuthResponseDTO.LoginResponse loginResponse) {
         String baseUrl = (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
                 ? oAuthProperties.frontendRedirectUri()
