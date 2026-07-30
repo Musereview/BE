@@ -9,40 +9,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 public class AuthRequestDTO {
 
-    @Schema(description = "소셜 로그인 요청 DTO (code, authorizationCode, accessToken 중 하나를 전달하며, redirectUri는 생략 가능)")
+    @Schema(description = "소셜 Access Token 로그인/회원가입 요청 DTO")
     public record SocialLoginRequest(
-            @Schema(description = "소셜 인가 코드 (authorizationCode와 동일 역할, 호환용)", example = "sample_authorization_code")
-            String code,
-
-            @Schema(description = "소셜 인가 코드 풀네임 (code와 동일 역할, 호환용)", example = "sample_authorization_code")
-            String authorizationCode,
-
-            @Schema(description = "소셜 Access Token (인가 코드 대신 직접 액세스 토큰 전송 시 사용)", example = "sample_access_token")
-            String accessToken,
-
-            @Schema(description = "커스텀 Redirect URI (생략 시 백엔드 기본값 자동 적용)")
-            String redirectUri
+            @Schema(description = "소셜 Access Token (카카오/구글 SDK 등에서 발급받은 액세스 토큰)", example = "sample_access_token")
+            @NotBlank(message = "Access Token은 필수 입력값입니다.")
+            String accessToken
     ) {
-        /**
-         * code, authorizationCode, accessToken 중 전송된 값으로 OAuthCredential을 생성합니다.
-         * 필수 입력값 누락 검증도 본 메서드에서 수행합니다.
-         */
         public OAuthCredential getCredential() {
-            int count = 0;
-            if (code != null && !code.isBlank()) count++;
-            if (authorizationCode != null && !authorizationCode.isBlank()) count++;
-            if (accessToken != null && !accessToken.isBlank()) count++;
-
-            if (count != 1) {
-                throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
-            }
-
-            if (code != null && !code.isBlank()) {
-                return new OAuthCredential(OAuthCredential.CredentialType.AUTHORIZATION_CODE, code.trim());
-            }
-            if (authorizationCode != null && !authorizationCode.isBlank()) {
-                return new OAuthCredential(OAuthCredential.CredentialType.AUTHORIZATION_CODE, authorizationCode.trim());
-            }
             return new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, accessToken.trim());
         }
     }

@@ -39,6 +39,11 @@ public class AuthService {
     private String defaultProfileImageUrl;
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, OAuthCredential credential, String deviceInfo) {
+        return socialLogin(socialType, credential, null, deviceInfo);
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, OAuthCredential credential, String redirectUri, String deviceInfo) {
         OAuthUserInfo userInfo = fetchOAuthUserInfo(socialType, credential, redirectUri);
 
@@ -145,6 +150,11 @@ public class AuthService {
                     .tokenInfo(tokenResponse)
                     .build();
         });
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public AuthResponseDTO.TokenInfo linkSocialAccount(Long userId, SocialType socialType, OAuthCredential credential, String deviceInfo) {
+        return linkSocialAccount(userId, socialType, credential, null, deviceInfo);
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
