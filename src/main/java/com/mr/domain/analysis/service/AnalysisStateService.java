@@ -3,11 +3,13 @@ package com.mr.domain.analysis.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisGrade;
+import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,10 +21,14 @@ public class AnalysisStateService {
     private final AnalysisRepository analysisRepository;
 
     @Transactional
-    public String startProcessing(Long analysisId) {
-        Analysis analysis = getAnalysis(analysisId);
+    public Optional<String> startProcessing(Long analysisId) {
+        Analysis analysis = analysisRepository.findByIdForUpdate(analysisId)
+                .orElseThrow(() -> new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_FOUND));
+        if (analysis.getStatus() != AnalysisStatus.PENDING) {
+            return Optional.empty();
+        }
         analysis.startProcessing();
-        return analysis.getAnalysisRequestJson();
+        return Optional.of(analysis.getAnalysisRequestJson());
     }
 
     @Transactional

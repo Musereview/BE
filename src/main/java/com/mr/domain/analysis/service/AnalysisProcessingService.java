@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.global.client.ai.AiAnalysisRequest;
 import com.mr.global.client.ai.AiServerClient;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,8 +21,12 @@ public class AnalysisProcessingService {
     public void process(Long analysisId) {
         boolean processingStarted = false;
         try {
-            String requestJson = analysisStateService.startProcessing(analysisId);
+            Optional<String> claimedRequest = analysisStateService.startProcessing(analysisId);
+            if (claimedRequest.isEmpty()) {
+                return;
+            }
             processingStarted = true;
+            String requestJson = claimedRequest.get();
             AiAnalysisRequest request = objectMapper.readValue(requestJson, AiAnalysisRequest.class);
             JsonNode result = aiServerClient.requestAnalysis(request);
             analysisStateService.complete(analysisId, result, objectMapper.writeValueAsString(result));

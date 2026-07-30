@@ -2,14 +2,34 @@ package com.mr.domain.analysis.repository;
 
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
+import jakarta.persistence.LockModeType;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
 
     boolean existsByPlayingIdAndStatusIn(Long playingId, List<AnalysisStatus> statuses);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from Analysis a where a.id = :analysisId")
+    Optional<Analysis> findByIdForUpdate(@Param("analysisId") Long analysisId);
+
+    @Query("""
+            select a.id from Analysis a
+            where a.status = :status and a.createdAt <= :cutoff
+            order by a.createdAt asc, a.id asc
+            """)
+    List<Long> findIdsByStatusAndCreatedAtBefore(
+            @Param("status") AnalysisStatus status,
+            @Param("cutoff") LocalDateTime cutoff,
+            Pageable pageable
+    );
 
     @Query("""
             select a from Analysis a
