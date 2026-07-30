@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -37,7 +38,7 @@ public class AuthService {
     @Value("${app.profile.default-image-url}")
     private String defaultProfileImageUrl;
 
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, OAuthCredential credential, String redirectUri, String deviceInfo) {
         OAuthUserInfo userInfo = fetchOAuthUserInfo(socialType, credential, redirectUri);
 
@@ -61,8 +62,8 @@ public class AuthService {
         return oAuthClientService.getUserInfo(socialType, credential);
     }
 
-    public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String codeOrToken, String deviceInfo) {
-        return socialLogin(socialType, new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, codeOrToken), null, deviceInfo);
+    public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String accessToken, String deviceInfo) {
+        return socialLogin(socialType, new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, accessToken), null, deviceInfo);
     }
 
     private AuthResponseDTO.LoginResponse executeSocialLogin(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
@@ -189,8 +190,8 @@ public class AuthService {
         });
     }
 
-    public AuthResponseDTO.TokenInfo linkSocialAccount(Long userId, SocialType socialType, String codeOrToken, String deviceInfo) {
-        return linkSocialAccount(userId, socialType, new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, codeOrToken), null, deviceInfo);
+    public AuthResponseDTO.TokenInfo linkSocialAccount(Long userId, SocialType socialType, String accessToken, String deviceInfo) {
+        return linkSocialAccount(userId, socialType, new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, accessToken), null, deviceInfo);
     }
 
     private User registerNewUser(OAuthUserInfo userInfo) {
