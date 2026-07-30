@@ -61,12 +61,8 @@ public class AuthService {
         return oAuthClientService.getUserInfo(socialType, credential);
     }
 
-    public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String codeOrToken, String redirectUri, String deviceInfo) {
-        return socialLogin(socialType, new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, codeOrToken), redirectUri, deviceInfo);
-    }
-
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String codeOrToken, String deviceInfo) {
-        return socialLogin(socialType, codeOrToken, null, deviceInfo);
+        return socialLogin(socialType, new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, codeOrToken), null, deviceInfo);
     }
 
     private AuthResponseDTO.LoginResponse executeSocialLogin(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {

@@ -13,6 +13,10 @@ public class AuthRequestDTO {
             String accessToken,
             String redirectUri
     ) {
+        /**
+         * code, authorizationCode, accessToken 중 전송된 값으로 OAuthCredential을 생성합니다.
+         * 필수 입력값 누락 검증도 본 메서드에서 수행합니다.
+         */
         public OAuthCredential getCredential() {
             if (code != null && !code.isBlank()) {
                 return new OAuthCredential(OAuthCredential.CredentialType.AUTHORIZATION_CODE, code.trim());
@@ -24,10 +28,6 @@ public class AuthRequestDTO {
                 return new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, accessToken.trim());
             }
             throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
-        }
-
-        public String getEffectiveCodeOrToken() {
-            return getCredential().value();
         }
     }
 
