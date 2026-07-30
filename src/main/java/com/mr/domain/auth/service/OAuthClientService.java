@@ -231,4 +231,48 @@ public class OAuthClientService {
 
         return trimmedCustomUri;
     }
+
+    public String getAuthorizationUrl(SocialType socialType, String customRedirectUri) {
+        OAuthProperties.ProviderProperties props = oAuthProperties != null ? switch (socialType) {
+            case KAKAO -> oAuthProperties.kakao();
+            case GOOGLE -> oAuthProperties.google();
+        } : null;
+
+        String clientId = props != null ? props.clientId() : null;
+        if (clientId == null || clientId.isBlank()) {
+            log.error("{} OAuth configuration is missing (client_id is not set)", socialType);
+            throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
+        }
+
+        String redirectUri = resolveRedirectUri(props, customRedirectUri, socialType.name());
+
+        return switch (socialType) {
+            case KAKAO -> org.springframework.web.util.UriComponentsBuilder.fromUriString("https://kauth.kakao.com/oauth/authorize")
+                    .queryParam("response_type", "code")
+                    .queryParam("client_id", clientId)
+                    .queryParam("redirect_uri", redirectUri)
+                    .build().toUriString();
+            case GOOGLE -> org.springframework.web.util.UriComponentsBuilder.fromUriString("https://accounts.google.com/o/oauth2/v2/auth")
+                    .queryParam("response_type", "code")
+                    .queryParam("client_id", clientId)
+                    .queryParam("redirect_uri", redirectUri)
+                    .queryParam("scope", "email profile openid")
+                    .build().toUriString();
+        };
+    }
+
+    public String buildFrontendRedirectUrl(com.mr.domain.auth.dto.res.AuthResponseDTO.LoginResponse loginResponse) {
+        String baseUrl = (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
+                ? oAuthProperties.frontendRedirectUri()
+                : "http://localhost:3000/oauth/callback";
+
+        return org.springframework.web.util.UriComponentsBuilder.fromUriString(baseUrl)
+                .queryParam("accessToken", loginResponse.tokenInfo().accessToken())
+                .queryParam("refreshToken", loginResponse.tokenInfo().refreshToken())
+                .queryParam("userId", loginResponse.userId())
+                .queryParam("isNewUser", loginResponse.isNewUser())
+                .queryParam("isOnboardingCompleted", loginResponse.isOnboardingCompleted())
+                .build()
+                .toUriString();
+    }
 }

@@ -176,7 +176,8 @@ class OAuthClientServiceTest {
                 "https://allowed.example.com/oauth/callback",
                 java.util.List.of("https://allowed.example.com/oauth/callback")
         );
-        com.mr.global.config.OAuthProperties oAuthProperties = new com.mr.global.config.OAuthProperties(kakaoProps, null);
+        com.mr.global.config.OAuthProperties oAuthProperties = new com.mr.global.config.OAuthProperties(
+                "http://localhost:3000/oauth/callback", kakaoProps, null);
         OAuthClientService serviceWithProps = new OAuthClientService(
                 restClientBuilder.build(), new OAuthExceptionMapper(), oAuthProperties);
 
