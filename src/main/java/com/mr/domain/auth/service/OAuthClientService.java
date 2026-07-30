@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import java.util.List;
 import org.springframework.web.client.RestClient;
 
 @Slf4j
@@ -82,14 +83,7 @@ public class OAuthClientService {
             throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
         }
 
-        String redirectUri = (customRedirectUri != null && !customRedirectUri.isBlank())
-                ? customRedirectUri
-                : (kakaoProps != null ? kakaoProps.redirectUri() : null);
-
-        if (redirectUri == null || redirectUri.isBlank()) {
-            log.error("Kakao OAuth configuration is missing (redirect_uri is not set)");
-            throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
-        }
+        String redirectUri = resolveRedirectUri(kakaoProps, customRedirectUri, "Kakao");
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("grant_type", "authorization_code");
@@ -164,14 +158,7 @@ public class OAuthClientService {
             throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
         }
 
-        String redirectUri = (customRedirectUri != null && !customRedirectUri.isBlank())
-                ? customRedirectUri
-                : (googleProps != null ? googleProps.redirectUri() : null);
-
-        if (redirectUri == null || redirectUri.isBlank()) {
-            log.error("Google OAuth configuration is missing (redirect_uri is not set)");
-            throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
-        }
+        String redirectUri = resolveRedirectUri(googleProps, customRedirectUri, "Google");
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("grant_type", "authorization_code");
@@ -222,5 +209,26 @@ public class OAuthClientService {
         } catch (Exception e) {
             throw exceptionMapper.map(e, "Google");
         }
+    }
+
+    private String resolveRedirectUri(OAuthProperties.ProviderProperties providerProps, String customRedirectUri, String providerName) {
+        List<String> allowedUris = providerProps != null ? providerProps.getAllowedRedirectUris() : List.of();
+
+        if (allowedUris.isEmpty()) {
+            log.error("{} OAuth configuration is missing (redirect_uri is not set)", providerName);
+            throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
+        }
+
+        if (customRedirectUri == null || customRedirectUri.isBlank()) {
+            return allowedUris.get(0);
+        }
+
+        String trimmedCustomUri = customRedirectUri.trim();
+        if (!allowedUris.contains(trimmedCustomUri)) {
+            log.warn("{} OAuth invalid redirect_uri requested: {}", providerName, trimmedCustomUri);
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        }
+
+        return trimmedCustomUri;
     }
 }
