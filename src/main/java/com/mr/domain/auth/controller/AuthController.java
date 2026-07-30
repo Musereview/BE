@@ -172,11 +172,9 @@ public class AuthController {
 
     @SecurityRequirements
     @Operation(
-            summary = "소셜 로그인 / 회원가입 POST API (REST / JSON 요청용)",
-            description = "프론트엔드/모바일에서 소셜 인가 코드(code 또는 authorizationCode) 또는 Access Token을 JSON으로 받아 서비스 전용 JWT 토큰을 발급합니다.<br/>"
-                    + "- <b>code / authorizationCode / accessToken</b>: 셋 중 전송된 하나를 백엔드가 자동 감지하여 인가 처리합니다.<br/>"
-                    + "- <b>redirectUri</b>: 생략 시 백엔드 .env/yml 기본값이 자동 적용됩니다.<br/>"
-                    + "<i>※ 주의: OAuth 2.0 인가 코드는 1회용이므로, 이미 사용된 코드로 재요청 시 AUTH_401_04 오류가 발생합니다.</i>"
+            summary = "소셜 Access Token 로그인 / 회원가입 POST API (REST / 모바일 SDK용)",
+            description = "모바일 앱 또는 프론트엔드에서 카카오/구글 SDK 등을 통해 발급받은 소셜 Access Token을 JSON으로 받아 서비스 전용 JWT 토큰을 발급합니다.<br/>"
+                    + "<i>※ 웹 OAuth 브라우저 리다이렉트 흐름인 경우 POST /api/auth/token/exchange API를 사용하세요.</i>"
     )
     @PostMapping("/login/{socialType}")
     public ApiResponse<AuthResponseDTO.LoginResponse> socialLogin(
@@ -188,7 +186,6 @@ public class AuthController {
         AuthResponseDTO.LoginResponse response = authService.socialLogin(
                 socialType,
                 request.getCredential(),
-                request.redirectUri(),
                 deviceInfo
         );
         return ApiResponse.onSuccess(response);
@@ -224,7 +221,6 @@ public class AuthController {
                 userId,
                 socialType,
                 request.getCredential(),
-                request.redirectUri(),
                 deviceInfo
         );
         return ApiResponse.onSuccess(tokenInfo);

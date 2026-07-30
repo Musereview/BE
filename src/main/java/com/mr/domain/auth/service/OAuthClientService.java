@@ -83,7 +83,7 @@ public class OAuthClientService {
             throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
         }
 
-        String redirectUri = resolveRedirectUri(kakaoProps, customRedirectUri, "Kakao");
+        String redirectUri = resolveRedirectUri(SocialType.KAKAO, customRedirectUri);
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("grant_type", "authorization_code");
@@ -158,7 +158,7 @@ public class OAuthClientService {
             throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
         }
 
-        String redirectUri = resolveRedirectUri(googleProps, customRedirectUri, "Google");
+        String redirectUri = resolveRedirectUri(SocialType.GOOGLE, customRedirectUri);
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("grant_type", "authorization_code");
@@ -211,25 +211,28 @@ public class OAuthClientService {
         }
     }
 
-    private String resolveRedirectUri(OAuthProperties.ProviderProperties providerProps, String customRedirectUri, String providerName) {
+    private String resolveRedirectUri(SocialType socialType, String customRedirectUri) {
+        OAuthProperties.ProviderProperties providerProps = oAuthProperties != null ? switch (socialType) {
+            case KAKAO -> oAuthProperties.kakao();
+            case GOOGLE -> oAuthProperties.google();
+        } : null;
+
         List<String> allowedUris = providerProps != null ? providerProps.getAllowedRedirectUris() : List.of();
 
         if (allowedUris.isEmpty()) {
-            log.error("{} OAuth configuration is missing (redirect_uri is not set)", providerName);
+            log.error("{} OAuth configuration is missing (redirect_uri is not set)", socialType);
             throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
         }
 
-        if (customRedirectUri == null || customRedirectUri.isBlank()) {
-            return allowedUris.get(0);
+        if (customRedirectUri != null && !customRedirectUri.isBlank()) {
+            String trimmedCustomUri = customRedirectUri.trim();
+            if (allowedUris.contains(trimmedCustomUri)) {
+                return trimmedCustomUri;
+            }
+            log.warn("{} custom redirect_uri [{}] is not in allowed list. Falling back to default [{}]", socialType, trimmedCustomUri, allowedUris.get(0));
         }
 
-        String trimmedCustomUri = customRedirectUri.trim();
-        if (!allowedUris.contains(trimmedCustomUri)) {
-            log.warn("{} custom redirect_uri [{}] is not in allowed list. Falling back to default [{}]", providerName, trimmedCustomUri, allowedUris.get(0));
-            return allowedUris.get(0);
-        }
-
-        return trimmedCustomUri;
+        return allowedUris.get(0);
     }
 
     public String getAuthorizationUrl(SocialType socialType, String customRedirectUri) {
@@ -248,7 +251,7 @@ public class OAuthClientService {
             throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
         }
 
-        String redirectUri = resolveRedirectUri(props, customRedirectUri, socialType.name());
+        String redirectUri = resolveRedirectUri(socialType, customRedirectUri);
 
         org.springframework.web.util.UriComponentsBuilder builder = switch (socialType) {
             case KAKAO -> org.springframework.web.util.UriComponentsBuilder.fromUriString("https://kauth.kakao.com/oauth/authorize")
