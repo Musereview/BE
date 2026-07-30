@@ -54,7 +54,7 @@ external:
     api-key: ${GEMINI_API_KEY:${AI_API_KEY:}}
     model: ${AI_MODEL:gemini-3-flash-preview}
     connect-timeout: ${AI_CONNECT_TIMEOUT:5s}
-    read-timeout: ${AI_READ_TIMEOUT:60s}
+    read-timeout: ${AI_READ_TIMEOUT:120s}
 
 aws:
   s3:
