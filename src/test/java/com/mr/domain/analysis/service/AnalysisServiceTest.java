@@ -12,26 +12,36 @@ import static org.mockito.Mockito.mock;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mr.domain.analysis.dto.req.AnalysisCreateRequestDTO;
+import com.mr.domain.analysis.dto.res.AnalysisCreateResponseDTO;
 import com.mr.domain.analysis.dto.res.AnalysisResultResponseDTO;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.AnalysisReport;
 import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.LlmStatus;
+import com.mr.domain.analysis.entity.enums.AnalysisStatus;
+import com.mr.domain.analysis.event.AnalysisRequestedEvent;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.analysis.repository.AnalysisReportRepository;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.playing.entity.Playing;
+import com.mr.domain.playing.entity.enums.PlayingStatus;
+import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.client.ai.AiAnalysisRequest;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.stubbing.Answer;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class AnalysisServiceTest {
@@ -42,11 +52,21 @@ class AnalysisServiceTest {
     @Mock
     private AnalysisReportRepository analysisReportRepository;
 
+    @Mock
+    private PlayingRepository playingRepository;
+
+    @Mock
+    private AnalysisRequestFactory analysisRequestFactory;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private AnalysisService analysisService;
 
     @BeforeEach
     void setUp() {
-        analysisService = new AnalysisService(analysisRepository, analysisReportRepository, new ObjectMapper());
+        analysisService = new AnalysisService(analysisRepository, analysisReportRepository, playingRepository,
+                analysisRequestFactory, eventPublisher, new ObjectMapper());
     }
 
     private Analysis completedAnalysis(Long userId) {
@@ -127,4 +147,30 @@ class AnalysisServiceTest {
                 .isInstanceOf(GeneralException.class)
                 .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.ANALYSIS_ACCESS_DENIED);
     }
+    @Test
+    @DisplayName("createAnalysis - saves a pending analysis and publishes an event")
+    void createAnalysis_success() {
+        User user = mock(User.class);
+        Playing playing = mock(Playing.class);
+        given(user.getUserId()).willReturn(1L);
+        given(playing.getId()).willReturn(31L);
+        given(playing.getUser()).willReturn(user);
+        given(playing.getStatus()).willReturn(PlayingStatus.COMPLETED);
+        given(playingRepository.findByIdWithBackingTrackForUpdate(31L)).willReturn(Optional.of(playing));
+        given(analysisRepository.existsByPlayingIdAndStatusIn(eq(31L), any())).willReturn(false);
+        given(analysisRequestFactory.create(playing, 1, 8))
+                .willReturn(new AiAnalysisRequest(null, List.of(), List.of()));
+        given(analysisRepository.save(any(Analysis.class)))
+                .willAnswer((Answer<Analysis>) invocation -> invocation.getArgument(0));
+
+        AnalysisCreateResponseDTO response = analysisService.createAnalysis(
+                1L, new AnalysisCreateRequestDTO(31L, 1, 8)
+        );
+
+        assertThat(response.playingId()).isEqualTo(31L);
+        assertThat(response.status()).isEqualTo(AnalysisStatus.PENDING);
+        verify(eventPublisher).publishEvent(any(AnalysisRequestedEvent.class));
+    }
+
+
 }

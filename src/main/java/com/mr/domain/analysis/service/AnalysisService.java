@@ -3,19 +3,28 @@ package com.mr.domain.analysis.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mr.domain.analysis.dto.req.AnalysisCreateRequestDTO;
+import com.mr.domain.analysis.dto.res.AnalysisCreateResponseDTO;
 import com.mr.domain.analysis.dto.res.AnalysisResultResponseDTO;
 import com.mr.domain.analysis.dto.res.AnalysisStatusResponseDTO;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.AnalysisReport;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.entity.enums.LlmStatus;
+import com.mr.domain.analysis.event.AnalysisRequestedEvent;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.analysis.repository.AnalysisReportRepository;
 import com.mr.domain.analysis.repository.AnalysisRepository;
+import com.mr.domain.playing.entity.Playing;
+import com.mr.domain.playing.entity.enums.PlayingStatus;
+import com.mr.domain.playing.exception.PlayingErrorStatus;
+import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +36,46 @@ public class AnalysisService {
 
     private final AnalysisRepository analysisRepository;
     private final AnalysisReportRepository analysisReportRepository;
+    private final PlayingRepository playingRepository;
+    private final AnalysisRequestFactory analysisRequestFactory;
+    private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+
+    @Transactional
+    public AnalysisCreateResponseDTO createAnalysis(
+            Long userId,
+            AnalysisCreateRequestDTO request
+    ) {
+        Playing playing = playingRepository.findByIdWithBackingTrackForUpdate(request.playingId())
+                .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
+        if (!Objects.equals(playing.getUser().getUserId(), userId)) {
+            throw new GeneralException(PlayingErrorStatus.PLAYING_ACCESS_DENIED);
+        }
+        if (playing.getStatus() != PlayingStatus.COMPLETED) {
+            throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_STATUS);
+        }
+        if (analysisRepository.existsByPlayingIdAndStatusIn(
+                playing.getId(),
+                List.of(AnalysisStatus.PENDING, AnalysisStatus.PROCESSING)
+        )) {
+            throw new GeneralException(AnalysisErrorStatus.ANALYSIS_ALREADY_IN_PROGRESS);
+        }
+
+        String requestJson;
+        try {
+            requestJson = objectMapper.writeValueAsString(
+                    analysisRequestFactory.create(playing, request.startBar(), request.endBar())
+            );
+        } catch (JsonProcessingException exception) {
+            throw new GeneralException(AnalysisErrorStatus.ANALYSIS_INVALID_REQUEST);
+        }
+
+        Analysis analysis = analysisRepository.save(Analysis.createPending(
+                playing.getUser(), playing, request.startBar(), request.endBar(), requestJson
+        ));
+        eventPublisher.publishEvent(new AnalysisRequestedEvent(analysis.getId()));
+        return AnalysisCreateResponseDTO.from(analysis);
+    }
 
     public AnalysisStatusResponseDTO getAnalysisStatus(
             Long userId,

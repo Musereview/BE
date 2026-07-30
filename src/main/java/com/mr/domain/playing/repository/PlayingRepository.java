@@ -2,6 +2,7 @@ package com.mr.domain.playing.repository;
 
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
+import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -9,6 +10,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -37,6 +39,15 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
               and p.deletedAt is null
             """)
     Optional<Playing> findByIdWithBackingTrack(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select p from Playing p
+            left join fetch p.backingTrack
+            where p.id = :id
+              and p.deletedAt is null
+            """)
+    Optional<Playing> findByIdWithBackingTrackForUpdate(@Param("id") Long id);
 
     @Query("""
             select p from Playing p

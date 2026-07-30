@@ -9,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
 
+    boolean existsByPlayingIdAndStatusIn(Long playingId, List<AnalysisStatus> statuses);
+
     @Query("""
             select a from Analysis a
             where a.playing.id in :playingIds and a.status = :status

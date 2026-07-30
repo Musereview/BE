@@ -163,6 +163,6 @@ class AnalysisControllerTest {
 
         mockMvc.perform(get("/api/analyses/{analysisId}", 1L))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("ANALYSIS_409_01"));
+                .andExpect(jsonPath("$.code").value("ANALYSIS_409_02"));
     }
 }

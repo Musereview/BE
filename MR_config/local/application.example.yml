@@ -63,11 +63,11 @@ aws:
 # 내부 AI 분석 서버 설정
 ai:
   internal:
-    base-url: ${AI_INTERNAL_BASE_URL}
-    connect-timeout: ${AI_INTERNAL_CONNECT_TIMEOUT}
-    read-timeout: ${AI_INTERNAL_READ_TIMEOUT}
+    base-url: ${AI_INTERNAL_BASE_URL:https://ai.musereview.site}
+    connect-timeout: ${AI_INTERNAL_CONNECT_TIMEOUT:5s}
+    read-timeout: ${AI_INTERNAL_READ_TIMEOUT:60s}
     endpoints:
-      analyze: ${AI_INTERNAL_ANALYZE_ENDPOINT}
+      analyze: ${AI_INTERNAL_ANALYZE_ENDPOINT:/analyze}
         
 # 프로필 관련 공통 설정
 app:
