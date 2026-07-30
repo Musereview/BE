@@ -20,9 +20,9 @@ import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +44,7 @@ public class StatisticsAggregationService {
     private final SkillStatisticsRepository skillStatisticsRepository;
     private final PlayingRepository playingRepository;
     private final AnalysisRepository analysisRepository;
+    private final Clock clock;
 
     // 재시도별 신규 트랜잭션 보장
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -86,7 +87,7 @@ public class StatisticsAggregationService {
     }
 
     private void refreshWeeklyPracticeStatistics(Long userId) {
-        LocalDate weekStart = LocalDate.now().with(DayOfWeek.MONDAY);
+        LocalDate weekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY);
         LocalDate weekEnd = weekStart.plusDays(6);
 
         List<Playing> playings = playingRepository.findByUserAndStatusSince(
@@ -107,7 +108,7 @@ public class StatisticsAggregationService {
     }
 
     private void refreshWeeklySkillStatistics(Long userId) {
-        LocalDate weekStart = LocalDate.now().with(DayOfWeek.MONDAY);
+        LocalDate weekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY);
         LocalDate weekEnd = weekStart.plusDays(6);
         LocalDate lastWeekStart = weekStart.minusWeeks(1);
 

@@ -29,9 +29,12 @@ import com.mr.domain.statistics.repository.UserStatisticsRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +48,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 @ExtendWith(MockitoExtension.class)
 class StatisticsAggregationServiceTest {
+
+    private static final ZoneId SERVICE_ZONE_ID = ZoneId.of("Asia/Seoul");
+    private static final Clock FIXED_CLOCK =
+            Clock.fixed(Instant.parse("2026-07-26T15:30:00Z"), SERVICE_ZONE_ID);
 
     @Mock
     private UserRepository userRepository;
@@ -62,7 +69,7 @@ class StatisticsAggregationServiceTest {
     private StatisticsAggregationService service;
 
     private final Long userId = 1L;
-    private final LocalDate weekStart = LocalDate.now().with(DayOfWeek.MONDAY);
+    private final LocalDate weekStart = LocalDate.now(FIXED_CLOCK).with(DayOfWeek.MONDAY);
     private final LocalDate weekEnd = weekStart.plusDays(6);
     private final LocalDate lastWeekStart = weekStart.minusWeeks(1);
 
@@ -70,7 +77,7 @@ class StatisticsAggregationServiceTest {
     void setUp() {
         service = new StatisticsAggregationService(
                 userRepository, userStatisticsRepository, practiceStatisticsRepository,
-                skillStatisticsRepository, playingRepository, analysisRepository);
+                skillStatisticsRepository, playingRepository, analysisRepository, FIXED_CLOCK);
     }
 
     private void stubBaseline() {
