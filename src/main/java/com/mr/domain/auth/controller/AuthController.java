@@ -81,7 +81,8 @@ public class AuthController {
     @SecurityRequirements
     @Operation(
             summary = "소셜 로그인 백엔드 콜백 API (OAuth Server ➔ Backend)",
-            description = "OAuth 제공자로부터 인가 코드(code)를 받아 토큰 교환 및 소셜 로그인을 수행한 후 프론트엔드 페이지로 리다이렉트합니다."
+            description = "OAuth 제공자로부터 인가 코드(code)를 받아 토큰 교환 및 소셜 로그인을 수행한 후 프론트엔드 페이지로 리다이렉트합니다.<br/>"
+                    + "- 소셜 인증 취소, state 미일치 또는 인증 실패 시에도 프론트엔드 페이지로 error 쿼리 파라미터와 함께 리다이렉트합니다."
     )
     @GetMapping("/{socialType}/callback")
     public void oAuthCallback(
@@ -97,30 +98,52 @@ public class AuthController {
             HttpServletResponse response
     ) throws IOException {
         if (state == null || cookieState == null || !state.equals(cookieState)) {
-            throw new GeneralException(AuthErrorStatus.INVALID_STATE);
+            deleteCookie(response, "oauth_state");
+            deleteCookie(response, "oauth_redirect_uri");
+            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl("invalid_state");
+            response.sendRedirect(errorRedirectUrl);
+            return;
         }
 
         deleteCookie(response, "oauth_state");
         deleteCookie(response, "oauth_redirect_uri");
 
-        if (error != null || code == null || code.isBlank()) {
-            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        if (error != null && !error.isBlank()) {
+            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl(
+                    error.equalsIgnoreCase("access_denied") ? "access_denied" : "oauth_error"
+            );
+            response.sendRedirect(errorRedirectUrl);
+            return;
+        }
+
+        if (code == null || code.isBlank()) {
+            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl("invalid_auth_request");
+            response.sendRedirect(errorRedirectUrl);
+            return;
         }
 
         String effectiveRedirectUri = (savedCustomRedirectUri != null && !savedCustomRedirectUri.isBlank())
                 ? savedCustomRedirectUri
                 : customRedirectUri;
 
-        OAuthCredential credential = new OAuthCredential(OAuthCredential.CredentialType.AUTHORIZATION_CODE, code);
-        AuthResponseDTO.LoginResponse loginResponse = authService.socialLogin(
-                socialType,
-                credential,
-                effectiveRedirectUri,
-                deviceInfo
-        );
+        try {
+            OAuthCredential credential = new OAuthCredential(OAuthCredential.CredentialType.AUTHORIZATION_CODE, code);
+            AuthResponseDTO.LoginResponse loginResponse = authService.socialLogin(
+                    socialType,
+                    credential,
+                    effectiveRedirectUri,
+                    deviceInfo
+            );
 
-        String targetFrontendUrl = oAuthClientService.buildFrontendRedirectUrl(loginResponse);
-        response.sendRedirect(targetFrontendUrl);
+            String targetFrontendUrl = oAuthClientService.buildFrontendRedirectUrl(loginResponse);
+            response.sendRedirect(targetFrontendUrl);
+        } catch (Exception e) {
+            String errorCode = (e instanceof GeneralException ge && ge.getCode() != null)
+                    ? ge.getCode().getCode()
+                    : "authentication_failed";
+            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl(errorCode);
+            response.sendRedirect(errorRedirectUrl);
+        }
     }
 
     private void deleteCookie(HttpServletResponse response, String name) {

@@ -283,4 +283,15 @@ public class OAuthClientService {
                 .build()
                 .toUriString();
     }
+
+    public String buildFrontendErrorRedirectUrl(String error) {
+        String baseUrl = (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
+                ? oAuthProperties.frontendRedirectUri()
+                : "http://localhost:3000/oauth/callback";
+
+        return org.springframework.web.util.UriComponentsBuilder.fromUriString(baseUrl)
+                .queryParam("error", (error != null && !error.isBlank()) ? error : "authentication_failed")
+                .build()
+                .toUriString();
+    }
 }
