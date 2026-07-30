@@ -32,6 +32,7 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/api/auth/login/**",
+            "/api/auth/**/callback",
             "/api/auth/*/callback",
             "/api/auth/reissue"
     };
@@ -47,7 +48,14 @@ public class SecurityConfig {
                         .accessDeniedHandler(jwtAccessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(PUBLIC_URLS).permitAll()
+                        .requestMatchers(
+                                org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher("/swagger-ui/**"),
+                                org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher("/v3/api-docs/**"),
+                                org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher("/api/auth/login/**"),
+                                org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher("/api/auth/**/callback"),
+                                org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher("/api/auth/*/callback"),
+                                org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher("/api/auth/reissue")
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
