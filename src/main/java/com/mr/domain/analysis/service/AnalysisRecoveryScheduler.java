@@ -29,7 +29,7 @@ public class AnalysisRecoveryScheduler {
             AnalysisProcessingService analysisProcessingService,
             @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
             @Value("${analysis.recovery.pending-threshold:1m}") Duration pendingThreshold,
-            @Value("${analysis.recovery.processing-threshold:2m}") Duration processingThreshold,
+            @Value("${analysis.recovery.processing-threshold:5m}") Duration processingThreshold,
             @Value("${analysis.recovery.batch-size:20}") int batchSize
     ) {
         this.analysisRepository = analysisRepository;

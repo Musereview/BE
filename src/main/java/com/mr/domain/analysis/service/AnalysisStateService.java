@@ -69,18 +69,10 @@ public class AnalysisStateService {
             GeneratedAnalysisReport generatedReport
     ) {
         Analysis analysis = getAnalysis(analysisId);
-        if (result == null || !result.isObject()) {
-            throw invalidRawResult();
-        }
+        validateResult(result);
         JsonNode scores = result.path("scores");
-        if (!scores.isObject()) {
-            throw invalidRawResult();
-        }
         BigDecimal finalScore = requiredScore(scores, "final_score");
         JsonNode domains = scores.path("domains");
-        if (!domains.isObject()) {
-            throw invalidRawResult();
-        }
         analysis.complete(
                 finalScore.setScale(0, RoundingMode.HALF_UP).intValueExact(),
                 resolveGrade(scores.path("grade").asText(), finalScore),
@@ -101,6 +93,25 @@ public class AnalysisStateService {
                 : AnalysisReport.createRuleBasedReport(analysis, generatedReport.content());
         analysisReportRepository.save(report);
         saveLlmCallLog(analysis, report, generatedReport.llmCall());
+    }
+
+    public void validateResult(JsonNode result) {
+        if (result == null || !result.isObject()) {
+            throw invalidRawResult();
+        }
+        JsonNode scores = result.path("scores");
+        if (!scores.isObject()) {
+            throw invalidRawResult();
+        }
+        requiredScore(scores, "final_score");
+        JsonNode domains = scores.path("domains");
+        if (!domains.isObject()) {
+            throw invalidRawResult();
+        }
+        requiredScore(domains, SCALE);
+        requiredScore(domains, TENSION);
+        requiredScore(domains, PROGRESSION);
+        requiredScore(domains, VOICE_LEADING);
     }
 
     private void saveLlmCallLog(

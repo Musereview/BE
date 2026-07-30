@@ -40,6 +40,7 @@ public class AnalysisProcessingService {
             String requestJson = claimedRequest.get();
             AiAnalysisRequest request = objectMapper.readValue(requestJson, AiAnalysisRequest.class);
             JsonNode result = aiServerClient.requestAnalysis(request);
+            analysisStateService.validateResult(result);
             GeneratedAnalysisReport report = reportGenerationService.generate(result);
             analysisStateService.complete(
                     analysisId,
