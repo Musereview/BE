@@ -59,6 +59,16 @@ aws:
     bucket: ${AWS_S3_BUCKET:}
     region: ${AWS_REGION:ap-northeast-2}
 
+
+# 내부 AI 분석 서버 설정
+ai:
+  internal:
+    base-url: ${AI_INTERNAL_BASE_URL}
+    connect-timeout: ${AI_INTERNAL_CONNECT_TIMEOUT}
+    read-timeout: ${AI_INTERNAL_READ_TIMEOUT}
+    endpoints:
+      analyze: ${AI_INTERNAL_ANALYZE_ENDPOINT}
+        
 # 프로필 관련 공통 설정
 app:
   profile:

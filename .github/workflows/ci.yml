@@ -38,6 +38,8 @@ jobs:
       # 저장소 코드 가져오기
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # JDK 17 설치 및 Gradle 의존성 캐시 적용
       - name: Set up JDK 17

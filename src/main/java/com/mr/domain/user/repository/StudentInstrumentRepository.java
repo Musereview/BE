@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface StudentInstrumentRepository extends JpaRepository<StudentInstrument, Long> {
 
-    Optional<StudentInstrument> findByStudentAndPrimaryTrue(Student student);
+    Optional<StudentInstrument> findFirstByStudentAndPrimaryTrue(Student student);
 }

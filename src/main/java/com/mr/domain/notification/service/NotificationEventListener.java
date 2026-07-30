@@ -14,8 +14,11 @@ import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.context.event.EventListener;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -34,8 +37,8 @@ public class NotificationEventListener {
             backoff = @Backoff(delay = 1000)
     )
     @Async
-    @EventListener
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)  // 메인 트랜잭션이 커밋된(AFTER_COMMIT) 이후에만 알림을 저장하도록 변경
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleNotificationEvent(NotificationEvent event) {
 
         // 중복 알림 검증 로직 (1분 이내 동일 제목 알림 무시)

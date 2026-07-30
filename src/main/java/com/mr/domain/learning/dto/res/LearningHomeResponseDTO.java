@@ -1,6 +1,7 @@
 package com.mr.domain.learning.dto.res;
 
 import com.mr.domain.learning.entity.Learning;
+import com.mr.domain.learning.entity.LearningStep;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
@@ -53,6 +54,34 @@ public class LearningHomeResponseDTO {
                     stepTitle,
                     progressRate,
                     nextStepId
+            );
+        }
+    }
+
+    @Schema(description = "추천 학습")
+    public record RecommendedLearning(
+            @Schema(description = "패키지 ID", example = "5")
+            Long learningId,
+
+            @Schema(description = "패키지 제목", example = "Tension Notes")
+            String title,
+
+            @Schema(description = "추천 단계 제목", example = "12th 텐션 노트 활용하기")
+            String subtitle,
+
+            @Schema(description = "패키지 난이도", example = "ADVANCED")
+            String level,
+
+            @Schema(description = "이동할 단계 ID", example = "14")
+            Long nextStepId
+    ) {
+        public static RecommendedLearning of(Learning learning, LearningStep step) {
+            return new RecommendedLearning(
+                    learning.getId(),
+                    learning.getTitle(),
+                    step.getTitle(),
+                    learning.getDifficulty().name(),
+                    step.getId()
             );
         }
     }

@@ -38,6 +38,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -635,6 +636,482 @@ class LearningServiceTest {
         LearningHomeResponseDTO.HomeResultDTO result = learningService.getHome(userId);
 
         assertThat(result.currentLearning().nextStepId()).isEqualTo(11L);
+    }
+
+    private Learning stubTheoryPackage(Long id, String title, LearningDifficulty difficulty) {
+        Learning learning = mock(Learning.class);
+        lenient().when(learning.getId()).thenReturn(id);
+        lenient().when(learning.getTitle()).thenReturn(title);
+        lenient().when(learning.getDifficulty()).thenReturn(difficulty);
+        lenient().when(learning.getCategory()).thenReturn(LearningCategory.THEORY);
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                LearningCategory.THEORY, difficulty)).thenReturn(Optional.of(learning));
+        return learning;
+    }
+
+    private LearningStep stubStep(Long id, int stepNo, String title) {
+        LearningStep step = mock(LearningStep.class);
+        lenient().when(step.getId()).thenReturn(id);
+        lenient().when(step.getStepNo()).thenReturn(stepNo);
+        lenient().when(step.getTitle()).thenReturn(title);
+        return step;
+    }
+
+    private UserLearningProgress stubProgress(LearningStep step, int score) {
+        UserLearningProgress progress = mock(UserLearningProgress.class);
+        lenient().when(progress.getLearningStep()).thenReturn(step);
+        lenient().when(progress.getScore()).thenReturn(score);
+        return progress;
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings - 아무것도 안 했으면 BEGINNER 패키지의 첫 두 단계를 추천한다")
+    void getRecommendedLearnings_noProgress_recommendsFirstTwoBeginnerSteps() {
+        Long userId = 1L;
+        Learning beginner = stubTheoryPackage(1L, "Diatonic Chords", LearningDifficulty.BEGINNER);
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                LearningCategory.THEORY, LearningDifficulty.INTERMEDIATE)).thenReturn(Optional.empty());
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                LearningCategory.THEORY, LearningDifficulty.ADVANCED)).thenReturn(Optional.empty());
+
+        LearningStep a1 = stubStep(11L, 1, "A1");
+        LearningStep a2 = stubStep(12L, 2, "A2");
+        stubStepLearning(a1, beginner);
+        stubStepLearning(a2, beginner);
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L)).thenReturn(List.of(a1, a2));
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_IdIn(userId, List.of(1L)))
+                .thenReturn(List.of());
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result = learningService.getRecommendedLearnings(userId);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).nextStepId()).isEqualTo(11L);
+        assertThat(result.get(1).nextStepId()).isEqualTo(12L);
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings - 진행 기록의 score가 null이어도 예외 없이 미완료로 처리한다")
+    void getRecommendedLearnings_progressWithNullScore_treatedAsIncomplete() {
+        Long userId = 1L;
+        Learning beginner = stubTheoryPackage(1L, "Diatonic Chords", LearningDifficulty.BEGINNER);
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                LearningCategory.THEORY, LearningDifficulty.INTERMEDIATE)).thenReturn(Optional.empty());
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                LearningCategory.THEORY, LearningDifficulty.ADVANCED)).thenReturn(Optional.empty());
+
+        LearningStep a1 = stubStep(11L, 1, "A1");
+        LearningStep a2 = stubStep(12L, 2, "A2");
+        stubStepLearning(a1, beginner);
+        stubStepLearning(a2, beginner);
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L)).thenReturn(List.of(a1, a2));
+
+        UserLearningProgress a1Progress = stubProgress(a1, 0);
+        lenient().when(a1Progress.getScore()).thenReturn(null); // 채점 전 진행 기록
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_IdIn(userId, List.of(1L)))
+                .thenReturn(List.of(a1Progress));
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result = learningService.getRecommendedLearnings(userId);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).nextStepId()).isEqualTo(11L);
+        assertThat(result.get(1).nextStepId()).isEqualTo(12L);
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings - BEGINNER 패키지를 모두 완료했으면 INTERMEDIATE 패키지로 넘어가서 추천한다")
+    void getRecommendedLearnings_beginnerCompleted_recommendsIntermediateSteps() {
+        Long userId = 1L;
+        Learning beginner = stubTheoryPackage(1L, "A", LearningDifficulty.BEGINNER);
+        Learning intermediate = stubTheoryPackage(2L, "B", LearningDifficulty.INTERMEDIATE);
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                LearningCategory.THEORY, LearningDifficulty.ADVANCED)).thenReturn(Optional.empty());
+
+        LearningStep a1 = stubStep(11L, 1, "A1");
+        stubStepLearning(a1, beginner);
+        LearningStep b1 = stubStep(21L, 1, "B1");
+        LearningStep b2 = stubStep(22L, 2, "B2");
+        stubStepLearning(b1, intermediate);
+        stubStepLearning(b2, intermediate);
+
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L)).thenReturn(List.of(a1));
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(2L)).thenReturn(List.of(b1, b2));
+
+        UserLearningProgress a1Progress = stubProgress(a1, 95);
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_IdIn(userId, List.of(1L, 2L)))
+                .thenReturn(List.of(a1Progress));
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result = learningService.getRecommendedLearnings(userId);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).nextStepId()).isEqualTo(21L);
+        assertThat(result.get(1).nextStepId()).isEqualTo(22L);
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings - 상위 난이도만 진행하고 중간 난이도를 건너뛰었으면 건너뛴 단계를 오름차순으로 추천한다")
+    void getRecommendedLearnings_skippedIntermediate_recommendsSkippedStepsInAscOrder() {
+        Long userId = 1L;
+        Learning beginner = stubTheoryPackage(1L, "A", LearningDifficulty.BEGINNER);
+        Learning intermediate = stubTheoryPackage(2L, "B", LearningDifficulty.INTERMEDIATE);
+        Learning advanced = stubTheoryPackage(3L, "C", LearningDifficulty.ADVANCED);
+
+        LearningStep a1 = stubStep(11L, 1, "A1");
+        stubStepLearning(a1, beginner);
+        LearningStep b1 = stubStep(21L, 1, "B1");
+        LearningStep b2 = stubStep(22L, 2, "B2");
+        stubStepLearning(b1, intermediate);
+        stubStepLearning(b2, intermediate);
+        LearningStep c1 = stubStep(31L, 1, "C1");
+        stubStepLearning(c1, advanced);
+
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L)).thenReturn(List.of(a1));
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(2L)).thenReturn(List.of(b1, b2));
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(3L)).thenReturn(List.of(c1));
+
+        UserLearningProgress a1Progress = stubProgress(a1, 95);
+        UserLearningProgress c1Progress = stubProgress(c1, 95); // B는 건너뛰고 C만 완료
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_IdIn(userId, List.of(1L, 2L, 3L)))
+                .thenReturn(List.of(a1Progress, c1Progress));
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result = learningService.getRecommendedLearnings(userId);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).nextStepId()).isEqualTo(21L);
+        assertThat(result.get(1).nextStepId()).isEqualTo(22L);
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings - 추천 가능한 THEORY 패키지가 아예 없으면 빈 배열을 반환한다")
+    void getRecommendedLearnings_noTheoryPackages_returnsEmptyList() {
+        Long userId = 1L;
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                eq(LearningCategory.THEORY), any())).thenReturn(Optional.empty());
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result = learningService.getRecommendedLearnings(userId);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings - 미완료 단계가 정확히 1개만 남았으면 1개만 반환한다")
+    void getRecommendedLearnings_onlyOneIncompleteStepLeft_returnsOneItem() {
+        Long userId = 1L;
+        Learning beginner = stubTheoryPackage(1L, "A", LearningDifficulty.BEGINNER);
+        Learning intermediate = stubTheoryPackage(2L, "B", LearningDifficulty.INTERMEDIATE);
+        Learning advanced = stubTheoryPackage(3L, "C", LearningDifficulty.ADVANCED);
+
+        LearningStep a1 = stubStep(11L, 1, "A1");
+        stubStepLearning(a1, beginner);
+        LearningStep b1 = stubStep(21L, 1, "B1");
+        LearningStep b2 = stubStep(22L, 2, "B2"); // 유일한 미완료 단계
+        stubStepLearning(b1, intermediate);
+        stubStepLearning(b2, intermediate);
+        LearningStep c1 = stubStep(31L, 1, "C1");
+        stubStepLearning(c1, advanced);
+
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L)).thenReturn(List.of(a1));
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(2L)).thenReturn(List.of(b1, b2));
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(3L)).thenReturn(List.of(c1));
+
+        UserLearningProgress a1Progress = stubProgress(a1, 95);
+        UserLearningProgress b1Progress = stubProgress(b1, 95);
+        UserLearningProgress c1Progress = stubProgress(c1, 95);
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_IdIn(userId, List.of(1L, 2L, 3L)))
+                .thenReturn(List.of(a1Progress, b1Progress, c1Progress));
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result = learningService.getRecommendedLearnings(userId);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).nextStepId()).isEqualTo(22L);
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings - 대표 패키지를 모두 완료했으면 빈 배열을 반환한다")
+    void getRecommendedLearnings_allStepsCompleted_returnsEmptyList() {
+        Long userId = 1L;
+        Learning beginner = stubTheoryPackage(1L, "A", LearningDifficulty.BEGINNER);
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                LearningCategory.THEORY, LearningDifficulty.INTERMEDIATE)).thenReturn(Optional.empty());
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                LearningCategory.THEORY, LearningDifficulty.ADVANCED)).thenReturn(Optional.empty());
+
+        LearningStep a1 = stubStep(11L, 1, "A1");
+        stubStepLearning(a1, beginner);
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L)).thenReturn(List.of(a1));
+
+        UserLearningProgress a1Progress = stubProgress(a1, 95);
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_IdIn(userId, List.of(1L)))
+                .thenReturn(List.of(a1Progress));
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result = learningService.getRecommendedLearnings(userId);
+
+        assertThat(result).isEmpty();
+    }
+
+    private static void stubStepLearning(LearningStep step, Learning learning) {
+        lenient().when(step.getLearning()).thenReturn(learning);
+    }
+
+    private void stubNoIntermediateAndAdvanced() {
+        lenient().when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                LearningCategory.THEORY, LearningDifficulty.INTERMEDIATE)).thenReturn(Optional.empty());
+        lenient().when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                LearningCategory.THEORY, LearningDifficulty.ADVANCED)).thenReturn(Optional.empty());
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings(excludeStepId) - 제외 후에도 미완료 후보가 충분하면 인접 보충 없이 채운다")
+    void getRecommendedLearnings_withExclude_backfillsFromRemainingIncompleteSteps() {
+        Long userId = 1L;
+        Learning beginner = stubTheoryPackage(1L, "A", LearningDifficulty.BEGINNER);
+        stubNoIntermediateAndAdvanced();
+
+        LearningStep b1 = stubStep(11L, 1, "B1");
+        LearningStep b2 = stubStep(12L, 2, "B2");
+        LearningStep b3 = stubStep(13L, 3, "B3");
+        stubStepLearning(b1, beginner);
+        stubStepLearning(b2, beginner);
+        stubStepLearning(b3, beginner);
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L)).thenReturn(List.of(b1, b2, b3));
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_IdIn(userId, List.of(1L)))
+                .thenReturn(List.of());
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result =
+                learningService.getRecommendedLearnings(userId, 11L);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).nextStepId()).isEqualTo(12L);
+        assertThat(result.get(1).nextStepId()).isEqualTo(13L);
+        verify(userLearningProgressRepository, never())
+                .findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(anyLong());
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings(excludeStepId) - 미완료 후보가 부족하면 최근 학습 단계 뒤쪽 인접 단계로 보충한다")
+    void getRecommendedLearnings_shortage_fillsForwardFromReferenceStep() {
+        Long userId = 1L;
+        Learning beginner = stubTheoryPackage(1L, "A", LearningDifficulty.BEGINNER);
+        stubNoIntermediateAndAdvanced();
+
+        LearningStep s1 = stubStep(11L, 1, "S1");
+        LearningStep s2 = stubStep(12L, 2, "S2");
+        LearningStep s3 = stubStep(13L, 3, "S3");
+        LearningStep s4 = stubStep(14L, 4, "S4");
+        stubStepLearning(s1, beginner);
+        stubStepLearning(s2, beginner);
+        stubStepLearning(s3, beginner);
+        stubStepLearning(s4, beginner);
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L)).thenReturn(List.of(s1, s2, s3, s4));
+
+        UserLearningProgress s1Progress = stubProgress(s1, 95);
+        UserLearningProgress s2Progress = stubProgress(s2, 95);
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_IdIn(userId, List.of(1L)))
+                .thenReturn(List.of(s1Progress, s2Progress));
+
+        UserLearningProgress latest = mock(UserLearningProgress.class);
+        lenient().when(latest.getLearning()).thenReturn(beginner);
+        lenient().when(latest.getLearningStep()).thenReturn(s3);
+        when(userLearningProgressRepository
+                .findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
+                .thenReturn(Optional.of(latest));
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result =
+                learningService.getRecommendedLearnings(userId, 13L);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).nextStepId()).isEqualTo(14L);
+        assertThat(result.get(1).nextStepId()).isEqualTo(12L);
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings(excludeStepId) - 기준 단계가 패키지의 마지막 단계면 이전 두 단계로 보충한다")
+    void getRecommendedLearnings_referenceIsLastStep_fillsBackwardTwoSteps() {
+        Long userId = 1L;
+        Learning beginner = stubTheoryPackage(1L, "A", LearningDifficulty.BEGINNER);
+        stubNoIntermediateAndAdvanced();
+
+        LearningStep b1 = stubStep(11L, 1, "B1");
+        LearningStep b2 = stubStep(12L, 2, "B2");
+        LearningStep b3 = stubStep(13L, 3, "B3");
+        LearningStep b4 = stubStep(14L, 4, "B4");
+        stubStepLearning(b1, beginner);
+        stubStepLearning(b2, beginner);
+        stubStepLearning(b3, beginner);
+        stubStepLearning(b4, beginner);
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L)).thenReturn(List.of(b1, b2, b3, b4));
+
+        UserLearningProgress b1Progress = stubProgress(b1, 95);
+        UserLearningProgress b2Progress = stubProgress(b2, 95);
+        UserLearningProgress b3Progress = stubProgress(b3, 95);
+        UserLearningProgress b4Progress = stubProgress(b4, 95);
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_IdIn(userId, List.of(1L)))
+                .thenReturn(List.of(b1Progress, b2Progress, b3Progress, b4Progress));
+
+        UserLearningProgress latest = mock(UserLearningProgress.class);
+        lenient().when(latest.getLearning()).thenReturn(beginner);
+        lenient().when(latest.getLearningStep()).thenReturn(b4);
+        when(userLearningProgressRepository
+                .findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
+                .thenReturn(Optional.of(latest));
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result = learningService.getRecommendedLearnings(userId);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).nextStepId()).isEqualTo(13L);
+        assertThat(result.get(1).nextStepId()).isEqualTo(12L);
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings(excludeStepId) - 기준 단계가 마지막에서 두 번째면 앞뒤로 하나씩 보충한다")
+    void getRecommendedLearnings_referenceIsSecondToLastStep_fillsOneBeforeAndOneAfter() {
+        Long userId = 1L;
+        Learning beginner = stubTheoryPackage(1L, "A", LearningDifficulty.BEGINNER);
+        stubNoIntermediateAndAdvanced();
+
+        LearningStep b1 = stubStep(11L, 1, "B1");
+        LearningStep b2 = stubStep(12L, 2, "B2");
+        LearningStep b3 = stubStep(13L, 3, "B3");
+        LearningStep b4 = stubStep(14L, 4, "B4");
+        stubStepLearning(b1, beginner);
+        stubStepLearning(b2, beginner);
+        stubStepLearning(b3, beginner);
+        stubStepLearning(b4, beginner);
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L)).thenReturn(List.of(b1, b2, b3, b4));
+
+        UserLearningProgress b1Progress = stubProgress(b1, 95);
+        UserLearningProgress b2Progress = stubProgress(b2, 95);
+        UserLearningProgress b3Progress = stubProgress(b3, 95);
+        UserLearningProgress b4Progress = stubProgress(b4, 95);
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_IdIn(userId, List.of(1L)))
+                .thenReturn(List.of(b1Progress, b2Progress, b3Progress, b4Progress));
+
+        UserLearningProgress latest = mock(UserLearningProgress.class);
+        lenient().when(latest.getLearning()).thenReturn(beginner);
+        lenient().when(latest.getLearningStep()).thenReturn(b3);
+        when(userLearningProgressRepository
+                .findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
+                .thenReturn(Optional.of(latest));
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result = learningService.getRecommendedLearnings(userId);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).nextStepId()).isEqualTo(14L);
+        assertThat(result.get(1).nextStepId()).isEqualTo(12L);
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings(excludeStepId) - 최근 학습 패키지가 THEORY가 아니면 인접 보충을 하지 않는다")
+    void getRecommendedLearnings_referenceLearningNotTheory_doesNotFallback() {
+        Long userId = 1L;
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                eq(LearningCategory.THEORY), any())).thenReturn(Optional.empty());
+
+        Learning accompaniment = mock(Learning.class);
+        lenient().when(accompaniment.getCategory()).thenReturn(LearningCategory.ACCOMPANIMENT);
+        LearningStep accStep = mock(LearningStep.class);
+
+        UserLearningProgress latest = mock(UserLearningProgress.class);
+        lenient().when(latest.getLearning()).thenReturn(accompaniment);
+        lenient().when(latest.getLearningStep()).thenReturn(accStep);
+        when(userLearningProgressRepository
+                .findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
+                .thenReturn(Optional.of(latest));
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result = learningService.getRecommendedLearnings(userId);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings(excludeStepId) - 뒤쪽 보충 후보가 없어 앞쪽으로 갈 때 이미 선택된 정상 후보와 중복되지 않는다")
+    void getRecommendedLearnings_backwardFallback_doesNotDuplicateAlreadySelectedCandidate() {
+        Long userId = 1L;
+        Learning beginner = stubTheoryPackage(1L, "A", LearningDifficulty.BEGINNER);
+        stubNoIntermediateAndAdvanced();
+
+        LearningStep p1 = stubStep(11L, 1, "P1");
+        LearningStep p2 = stubStep(12L, 2, "P2");
+        LearningStep p3 = stubStep(13L, 3, "P3");
+        stubStepLearning(p1, beginner);
+        stubStepLearning(p2, beginner);
+        stubStepLearning(p3, beginner);
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L)).thenReturn(List.of(p1, p2, p3));
+
+        UserLearningProgress p2Progress = stubProgress(p2, 95);
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_IdIn(userId, List.of(1L)))
+                .thenReturn(List.of(p2Progress));
+
+        UserLearningProgress latest = mock(UserLearningProgress.class);
+        lenient().when(latest.getLearning()).thenReturn(beginner);
+        lenient().when(latest.getLearningStep()).thenReturn(p3);
+        when(userLearningProgressRepository
+                .findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
+                .thenReturn(Optional.of(latest));
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result =
+                learningService.getRecommendedLearnings(userId, 13L);
+
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(LearningHomeResponseDTO.RecommendedLearning::nextStepId)
+                .containsExactly(11L, 12L);
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings(excludeStepId) - 인접 후보가 부족하면 예외 없이 결과가 1건으로 줄어든다")
+    void getRecommendedLearnings_adjacentCandidatesInsufficient_returnsOneItem() {
+        Long userId = 1L;
+        Learning beginner = stubTheoryPackage(1L, "A", LearningDifficulty.BEGINNER);
+        stubNoIntermediateAndAdvanced();
+
+        LearningStep q1 = stubStep(11L, 1, "Q1");
+        LearningStep q2 = stubStep(12L, 2, "Q2");
+        stubStepLearning(q1, beginner);
+        stubStepLearning(q2, beginner);
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L)).thenReturn(List.of(q1, q2));
+
+        UserLearningProgress q1Progress = stubProgress(q1, 95);
+        UserLearningProgress q2Progress = stubProgress(q2, 95);
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_IdIn(userId, List.of(1L)))
+                .thenReturn(List.of(q1Progress, q2Progress));
+
+        UserLearningProgress latest = mock(UserLearningProgress.class);
+        lenient().when(latest.getLearning()).thenReturn(beginner);
+        lenient().when(latest.getLearningStep()).thenReturn(q2);
+        when(userLearningProgressRepository
+                .findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
+                .thenReturn(Optional.of(latest));
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result = learningService.getRecommendedLearnings(userId);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).nextStepId()).isEqualTo(11L);
+    }
+
+    @Test
+    @DisplayName("getRecommendedLearnings(excludeStepId) - 인접 후보가 아예 없으면 빈 배열을 반환한다")
+    void getRecommendedLearnings_noAdjacentCandidates_returnsEmptyList() {
+        Long userId = 1L;
+        Learning beginner = stubTheoryPackage(1L, "A", LearningDifficulty.BEGINNER);
+        stubNoIntermediateAndAdvanced();
+
+        LearningStep r1 = stubStep(11L, 1, "R1");
+        stubStepLearning(r1, beginner);
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L)).thenReturn(List.of(r1));
+
+        UserLearningProgress r1Progress = stubProgress(r1, 95);
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_IdIn(userId, List.of(1L)))
+                .thenReturn(List.of(r1Progress));
+
+        UserLearningProgress latest = mock(UserLearningProgress.class);
+        lenient().when(latest.getLearning()).thenReturn(beginner);
+        lenient().when(latest.getLearningStep()).thenReturn(r1);
+        when(userLearningProgressRepository
+                .findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
+                .thenReturn(Optional.of(latest));
+
+        List<LearningHomeResponseDTO.RecommendedLearning> result = learningService.getRecommendedLearnings(userId);
+
+        assertThat(result).isEmpty();
     }
 
     @Test
