@@ -259,4 +259,33 @@ public class AuthService {
 
         userRepository.delete(user);
     }
+
+    private static final long TEMP_CODE_EXPIRATION_SECONDS = 120;
+    private final java.util.concurrent.ConcurrentHashMap<String, TempExchangeData> tempCodeStore = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private record TempExchangeData(AuthResponseDTO.LoginResponse loginResponse, LocalDateTime expiresAt) {}
+
+    public String generateTempExchangeCode(AuthResponseDTO.LoginResponse loginResponse) {
+        cleanExpiredTempCodes();
+        String tempCode = java.util.UUID.randomUUID().toString();
+        tempCodeStore.put(tempCode, new TempExchangeData(loginResponse, LocalDateTime.now().plusSeconds(TEMP_CODE_EXPIRATION_SECONDS)));
+        return tempCode;
+    }
+
+    public AuthResponseDTO.LoginResponse exchangeTempCode(String tempCode) {
+        cleanExpiredTempCodes();
+        if (tempCode == null || tempCode.isBlank()) {
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        }
+        TempExchangeData data = tempCodeStore.remove(tempCode.trim());
+        if (data == null || LocalDateTime.now().isAfter(data.expiresAt())) {
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        }
+        return data.loginResponse();
+    }
+
+    private void cleanExpiredTempCodes() {
+        LocalDateTime now = LocalDateTime.now();
+        tempCodeStore.entrySet().removeIf(entry -> now.isAfter(entry.getValue().expiresAt()));
+    }
 }
