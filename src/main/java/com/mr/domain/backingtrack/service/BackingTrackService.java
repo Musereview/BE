@@ -188,6 +188,10 @@ public class BackingTrackService {
             throw new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_COMPLETED);
         }
 
+        if (!analysis.getPlaying().getBackingTrack().getId().equals(backingTrackId)) {
+            throw new GeneralException(BackingTrackErrorStatus.ANALYSIS_TRACK_MISMATCH);
+        }
+
         // 재생 수 증가
         int updated = backingTrackRepository.increasePlayCount(backingTrackId);
         if (updated == 0) {

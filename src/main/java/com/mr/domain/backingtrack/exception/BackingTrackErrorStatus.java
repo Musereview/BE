@@ -35,6 +35,7 @@ public enum BackingTrackErrorStatus implements BaseCode {
     INVALID_BPM_RANGE(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_25", "BPM 범위가 올바르지 않습니다."),
     INVALID_PAGE_NUMBER(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_26", "페이지 번호가 올바르지 않습니다."),
     INVALID_PAGE_SIZE(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_27", "페이지 크기가 올바르지 않습니다."),
+    ANALYSIS_TRACK_MISMATCH(HttpStatus.BAD_REQUEST, "BACKING_TRACK_400_28", "분석 결과가 요청한 백킹트랙과 일치하지 않습니다."),
 
     // [403] 권한 에러
     FORBIDDEN_UPDATE(HttpStatus.FORBIDDEN, "BACKING_TRACK_403_01", "백킹트랙 수정 권한이 없습니다."),
