@@ -147,6 +147,7 @@ public class AuthService {
         });
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthResponseDTO.TokenInfo linkSocialAccount(Long userId, SocialType socialType, OAuthCredential credential, String redirectUri, String deviceInfo) {
         OAuthUserInfo userInfo = fetchOAuthUserInfo(socialType, credential, redirectUri);
 
