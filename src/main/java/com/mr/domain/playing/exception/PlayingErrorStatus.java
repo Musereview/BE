@@ -26,9 +26,9 @@ public enum PlayingErrorStatus implements BaseCode {
     INVALID_MIDI_SEQUENCE(HttpStatus.BAD_REQUEST, "PLAYING_400_15", "MIDI 이벤트 순서(sequence) 값이 유효하지 않습니다."),
     DUPLICATE_MIDI_SEQUENCE(HttpStatus.BAD_REQUEST, "PLAYING_400_16", "중복된 MIDI sequence 값이 존재합니다."),
 
-    PLAYING_ACCESS_DENIED(HttpStatus.FORBIDDEN, "PLAYING_403_01", "\uD574\uB2F9 \uC5F0\uC8FC \uAE30\uB85D\uC5D0 \uC811\uADFC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."),
+    PLAYING_ACCESS_DENIED(HttpStatus.FORBIDDEN, "PLAYING_403_01", "해당 연주 기록에 접근할 수 없습니다."),
 
-    PLAYING_NOT_FOUND(HttpStatus.NOT_FOUND, "PLAYING_404_01", "\uC5F0\uC8FC \uAE30\uB85D\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."),
+    PLAYING_NOT_FOUND(HttpStatus.NOT_FOUND, "PLAYING_404_01", "연주 기록을 찾을 수 없습니다."),
 
     INVALID_PLAYING_STATUS(HttpStatus.CONFLICT, "PLAYING_409_01", "현재 연주 상태에서는 요청한 작업을 수행할 수 없습니다."),
     MISSING_PLAYING_START_TIME(HttpStatus.CONFLICT, "PLAYING_409_02", "연주 시작 시간이 기록되지 않았습니다."),

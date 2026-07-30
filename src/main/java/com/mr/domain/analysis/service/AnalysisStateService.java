@@ -30,10 +30,10 @@ public class AnalysisStateService {
 
     private static final BigDecimal MIN_SCORE = BigDecimal.ZERO;
     private static final BigDecimal MAX_SCORE = new BigDecimal("100");
-    private static final String SCALE = "\uC2A4\uCF00\uC77C";
-    private static final String TENSION = "\uD150\uC158";
-    private static final String PROGRESSION = "\uC9C4\uD589";
-    private static final String VOICE_LEADING = "\uCF54\uB4DC \uC5F0\uACB0";
+    private static final String SCALE = "스케일";
+    private static final String TENSION = "텐션";
+    private static final String PROGRESSION = "진행";
+    private static final String VOICE_LEADING = "코드 연결";
 
     private final AnalysisRepository analysisRepository;
     private final AnalysisReportRepository analysisReportRepository;
@@ -178,10 +178,10 @@ public class AnalysisStateService {
 
     private AnalysisGrade resolveGrade(String value, BigDecimal score) {
         return switch (value) {
-            case "\uD6CC\uB96D\uD568", "EXCELLENT" -> AnalysisGrade.EXCELLENT;
-            case "\uC88B\uC74C", "GOOD" -> AnalysisGrade.GOOD;
-            case "\uBCF4\uD1B5", "FAIR" -> AnalysisGrade.FAIR;
-            case "\uC5F0\uC2B5 \uD544\uC694", "POOR" -> AnalysisGrade.POOR;
+            case "훌륭함", "EXCELLENT" -> AnalysisGrade.EXCELLENT;
+            case "좋음", "GOOD" -> AnalysisGrade.GOOD;
+            case "보통", "FAIR" -> AnalysisGrade.FAIR;
+            case "연습 필요", "POOR" -> AnalysisGrade.POOR;
             default -> {
                 if (score.compareTo(new BigDecimal("90")) >= 0) yield AnalysisGrade.EXCELLENT;
                 if (score.compareTo(new BigDecimal("75")) >= 0) yield AnalysisGrade.GOOD;
