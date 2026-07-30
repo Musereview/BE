@@ -1,10 +1,8 @@
 package com.mr.domain.auth.controller;
 
-import com.mr.domain.auth.dto.OAuthCredential;
 import com.mr.domain.auth.dto.req.AuthRequestDTO;
 import com.mr.domain.auth.dto.res.AuthResponseDTO;
 import com.mr.domain.auth.entity.enums.SocialType;
-import com.mr.domain.auth.exception.AuthErrorStatus;
 import com.mr.domain.auth.service.AuthService;
 import com.mr.domain.auth.service.OAuthClientService;
 import com.mr.global.apipayload.ApiResponse;
@@ -14,15 +12,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import java.io.IOException;
 import lombok.RequiredArgsConstructor;
-import java.time.Duration;
-import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,10 +29,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Auth API", description = "인증 및 소셜 로그인 관련 API")
+import java.io.IOException;
+import java.util.UUID;
+
+@Slf4j
+@Tag(name = "Auth API", description = "인증/인가 관련 API (소셜 로그인, 토큰 재발급, 로그아웃)")
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
@@ -43,8 +44,8 @@ public class AuthController {
 
     @SecurityRequirements
     @Operation(
-            summary = "소셜 로그인 시작 API (Provider 로그인 이동)",
-            description = "소셜 로그인 제공자(카카오/구글)의 OAuth 인가 페이지로 HTTP 302 리다이렉트합니다."
+            summary = "소셜 로그인 시작 (OAuth 인가 URL 반환)",
+            description = "선택한 소셜 제공자(카카오/구글)의 로그인 페이지 URL로 302 리다이렉트합니다."
     )
     @GetMapping("/login/{socialType}")
     public void startOAuthLogin(
@@ -58,17 +59,19 @@ public class AuthController {
 
         ResponseCookie stateCookie = ResponseCookie.from("oauth_state", state)
                 .httpOnly(true)
+                .secure(false)
                 .path("/")
-                .maxAge(Duration.ofMinutes(5))
+                .maxAge(300)
                 .sameSite("Lax")
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, stateCookie.toString());
 
         if (customRedirectUri != null && !customRedirectUri.isBlank()) {
-            ResponseCookie redirectCookie = ResponseCookie.from("oauth_redirect_uri", customRedirectUri.trim())
+            ResponseCookie redirectCookie = ResponseCookie.from("oauth_redirect_uri", customRedirectUri)
                     .httpOnly(true)
+                    .secure(false)
                     .path("/")
-                    .maxAge(Duration.ofMinutes(5))
+                    .maxAge(300)
                     .sameSite("Lax")
                     .build();
             response.addHeader(HttpHeaders.SET_COOKIE, redirectCookie.toString());
@@ -80,9 +83,8 @@ public class AuthController {
 
     @SecurityRequirements
     @Operation(
-            summary = "소셜 로그인 백엔드 콜백 API (OAuth Server ➔ Backend)",
-            description = "OAuth 제공자로부터 인가 코드(code)를 받아 토큰 교환 및 소셜 로그인을 수행한 후 프론트엔드 페이지로 리다이렉트합니다.<br/>"
-                    + "- 소셜 인증 취소, state 미일치 또는 인증 실패 시에도 프론트엔드 페이지로 error 쿼리 파라미터와 함께 리다이렉트합니다."
+            summary = "OAuth 콜백 수신 엔드포인트",
+            description = "소셜 로그인 완료 후 Provider가 인가 코드(code)와 state를 백엔드로 전달하는 콜백 API입니다."
     )
     @GetMapping("/{socialType}/callback")
     public void oAuthCallback(
@@ -91,32 +93,48 @@ public class AuthController {
             @RequestParam(name = "code", required = false) String code,
             @RequestParam(name = "state", required = false) String state,
             @RequestParam(name = "error", required = false) String error,
-            @CookieValue(name = "oauth_state", required = false) String cookieState,
-            @CookieValue(name = "oauth_redirect_uri", required = false) String savedCustomRedirectUri,
             @RequestParam(name = "redirectUri", required = false) String customRedirectUri,
             @RequestHeader(value = HttpHeaders.USER_AGENT, defaultValue = "Unknown Device") String deviceInfo,
+            HttpServletRequest request,
             HttpServletResponse response
     ) throws IOException {
-        if (state == null || cookieState == null || !state.equals(cookieState)) {
-            deleteCookie(response, "oauth_state");
-            deleteCookie(response, "oauth_redirect_uri");
+        String savedState = null;
+        String savedCustomRedirectUri = null;
+
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("oauth_state".equals(cookie.getName())) {
+                    savedState = cookie.getValue();
+                } else if ("oauth_redirect_uri".equals(cookie.getName())) {
+                    savedCustomRedirectUri = cookie.getValue();
+                }
+            }
+        }
+
+        ResponseCookie clearStateCookie = ResponseCookie.from("oauth_state", "")
+                .httpOnly(true).secure(false).path("/").maxAge(0).sameSite("Lax").build();
+        ResponseCookie clearRedirectCookie = ResponseCookie.from("oauth_redirect_uri", "")
+                .httpOnly(true).secure(false).path("/").maxAge(0).sameSite("Lax").build();
+        response.addHeader(HttpHeaders.SET_COOKIE, clearStateCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, clearRedirectCookie.toString());
+
+        if (error != null || code == null || code.isBlank()) {
+            log.warn("{} OAuth login failed/cancelled by user: error={}", socialType, error);
+            String errorCode = "access_denied".equalsIgnoreCase(error) ? "access_denied" : "oauth_failed";
+            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl(errorCode);
+            response.sendRedirect(errorRedirectUrl);
+            return;
+        }
+
+        if (savedState != null && (state == null || !savedState.equals(state))) {
+            log.warn("{} OAuth state mismatch: saved={}, received={}", socialType, savedState, state);
             String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl("invalid_state");
             response.sendRedirect(errorRedirectUrl);
             return;
         }
 
-        deleteCookie(response, "oauth_state");
-        deleteCookie(response, "oauth_redirect_uri");
-
-        if (error != null && !error.isBlank()) {
-            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl(
-                    error.equalsIgnoreCase("access_denied") ? "access_denied" : "oauth_error"
-            );
-            response.sendRedirect(errorRedirectUrl);
-            return;
-        }
-
-        if (code == null || code.isBlank()) {
+        if (savedState == null) {
+            log.warn("{} OAuth state cookie missing in callback request", socialType);
             String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl("invalid_auth_request");
             response.sendRedirect(errorRedirectUrl);
             return;
@@ -127,10 +145,9 @@ public class AuthController {
                 : customRedirectUri;
 
         try {
-            OAuthCredential credential = new OAuthCredential(OAuthCredential.CredentialType.AUTHORIZATION_CODE, code);
-            AuthResponseDTO.LoginResponse loginResponse = authService.socialLogin(
+            AuthResponseDTO.LoginResponse loginResponse = authService.socialLoginByCode(
                     socialType,
-                    credential,
+                    code,
                     effectiveRedirectUri,
                     deviceInfo
             );
@@ -185,7 +202,7 @@ public class AuthController {
     ) {
         AuthResponseDTO.LoginResponse response = authService.socialLogin(
                 socialType,
-                request.getCredential(),
+                request.accessToken(),
                 deviceInfo
         );
         return ApiResponse.onSuccess(response);
@@ -220,7 +237,7 @@ public class AuthController {
         AuthResponseDTO.TokenInfo tokenInfo = authService.linkSocialAccount(
                 userId,
                 socialType,
-                request.getCredential(),
+                request.accessToken(),
                 deviceInfo
         );
         return ApiResponse.onSuccess(tokenInfo);

@@ -1,6 +1,5 @@
 package com.mr.domain.auth.dto.req;
 
-import com.mr.domain.auth.dto.OAuthCredential;
 import com.mr.domain.auth.exception.AuthErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import jakarta.validation.constraints.NotBlank;
@@ -14,11 +13,7 @@ public class AuthRequestDTO {
             @Schema(description = "소셜 Access Token (카카오/구글 SDK 등에서 발급받은 액세스 토큰)", example = "sample_access_token")
             @NotBlank(message = "Access Token은 필수 입력값입니다.")
             String accessToken
-    ) {
-        public OAuthCredential getCredential() {
-            return new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, accessToken.trim());
-        }
-    }
+    ) {}
 
     @Schema(description = "토큰 재발급 요청 DTO")
     public record TokenRefreshRequest(

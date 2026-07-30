@@ -1,6 +1,5 @@
 package com.mr.domain.auth.service;
 
-import com.mr.domain.auth.dto.OAuthCredential;
 import com.mr.domain.auth.dto.OAuthUserInfo;
 import com.mr.domain.auth.dto.res.GoogleUserResponse;
 import com.mr.domain.auth.dto.res.KakaoUserResponse;
@@ -37,42 +36,19 @@ public class OAuthClientService {
         this.oAuthProperties = oAuthProperties;
     }
 
-    public OAuthUserInfo getUserInfo(SocialType socialType, OAuthCredential credential, String customRedirectUri) {
-        if (credential.type() == OAuthCredential.CredentialType.ACCESS_TOKEN) {
-            return getUserInfo(socialType, credential.value(), customRedirectUri);
-        }
-        return switch (socialType) {
-            case KAKAO -> getKakaoUserInfo(credential, customRedirectUri);
-            case GOOGLE -> getGoogleUserInfo(credential, customRedirectUri);
-        };
-    }
-
-    public OAuthUserInfo getUserInfo(SocialType socialType, OAuthCredential credential) {
-        if (credential.type() == OAuthCredential.CredentialType.ACCESS_TOKEN) {
-            return getUserInfo(socialType, credential.value());
-        }
-        return getUserInfo(socialType, credential, null);
-    }
-
-    public OAuthUserInfo getUserInfo(SocialType socialType, String accessToken, String customRedirectUri) {
-        return switch (socialType) {
-            case KAKAO -> getKakaoUserInfo(new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, accessToken), customRedirectUri);
-            case GOOGLE -> getGoogleUserInfo(new OAuthCredential(OAuthCredential.CredentialType.ACCESS_TOKEN, accessToken), customRedirectUri);
-        };
-    }
-
     public OAuthUserInfo getUserInfo(SocialType socialType, String accessToken) {
-        return getUserInfo(socialType, accessToken, null);
+        return switch (socialType) {
+            case KAKAO -> fetchKakaoUserInfo(accessToken);
+            case GOOGLE -> fetchGoogleUserInfo(accessToken);
+        };
     }
 
-    private String resolveAccessToken(SocialType socialType, OAuthCredential credential, String customRedirectUri) {
-        if (credential.type() == OAuthCredential.CredentialType.ACCESS_TOKEN) {
-            return credential.value();
-        }
-        return switch (socialType) {
-            case KAKAO -> exchangeKakaoCode(credential.value(), customRedirectUri);
-            case GOOGLE -> exchangeGoogleCode(credential.value(), customRedirectUri);
+    public OAuthUserInfo getUserInfoByCode(SocialType socialType, String code, String customRedirectUri) {
+        String accessToken = switch (socialType) {
+            case KAKAO -> exchangeKakaoCode(code, customRedirectUri);
+            case GOOGLE -> exchangeGoogleCode(code, customRedirectUri);
         };
+        return getUserInfo(socialType, accessToken);
     }
 
     private String exchangeKakaoCode(String code, String customRedirectUri) {
@@ -115,10 +91,8 @@ public class OAuthClientService {
         }
     }
 
-    private OAuthUserInfo getKakaoUserInfo(OAuthCredential credential, String customRedirectUri) {
+    private OAuthUserInfo fetchKakaoUserInfo(String accessToken) {
         try {
-            String accessToken = resolveAccessToken(SocialType.KAKAO, credential, customRedirectUri);
-
             KakaoUserResponse response = restClient.get()
                     .uri("https://kapi.kakao.com/v2/user/me")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
@@ -187,10 +161,8 @@ public class OAuthClientService {
         }
     }
 
-    private OAuthUserInfo getGoogleUserInfo(OAuthCredential credential, String customRedirectUri) {
+    private OAuthUserInfo fetchGoogleUserInfo(String accessToken) {
         try {
-            String accessToken = resolveAccessToken(SocialType.GOOGLE, credential, customRedirectUri);
-
             GoogleUserResponse response = restClient.get()
                     .uri("https://www.googleapis.com/oauth2/v2/userinfo")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
