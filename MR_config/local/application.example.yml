@@ -68,7 +68,7 @@ ai:
     read-timeout: ${AI_INTERNAL_READ_TIMEOUT}
     endpoints:
       analyze: ${AI_INTERNAL_ANALYZE_ENDPOINT}
-        
+
 # 프로필 관련 공통 설정
 app:
   profile:
