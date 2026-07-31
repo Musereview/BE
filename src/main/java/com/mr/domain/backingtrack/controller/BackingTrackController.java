@@ -87,7 +87,7 @@ public class BackingTrackController {
     @Operation(
             summary = "백킹트랙 목록 조회",
             description = "사용자가 연주 가능한 백킹트랙 목록을 카드뷰 형태로 조회하는 API\n" +
-                    "인기순 정렬, 장르, Key + 조성, BPM 조건으로 필터링할 수 있습니다."
+                    "공개 범위와 사용자를 고려하여 필터 후 커서 기반 페이징"
     )
     @GetMapping
     public ApiResponse<BackingTrackListResponseDTO.ListResponseDTO> getBackingTracks(

@@ -31,7 +31,7 @@ public class BackingTrackSaveRequestDTO {
 
             @NotNull(message = "조성은 필수입니다.")
             ScaleType scaleType,
-
+    
             @NotBlank(message = "박자는 필수입니다.")
             @Pattern(regexp = "^([1-9]|1[0-6])/(2|4|8|16)$", message = "음악적으로 유효한 박자 형식이어야 합니다. (예: 4/4, 3/4, 6/8)")
             String timeSignature,
