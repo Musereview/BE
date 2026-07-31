@@ -43,11 +43,11 @@ public class UserStatistics extends BaseTimeEntity {
     @Column(name = "total_analysis_count", nullable = false)
     private Integer totalAnalysisCount;
 
-    // 산출 기준 미확정(PM 확인 필요) - 집계 로직에서 채우지 않음
+    // 미집계 지표
     @Column(name = "average_score", precision = 5, scale = 2)
     private BigDecimal averageScore;
 
-    // COMPLETED Analysis의 totalScore 평균 (전체 기간)
+    // 전체 완료 분석 평균 점수
     @Column(name = "average_accuracy", precision = 5, scale = 2)
     private BigDecimal averageAccuracy;
 

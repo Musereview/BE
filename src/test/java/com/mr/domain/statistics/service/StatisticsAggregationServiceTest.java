@@ -373,7 +373,6 @@ class StatisticsAggregationServiceTest {
                 .willReturn(emptyAnalysisTotals);
         given(userStatisticsRepository.findByUser_UserId(userId))
                 .willReturn(Optional.of(UserStatistics.createForUser(mock(User.class))));
-        // scaleScore만 null(AI가 해당 지표를 안 준 경우), 나머지는 정상 값
         List<Analysis> weeklyAnalyses = List.of(mockAnalysis(null,
                 null, new BigDecimal("70.0"), new BigDecimal("80.0"), new BigDecimal("90.0")));
         given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay()))

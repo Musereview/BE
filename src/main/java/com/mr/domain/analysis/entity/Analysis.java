@@ -11,11 +11,14 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @Entity
@@ -65,6 +68,7 @@ public class Analysis extends BaseCreatedEntity {
     @Column(name = "summary", columnDefinition = "text")
     private String summary;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "analysis_request_json", nullable = false, columnDefinition = "json")
     private String analysisRequestJson;
 
@@ -80,11 +84,15 @@ public class Analysis extends BaseCreatedEntity {
     @Column(name = "voice_leading_score", precision = 5, scale = 2)
     private BigDecimal voiceLeadingScore;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "raw_result_json", columnDefinition = "json")
     private String rawResultJson;
 
     @Column(name = "failed_reason", columnDefinition = "text")
     private String failedReason;
+
+    @Column(name = "processing_started_at")
+    private LocalDateTime processingStartedAt;
 
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
@@ -164,16 +172,39 @@ public class Analysis extends BaseCreatedEntity {
         }
     }
 
-    public void startProcessing() {
+    public LocalDateTime startProcessing(LocalDateTime now) {
         if (this.status != AnalysisStatus.PENDING) {
             throw new IllegalStateException("PENDING 상태의 분석만 PROCESSING으로 변경할 수 있습니다.");
         }
         this.status = AnalysisStatus.PROCESSING;
+        this.processingStartedAt = nextProcessingStartedAt(now);
+        return this.processingStartedAt;
+    }
+
+    public LocalDateTime restartProcessing(LocalDateTime now) {
+        if (this.status != AnalysisStatus.PROCESSING) {
+            throw new IllegalStateException("PROCESSING 상태의 분석만 다시 시작할 수 있습니다.");
+        }
+        this.processingStartedAt = nextProcessingStartedAt(now);
+        return this.processingStartedAt;
+    }
+
+    public boolean isCurrentProcessing(LocalDateTime expectedProcessingStartedAt) {
+        return this.status == AnalysisStatus.PROCESSING
+                && Objects.equals(this.processingStartedAt, expectedProcessingStartedAt);
+    }
+
+    private LocalDateTime nextProcessingStartedAt(LocalDateTime requestedAt) {
+        LocalDateTime next = Objects.requireNonNull(requestedAt).truncatedTo(ChronoUnit.MILLIS);
+        if (this.processingStartedAt != null && !next.isAfter(this.processingStartedAt)) {
+            return this.processingStartedAt.plus(1, ChronoUnit.MILLIS);
+        }
+        return next;
     }
 
     public void complete(Integer totalScore, AnalysisGrade grade, String summary, BigDecimal scaleScore,
                          BigDecimal tensionScore, BigDecimal progressionScore, BigDecimal voiceLeadingScore,
-                         String rawResultJson) {
+                         String rawResultJson, LocalDateTime completedAt) {
         if (this.status != AnalysisStatus.PROCESSING) {
             throw new IllegalStateException("PROCESSING 상태의 분석만 완료 처리할 수 있습니다.");
         }
@@ -186,16 +217,16 @@ public class Analysis extends BaseCreatedEntity {
         this.progressionScore = progressionScore;
         this.voiceLeadingScore = voiceLeadingScore;
         this.rawResultJson = rawResultJson;
-        this.completedAt = LocalDateTime.now();
+        this.completedAt = Objects.requireNonNull(completedAt);
     }
 
-    public void fail(String failedReason) {
+    public void fail(String failedReason, LocalDateTime completedAt) {
         if (this.status == AnalysisStatus.COMPLETED || this.status == AnalysisStatus.FAILED) {
             throw new IllegalStateException("이미 완료된 분석은 실패 처리할 수 없습니다.");
         }
         this.status = AnalysisStatus.FAILED;
         this.failedReason = failedReason;
-        this.completedAt = LocalDateTime.now();
+        this.completedAt = Objects.requireNonNull(completedAt);
     }
 
     // 재생수 증가 등 조회 이후 시점에, 요청자가 본인 분석 결과를 사용하는지 검증

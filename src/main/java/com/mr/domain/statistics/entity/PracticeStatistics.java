@@ -60,11 +60,11 @@ public class PracticeStatistics extends BaseCreatedEntity {
     @Column(name = "session_count", nullable = false)
     private Integer sessionCount;
 
-    // 산출 기준 미확정(PM 확인 필요) - 집계 로직에서 채우지 않음
+    // 미집계 지표
     @Column(name = "average_score", precision = 5, scale = 2)
     private BigDecimal averageScore;
 
-    // COMPLETED Analysis의 totalScore 평균 (해당 기간)
+    // 기간별 완료 분석 평균 점수
     @Column(name = "average_accuracy", precision = 5, scale = 2)
     private BigDecimal averageAccuracy;
 

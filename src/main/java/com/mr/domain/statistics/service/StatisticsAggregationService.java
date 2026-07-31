@@ -30,7 +30,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-// 연습/분석 완료 이벤트를 받아 UserStatistics/PracticeStatistics/SkillStatistics를 다시 계산해 저장
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -47,8 +46,7 @@ public class StatisticsAggregationService {
     private final AnalysisRepository analysisRepository;
     private final Clock clock;
 
-    // 리스너의 @Retryable과 같은 메서드에 두면 advice 순서가 불명확해지므로,
-    // 트랜잭션 경계는 반드시 이 별도 빈의 메서드에서 열어 재시도마다 새 트랜잭션이 보장되도록 함
+    // 재시도별 신규 트랜잭션 보장
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onPlayingCompleted(Long userId) {
         refreshUserPracticeTotals(userId);
@@ -83,7 +81,6 @@ public class StatisticsAggregationService {
                 toScoreScale(totals.getAverageTotalScore()));
     }
 
-    // 동시 이벤트로 인해 유니크 제약을 어겨 저장에 실패해도, 리스너의 재시도가 재조회 후 갱신으로 이어져 정상 처리됨
     private UserStatistics getOrCreateUserStatistics(Long userId) {
         return userStatisticsRepository.findByUser_UserId(userId)
                 .orElseGet(() -> userStatisticsRepository.save(UserStatistics.createForUser(getUser(userId))));
@@ -127,7 +124,7 @@ public class StatisticsAggregationService {
             LocalDate weekEnd, LocalDate lastWeekStart, List<Analysis> analyses) {
         BigDecimal score = averageSkillScore(analyses, skillType);
         if (score == null) {
-            // score는 NOT NULL 컬럼 - 이번 주 유효한 점수가 없으면 생성/갱신하지 않고 건너뜀
+            // NOT NULL 제약에 따른 미집계 처리
             return;
         }
 
