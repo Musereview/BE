@@ -1,7 +1,5 @@
 package com.mr.domain.backingtrack.dto.res;
 
-import org.springframework.data.domain.Page;
-
 import java.util.List;
 
 public class BackingTrackListResponseDTO {
