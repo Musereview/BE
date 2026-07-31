@@ -51,14 +51,17 @@ oauth:
 # AI 도입 및 AWS S3 공통 구조
 external:
   ai:
-    base-url: ${AI_BASE_URL:}
-    api-key: ${AI_API_KEY:}
-    model: ${AI_MODEL:}
+    base-url: ${AI_BASE_URL:https://generativelanguage.googleapis.com}
+    api-key: ${GEMINI_API_KEY:${AI_API_KEY:}}
+    model: ${AI_MODEL:gemini-3-flash-preview}
+    connect-timeout: ${AI_CONNECT_TIMEOUT:5s}
+    read-timeout: ${AI_READ_TIMEOUT:120s}
 
 aws:
   s3:
     bucket: ${AWS_S3_BUCKET:}
     region: ${AWS_REGION:ap-northeast-2}
+
 
 # 내부 AI 분석 서버 설정
 ai:
