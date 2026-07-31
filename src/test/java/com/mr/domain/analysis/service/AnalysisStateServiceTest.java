@@ -79,26 +79,28 @@ class AnalysisStateServiceTest {
     }
 
     @Test
-    void startProcessing_rejectsBlankRequestBeforeStateChange() {
+    void startProcessing_marksBlankRequestAsFailed() {
         given(analysis.getStatus()).willReturn(AnalysisStatus.PENDING);
         given(analysis.getAnalysisRequestJson()).willReturn(" ");
 
-        assertThatThrownBy(() -> service.startProcessing(1L))
-                .isInstanceOf(GeneralException.class)
-                .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST);
+        Optional<?> claim = service.startProcessing(1L);
+
+        org.assertj.core.api.Assertions.assertThat(claim).isEmpty();
+        verify(analysis).fail(AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST.getMessage());
         verify(analysis, never()).startProcessing();
     }
 
     @Test
-    void restartStaleProcessing_rejectsNullRequestBeforeStateChange() {
+    void restartStaleProcessing_marksNullRequestAsFailed() {
         LocalDateTime cutoff = LocalDateTime.now();
         given(analysis.getStatus()).willReturn(AnalysisStatus.PROCESSING);
         given(analysis.getProcessingStartedAt()).willReturn(cutoff.minusMinutes(1));
         given(analysis.getAnalysisRequestJson()).willReturn(null);
 
-        assertThatThrownBy(() -> service.restartStaleProcessing(1L, cutoff))
-                .isInstanceOf(GeneralException.class)
-                .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST);
+        Optional<?> claim = service.restartStaleProcessing(1L, cutoff);
+
+        org.assertj.core.api.Assertions.assertThat(claim).isEmpty();
+        verify(analysis).fail(AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST.getMessage());
         verify(analysis, never()).restartProcessing();
     }
 

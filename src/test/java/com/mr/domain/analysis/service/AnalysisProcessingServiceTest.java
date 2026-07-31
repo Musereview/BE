@@ -90,6 +90,26 @@ class AnalysisProcessingServiceTest {
     }
 
     @Test
+    void process_marksMalformedRequestAsFailedWithoutCallingAi() {
+        LocalDateTime processingStartedAt = LocalDateTime.now();
+        given(analysisStateService.startProcessing(1L))
+                .willReturn(Optional.of(new AnalysisProcessingClaim("{invalid", processingStartedAt)));
+        AnalysisProcessingService service = new AnalysisProcessingService(
+                analysisStateService, aiServerClient, reportGenerationService,
+                new AnalysisResultEnricher(), new ObjectMapper()
+        );
+
+        service.process(1L);
+
+        verify(aiServerClient, never()).requestAnalysis(org.mockito.ArgumentMatchers.any());
+        verify(analysisStateService).fail(
+                org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.eq(processingStartedAt),
+                org.mockito.ArgumentMatchers.any()
+        );
+    }
+
+    @Test
     void process_passesGeneratedReportToFencedCompletion() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         LocalDateTime processingStartedAt = LocalDateTime.now();

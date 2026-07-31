@@ -50,9 +50,12 @@ public class AnalysisStateService {
         if (analysis.getStatus() != AnalysisStatus.PENDING) {
             return Optional.empty();
         }
-        String requestJson = requireRequestJson(analysis);
+        Optional<String> requestJson = requestJsonOrFail(analysis);
+        if (requestJson.isEmpty()) {
+            return Optional.empty();
+        }
         LocalDateTime processingStartedAt = analysis.startProcessing();
-        return Optional.of(new AnalysisProcessingClaim(requestJson, processingStartedAt));
+        return Optional.of(new AnalysisProcessingClaim(requestJson.get(), processingStartedAt));
     }
 
     @Transactional
@@ -64,9 +67,12 @@ public class AnalysisStateService {
                 || analysis.getProcessingStartedAt().isAfter(cutoff)) {
             return Optional.empty();
         }
-        String requestJson = requireRequestJson(analysis);
+        Optional<String> requestJson = requestJsonOrFail(analysis);
+        if (requestJson.isEmpty()) {
+            return Optional.empty();
+        }
         LocalDateTime processingStartedAt = analysis.restartProcessing();
-        return Optional.of(new AnalysisProcessingClaim(requestJson, processingStartedAt));
+        return Optional.of(new AnalysisProcessingClaim(requestJson.get(), processingStartedAt));
     }
 
     @Transactional
@@ -130,12 +136,13 @@ public class AnalysisStateService {
         requiredScore(domains, VOICE_LEADING);
     }
 
-    private String requireRequestJson(Analysis analysis) {
+    private Optional<String> requestJsonOrFail(Analysis analysis) {
         String requestJson = analysis.getAnalysisRequestJson();
         if (requestJson == null || requestJson.isBlank()) {
-            throw new GeneralException(AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST);
+            analysis.fail(AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST.getMessage());
+            return Optional.empty();
         }
-        return requestJson;
+        return Optional.of(requestJson);
     }
 
     private void saveLlmCallLog(
