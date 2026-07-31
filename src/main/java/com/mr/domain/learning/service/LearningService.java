@@ -72,7 +72,9 @@ public class LearningService {
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
-        Learning learning = learningRepository.findById(learningId)
+        // 같은 패키지에 대한 동시 저장 요청을 직렬화하기 위해 비관적 락으로 조회
+        // (completedStepCountBefore/After 판정 구간 전체가 이 락 보유 중에 실행되어야 TOCTOU가 안 생김)
+        Learning learning = learningRepository.findByIdForUpdate(learningId)
                 .orElseThrow(() -> new GeneralException(LearningErrorStatus.LEARNING_NOT_FOUND));
 
         LearningStep learningStep = learningStepRepository.findById(request.learningStepId())
