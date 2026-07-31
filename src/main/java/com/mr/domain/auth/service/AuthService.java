@@ -14,6 +14,7 @@ import com.mr.global.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -30,6 +31,7 @@ public class AuthService {
     private final OAuthClientService oAuthClientService;
     private final AuthTransactionService authTransactionService;
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String accessToken, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
 
@@ -40,6 +42,7 @@ public class AuthService {
         }
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthResponseDTO.LoginResponse socialLoginByCode(SocialType socialType, String code, String redirectUri, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfoByCode(socialType, code, redirectUri);
 
@@ -50,6 +53,7 @@ public class AuthService {
         }
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthResponseDTO.TokenInfo linkSocialAccount(Long userId, SocialType socialType, String accessToken, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
         return authTransactionService.executeLinkSocialAccount(userId, socialType, userInfo, deviceInfo);
