@@ -41,24 +41,16 @@ public interface BackingTrackRepository extends JpaRepository<BackingTrack, Long
         );
     }
 
-    // 장르, 키, 스케일, BPM 범위까지 모두 지원하는 동적 필터링 쿼리
-    @Query("""
-            SELECT b FROM BackingTrack b 
-            WHERE b.accessLevel = :accessLevel 
-              AND b.deletedAt IS NULL 
-              AND (:genre IS NULL OR b.genre = :genre) 
-              AND (:keySignature IS NULL OR b.keySignature = :keySignature)
-              AND (:scaleType IS NULL OR b.scaleType = :scaleType)
-              AND (:bpmMin IS NULL OR b.bpm >= :bpmMin)
-              AND (:bpmMax IS NULL OR b.bpm <= :bpmMax)
-            """)
-    Page<BackingTrack> findFilteredTracks(
+    // 연동 기준으로 쿼리 수정
+    @Query("SELECT b FROM BackingTrack b " +
+            "WHERE b.deletedAt IS NULL " +
+            "AND (b.accessLevel = :accessLevel OR b.user.userId = :userId) "+
+            "AND (:cursor IS NULL OR b.id < :cursor)" +
+            "ORDER BY b.id DESC")
+    List<BackingTrack> findVisibleTracksAfterCursor(
             @Param("accessLevel") AccessLevel accessLevel,
-            @Param("genre") String genre,
-            @Param("keySignature") String keySignature,
-            @Param("scaleType") ScaleType scaleType,
-            @Param("bpmMin") Integer bpmMin,
-            @Param("bpmMax") Integer bpmMax,
+            @Param("userId") Long userId,
+            @Param("cursor") Long cursor,
             Pageable pageable
     );
 

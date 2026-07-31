@@ -23,8 +23,10 @@ import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +36,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -44,6 +47,7 @@ public class BackingTrackService {
     private final AnalysisRepository analysisRepository;
 
     private static final Long TEMP_DEFAULT_ACADEMY_ID = 1L; // MVP 임시 학원 ID
+    private static final int PAGE_SIZE = 9;
 
     // 백킹트랙 생성
     @Transactional
@@ -188,6 +192,9 @@ public class BackingTrackService {
             throw new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_COMPLETED);
         }
 
+        // 본인 분석 결과인지
+        analysis.validateOwner(userId);
+
         if (!analysis.getPlaying().getBackingTrack().getId().equals(backingTrackId)) {
             throw new GeneralException(BackingTrackErrorStatus.ANALYSIS_TRACK_MISMATCH);
         }
@@ -214,51 +221,40 @@ public class BackingTrackService {
             Long userId
     ) {
         try {
-            Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");  // 정렬 조건 처리
-            if (request.sort() != null) {
-                if ("popular".equalsIgnoreCase(request.sort())) {
-                    sort = Sort.by(Sort.Direction.DESC, "playCount", "createdAt");
-                } else if ("oldest".equalsIgnoreCase(request.sort())) {
-                    sort = Sort.by(Sort.Direction.ASC, "createdAt");
-                }
-            }
+            Pageable pageable = PageRequest.of(0, PAGE_SIZE);
 
-            PageRequest pageRequest = PageRequest.of(request.page(), request.size(), sort);
-
-            Page<BackingTrack> trackPage = backingTrackRepository.findFilteredTracks(   // findAll 대신 동적 필터링 쿼리 사용 (PUBLIC 및 삭제되지 않은 트랙만 조회)
-                    AccessLevel.PUBLIC,
-                    request.genre(),
-                    request.keySignature(),
-                    request.scaleType(),
-                    request.bpmMin(),
-                    request.bpmMax(),
-                    pageRequest
+            List<BackingTrack> tracks = backingTrackRepository.findVisibleTracksAfterCursor(
+                    AccessLevel.PUBLIC, userId, request.cursor(), pageable
             );
 
-            Page<BackingTrackListResponseDTO.TrackInfo> mappedPage = trackPage.map(track -> {
-                List<String> chordNames = track.getChordProgressions().stream()
-                        .sorted(Comparator.comparing(ChordProgression::getMeasureNo)
-                                .thenComparing(ChordProgression::getSequenceNo))
-                        .map(ChordProgression::getChordName)
-                        .toList();
+            List<BackingTrackListResponseDTO.TrackInfo> trackInfos = tracks.stream()
+                    .map(track -> {
+                        List<String> chordNames = track.getChordProgressions().stream()
+                                .sorted(Comparator.comparing(ChordProgression::getMeasureNo)
+                                        .thenComparing(ChordProgression::getSequenceNo))
+                                .map(ChordProgression::getChordName)
+                                .toList();
 
-                return BackingTrackListResponseDTO.TrackInfo.of(
-                        track.getId(),
-                        track.getTitle(),
-                        track.getGenre(),
-                        track.getKeySignature(),
-                        track.getScaleType().name(),
-                        chordNames,
-                        track.getBpm(),
-                        track.getLevel().name(),
-                        track.getPlaytimeSec()
-                );
-            });
+                        return BackingTrackListResponseDTO.TrackInfo.of(
+                                track.getId(),
+                                track.getTitle(),
+                                track.getGenre(),
+                                track.getKeySignature(),
+                                track.getScaleType().name(),
+                                chordNames,
+                                track.getBpm(),
+                                track.getLevel().name(),
+                                track.getPlaytimeSec()
+                        );
+                    }).toList();
+            Long nextCursor = tracks.isEmpty() ? null : tracks.get(tracks.size()-1).getId();
+            boolean hasNext = tracks.size() == PAGE_SIZE;
 
-            return BackingTrackListResponseDTO.ListResponseDTO.of(mappedPage);
+            return BackingTrackListResponseDTO.ListResponseDTO.of(trackInfos, nextCursor, hasNext);
         } catch (GeneralException e){
             throw e;
         } catch (Exception e) {
+            log.error("백킹트랙 목록 조회 중 예상치 못한 오류가 발생했습니다.", e);
             throw new GeneralException(BackingTrackErrorStatus.LIST_INQUIRY_FAILED);
         }
     }
@@ -305,6 +301,7 @@ public class BackingTrackService {
         } catch (GeneralException e){
             throw e;
         } catch (Exception e) {
+            log.error("백킹트랙 상세 조회 중 예상치 못한 오류가 발생했습니다. backingTrackId: {}", backingTrackId, e);
             throw new GeneralException(BackingTrackErrorStatus.DETAIL_INQUIRY_FAILED);
         }
     }

@@ -1,29 +1,9 @@
 package com.mr.domain.backingtrack.dto.req;
 
-import com.mr.domain.backingtrack.entity.enums.ScaleType;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-
 public class BackingTrackListRequestDTO {
 
     public record ListRequestDTO(
-            String sort,
-            String genre,
-            String keySignature,
-            ScaleType scaleType,
-            Integer bpmMin,
-            Integer bpmMax,
-
-            @Min(value = 0, message = "BACKING_TRACK_400_26")
-            Integer page,
-
-            @Min(value = 1, message = "BACKING_TRACK_400_27")
-            @Max(value = 9, message = "BACKING_TRACK_400_27")
-            Integer size
+            Long cursor   // 마지막으로 받은 트랙의 id, 첫 요청 시 null
     ) {
-        public ListRequestDTO {
-            if (page == null) page = 0;
-            if (size == null) size = 9;
-        }
     }
 }

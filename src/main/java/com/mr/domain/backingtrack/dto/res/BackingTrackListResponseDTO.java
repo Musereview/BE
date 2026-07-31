@@ -7,22 +7,12 @@ import java.util.List;
 public class BackingTrackListResponseDTO {
 
     public record ListResponseDTO(
-            List<TrackInfo> content,
-            int page,
-            int size,
-            long totalElements,
-            int totalPages,
+            List<TrackInfo> tracks,
+            Long nextCursor,
             boolean hasNext
-    ){
-        public static ListResponseDTO of(Page<TrackInfo> pageData){
-            return new ListResponseDTO(
-                    pageData.getContent(),
-                    pageData.getNumber(),
-                    pageData.getSize(),
-                    pageData.getTotalElements(),
-                    pageData.getTotalPages(),
-                    pageData.hasNext()
-            );
+    ) {
+        public static ListResponseDTO of(List<TrackInfo> tracks, Long nextCursor, boolean hasNext) {
+            return new ListResponseDTO(tracks, nextCursor, hasNext);
         }
     }
 
