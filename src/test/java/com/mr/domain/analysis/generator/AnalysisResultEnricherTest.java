@@ -1,6 +1,7 @@
 package com.mr.domain.analysis.generator;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,6 +47,17 @@ class AnalysisResultEnricherTest {
 
         assertThat(enriched).isSameAs(original);
         assertThat(enriched.path("summary").asText()).isEqualTo("AI 서버 요약");
+    }
+
+    @Test
+    void enrich_withoutDomainScores_throwsDescriptiveException() throws Exception {
+        JsonNode result = objectMapper.readTree("""
+                {"scores":{"domains":{}}}
+                """);
+
+        assertThatThrownBy(() -> enricher.enrich(result))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("도메인 점수가 없습니다.");
     }
 
     private JsonNode resultWithoutSummary() throws Exception {

@@ -25,7 +25,10 @@ import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.AnalysisCompletedEvent;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +42,10 @@ import org.springframework.context.ApplicationEventPublisher;
 class AnalysisStateServiceTest {
 
     private static final LocalDateTime PROCESSING_STARTED_AT = LocalDateTime.of(2026, 7, 31, 12, 0);
+    private static final Clock FIXED_CLOCK = Clock.fixed(
+            Instant.parse("2026-07-31T03:00:00Z"),
+            ZoneId.of("Asia/Seoul")
+    );
 
     @Mock
     private AnalysisRepository analysisRepository;
@@ -63,7 +70,8 @@ class AnalysisStateServiceTest {
                 analysisRepository,
                 analysisReportRepository,
                 llmCallLogRepository,
-                eventPublisher
+                eventPublisher,
+                FIXED_CLOCK
         );
         analysis = mock(Analysis.class);
         user = mock(User.class);
@@ -86,8 +94,8 @@ class AnalysisStateServiceTest {
         Optional<?> claim = service.startProcessing(1L);
 
         org.assertj.core.api.Assertions.assertThat(claim).isEmpty();
-        verify(analysis).fail(AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST.getMessage());
-        verify(analysis, never()).startProcessing();
+        verify(analysis).fail(AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST.getMessage(), PROCESSING_STARTED_AT);
+        verify(analysis, never()).startProcessing(any());
     }
 
     @Test
@@ -100,8 +108,8 @@ class AnalysisStateServiceTest {
         Optional<?> claim = service.restartStaleProcessing(1L, cutoff);
 
         org.assertj.core.api.Assertions.assertThat(claim).isEmpty();
-        verify(analysis).fail(AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST.getMessage());
-        verify(analysis, never()).restartProcessing();
+        verify(analysis).fail(AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST.getMessage(), PROCESSING_STARTED_AT);
+        verify(analysis, never()).restartProcessing(any());
     }
 
     @Test
@@ -132,7 +140,8 @@ class AnalysisStateServiceTest {
                 new BigDecimal("82.0"),
                 new BigDecimal("83.0"),
                 new BigDecimal("84.0"),
-                result.toString()
+                result.toString(),
+                PROCESSING_STARTED_AT
         );
         verify(analysisReportRepository).save(any(AnalysisReport.class));
         verify(llmCallLogRepository).save(any(LlmCallLog.class));
@@ -209,7 +218,7 @@ class AnalysisStateServiceTest {
         );
 
         org.assertj.core.api.Assertions.assertThat(completed).isFalse();
-        verify(analysis, never()).complete(any(), any(), any(), any(), any(), any(), any(), any());
+        verify(analysis, never()).complete(any(), any(), any(), any(), any(), any(), any(), any(), any());
         verify(analysisReportRepository, never()).save(any());
         verify(llmCallLogRepository, never()).save(any());
         verify(eventPublisher, never()).publishEvent(any());
@@ -222,7 +231,7 @@ class AnalysisStateServiceTest {
         boolean failed = service.fail(1L, PROCESSING_STARTED_AT, "timeout");
 
         org.assertj.core.api.Assertions.assertThat(failed).isFalse();
-        verify(analysis, never()).fail(any());
+        verify(analysis, never()).fail(any(), any());
     }
 
     @Test
@@ -308,7 +317,7 @@ class AnalysisStateServiceTest {
         ))
                 .isInstanceOf(GeneralException.class)
                 .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.INVALID_RAW_RESULT);
-        verify(analysis, never()).complete(any(), any(), any(), any(), any(), any(), any(), any());
+        verify(analysis, never()).complete(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     private GeneratedAnalysisReport generatedReport() {

@@ -20,6 +20,7 @@ import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.AnalysisCompletedEvent;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,7 @@ public class AnalysisStateService {
     private final AnalysisReportRepository analysisReportRepository;
     private final LlmCallLogRepository llmCallLogRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
 
     @Transactional
     public Optional<AnalysisProcessingClaim> startProcessing(Long analysisId) {
@@ -54,7 +56,7 @@ public class AnalysisStateService {
         if (requestJson.isEmpty()) {
             return Optional.empty();
         }
-        LocalDateTime processingStartedAt = analysis.startProcessing();
+        LocalDateTime processingStartedAt = analysis.startProcessing(now());
         return Optional.of(new AnalysisProcessingClaim(requestJson.get(), processingStartedAt));
     }
 
@@ -71,7 +73,7 @@ public class AnalysisStateService {
         if (requestJson.isEmpty()) {
             return Optional.empty();
         }
-        LocalDateTime processingStartedAt = analysis.restartProcessing();
+        LocalDateTime processingStartedAt = analysis.restartProcessing(now());
         return Optional.of(new AnalysisProcessingClaim(requestJson.get(), processingStartedAt));
     }
 
@@ -99,7 +101,8 @@ public class AnalysisStateService {
                 requiredScore(domains, TENSION),
                 requiredScore(domains, PROGRESSION),
                 requiredScore(domains, VOICE_LEADING),
-                rawResultJson
+                rawResultJson,
+                now()
         );
         AnalysisReport report = generatedReport.generationType() == ReportGenerationType.LLM
                 ? AnalysisReport.createLlmReport(
@@ -139,7 +142,7 @@ public class AnalysisStateService {
     private Optional<String> requestJsonOrFail(Analysis analysis) {
         String requestJson = analysis.getAnalysisRequestJson();
         if (requestJson == null || requestJson.isBlank()) {
-            analysis.fail(AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST.getMessage());
+            analysis.fail(AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST.getMessage(), now());
             return Optional.empty();
         }
         return Optional.of(requestJson);
@@ -180,8 +183,12 @@ public class AnalysisStateService {
         if (!analysis.isCurrentProcessing(expectedProcessingStartedAt)) {
             return false;
         }
-        analysis.fail(reason);
+        analysis.fail(reason, now());
         return true;
+    }
+
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock);
     }
 
     private Analysis getAnalysisForUpdate(Long analysisId) {

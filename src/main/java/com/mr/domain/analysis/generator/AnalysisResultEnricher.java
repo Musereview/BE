@@ -31,7 +31,7 @@ public class AnalysisResultEnricher {
         });
         DomainScore strongest = domainScores.stream()
                 .max(Comparator.comparing(DomainScore::score))
-                .orElseThrow();
+                .orElseThrow(() -> new IllegalStateException("도메인 점수가 없습니다."));
         return switch (strongest.name()) {
             case "스케일" -> "조성에 어울리는 음 선택이 안정적으로 이어졌어요.";
             case "텐션" -> "긴장감을 살리는 텐션 활용이 자연스럽게 이어졌어요.";

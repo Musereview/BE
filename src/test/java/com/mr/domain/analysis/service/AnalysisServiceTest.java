@@ -34,6 +34,7 @@ import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.client.ai.AiAnalysisRequest;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -88,7 +89,8 @@ class AnalysisServiceTest {
         lenient().when(backingTrack.getScaleType()).thenReturn(ScaleType.MAJOR);
 
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
-        analysis.startProcessing();
+        LocalDateTime now = LocalDateTime.of(2026, 7, 31, 12, 0);
+        analysis.startProcessing(now);
         analysis.complete(
                 85,
                 AnalysisGrade.GOOD,
@@ -97,7 +99,8 @@ class AnalysisServiceTest {
                 new BigDecimal("75.50"),
                 new BigDecimal("90.00"),
                 new BigDecimal("70.00"),
-                null
+                null,
+                now
         );
         return analysis;
     }
