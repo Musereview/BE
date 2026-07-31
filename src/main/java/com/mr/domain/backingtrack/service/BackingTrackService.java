@@ -220,45 +220,38 @@ public class BackingTrackService {
             BackingTrackListRequestDTO.ListRequestDTO request,
             Long userId
     ) {
-        try {
-            Pageable pageable = PageRequest.of(0, PAGE_SIZE + 1);
+        Pageable pageable = PageRequest.of(0, PAGE_SIZE + 1);
 
-            List<BackingTrack> tracks = backingTrackRepository.findVisibleTracksAfterCursor(
-                    AccessLevel.PUBLIC, userId, request.cursor(), pageable
-            );
+        List<BackingTrack> tracks = backingTrackRepository.findVisibleTracksAfterCursor(
+                AccessLevel.PUBLIC, userId, request.cursor(), pageable
+        );
 
-            boolean hasNext = tracks.size() > PAGE_SIZE;
-            List<BackingTrack> pageTracks = hasNext ? tracks.subList(0, PAGE_SIZE) : tracks;
+        boolean hasNext = tracks.size() > PAGE_SIZE;
+        List<BackingTrack> pageTracks = hasNext ? tracks.subList(0, PAGE_SIZE) : tracks;
 
-            List<BackingTrackListResponseDTO.TrackInfo> trackInfos = pageTracks.stream()
-                    .map(track -> {
-                        List<String> chordNames = track.getChordProgressions().stream()
-                                .sorted(Comparator.comparing(ChordProgression::getMeasureNo)
-                                        .thenComparing(ChordProgression::getSequenceNo))
-                                .map(ChordProgression::getChordName)
-                                .toList();
+        List<BackingTrackListResponseDTO.TrackInfo> trackInfos = pageTracks.stream()
+                .map(track -> {
+                    List<String> chordNames = track.getChordProgressions().stream()
+                            .sorted(Comparator.comparing(ChordProgression::getMeasureNo)
+                                    .thenComparing(ChordProgression::getSequenceNo))
+                            .map(ChordProgression::getChordName)
+                            .toList();
 
-                        return BackingTrackListResponseDTO.TrackInfo.of(
-                                track.getId(),
-                                track.getTitle(),
-                                track.getGenre(),
-                                track.getKeySignature(),
-                                track.getScaleType().name(),
-                                chordNames,
-                                track.getBpm(),
-                                track.getLevel().name(),
-                                track.getPlaytimeSec()
-                        );
-                    }).toList();
-            Long nextCursor = pageTracks.isEmpty() ? null : pageTracks.get(pageTracks.size()-1).getId();
+                    return BackingTrackListResponseDTO.TrackInfo.of(
+                            track.getId(),
+                            track.getTitle(),
+                            track.getGenre(),
+                            track.getKeySignature(),
+                            track.getScaleType().name(),
+                            chordNames,
+                            track.getBpm(),
+                            track.getLevel().name(),
+                            track.getPlaytimeSec()
+                    );
+                }).toList();
+        Long nextCursor = pageTracks.isEmpty() ? null : pageTracks.get(pageTracks.size()-1).getId();
 
-            return BackingTrackListResponseDTO.ListResponseDTO.of(trackInfos, nextCursor, hasNext);
-        } catch (GeneralException e){
-            throw e;
-        } catch (Exception e) {
-            log.error("백킹트랙 목록 조회 중 예상치 못한 오류가 발생했습니다.", e);
-            throw new GeneralException(BackingTrackErrorStatus.LIST_INQUIRY_FAILED);
-        }
+        return BackingTrackListResponseDTO.ListResponseDTO.of(trackInfos, nextCursor, hasNext);
     }
 
     // 백킹트랙 상세 조회
@@ -266,46 +259,39 @@ public class BackingTrackService {
             Long backingTrackId,
             Long userId
     ) {
-        try {
-            BackingTrack track = backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId)
-                    .orElseThrow(() -> new GeneralException(BackingTrackErrorStatus.BACKING_TRACK_NOT_FOUND));
+        BackingTrack track = backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId)
+                .orElseThrow(() -> new GeneralException(BackingTrackErrorStatus.BACKING_TRACK_NOT_FOUND));
 
-            if (track.getAccessLevel() == AccessLevel.PRIVATE && !track.getUser().getUserId().equals(userId)) {
-                throw new GeneralException(BackingTrackErrorStatus.FORBIDDEN_READ);
-            }
-
-            List<BackingTrackDetailResponseDTO.ChordDetail> chordDetails = track.getChordProgressions().stream()
-                    .sorted(Comparator.comparing(ChordProgression::getMeasureNo)
-                            .thenComparing(ChordProgression::getSequenceNo))
-                    .map(c -> BackingTrackDetailResponseDTO.ChordDetail.of(
-                            c.getMeasureNo(),
-                            c.getSequenceNo(),
-                            c.getChordName()
-                    ))
-                    .toList();
-
-            String creatorName = track.getUser().getNickname();
-
-            return BackingTrackDetailResponseDTO.DetailResponseDTO.of(
-                    track.getId(),
-                    track.getTitle(),
-                    track.getGenre(),
-                    track.getKeySignature(),
-                    track.getScaleType().name(),
-                    track.getTimeSignature(),
-                    track.getBpm(),
-                    track.getPlaytimeSec(),
-                    track.getLevel().name(),
-                    creatorName,
-                    track.getAudioFileUrl(),
-                    chordDetails
-            );
-        } catch (GeneralException e){
-            throw e;
-        } catch (Exception e) {
-            log.error("백킹트랙 상세 조회 중 예상치 못한 오류가 발생했습니다. backingTrackId: {}", backingTrackId, e);
-            throw new GeneralException(BackingTrackErrorStatus.DETAIL_INQUIRY_FAILED);
+        if (track.getAccessLevel() == AccessLevel.PRIVATE && !track.getUser().getUserId().equals(userId)) {
+            throw new GeneralException(BackingTrackErrorStatus.FORBIDDEN_READ);
         }
+
+        List<BackingTrackDetailResponseDTO.ChordDetail> chordDetails = track.getChordProgressions().stream()
+                .sorted(Comparator.comparing(ChordProgression::getMeasureNo)
+                        .thenComparing(ChordProgression::getSequenceNo))
+                .map(c -> BackingTrackDetailResponseDTO.ChordDetail.of(
+                        c.getMeasureNo(),
+                        c.getSequenceNo(),
+                        c.getChordName()
+                ))
+                .toList();
+
+        String creatorName = track.getUser().getNickname();
+
+        return BackingTrackDetailResponseDTO.DetailResponseDTO.of(
+                track.getId(),
+                track.getTitle(),
+                track.getGenre(),
+                track.getKeySignature(),
+                track.getScaleType().name(),
+                track.getTimeSignature(),
+                track.getBpm(),
+                track.getPlaytimeSec(),
+                track.getLevel().name(),
+                creatorName,
+                track.getAudioFileUrl(),
+                chordDetails
+        );
     }
 
     // 추천 백킹트랙 조회 로직
