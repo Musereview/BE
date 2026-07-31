@@ -79,7 +79,10 @@ public class SecurityConfig {
                 .filter(s -> !s.isBlank())
                 .toList();
 
-        configuration.setAllowedOriginPatterns(origins);
+        if (origins.isEmpty()) {
+            throw new IllegalStateException("CORS allowed origins must not be empty");
+        }
+        configuration.setAllowedOrigins(origins);
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
 
