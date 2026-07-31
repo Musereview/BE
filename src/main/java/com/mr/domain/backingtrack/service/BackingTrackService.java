@@ -267,7 +267,7 @@ public class BackingTrackService {
             Long userId
     ) {
         try {
-            BackingTrack track = backingTrackRepository.findById(backingTrackId)
+            BackingTrack track = backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId)
                     .orElseThrow(() -> new GeneralException(BackingTrackErrorStatus.BACKING_TRACK_NOT_FOUND));
 
             if (track.getAccessLevel() == AccessLevel.PRIVATE && !track.getUser().getUserId().equals(userId)) {
