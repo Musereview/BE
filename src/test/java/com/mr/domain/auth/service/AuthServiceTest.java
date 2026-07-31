@@ -180,19 +180,25 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("generateTempExchangeCode / exchangeTempCode - 일회성 교환 코드로 로그인 정보를 정상 교환하며, 1회 교환 후 재사용 시 예외가 발생한다")
-    void tempExchangeCode_oneTimeUseSuccessAndFailsOnReuse() {
+    @DisplayName("generateTempCodeByCode / exchangeTempCode - 콜백 단계에서는 최소 정보만 보관하고, /token/exchange 시점에 원자적으로 Refresh Token을 DB에 저장한다")
+    void tempExchangeCode_atomicTokenExchangeSuccess() {
         // given
-        given(oAuthClientService.getUserInfo(SocialType.KAKAO, "access_token")).willReturn(kakaoUserInfo);
-        AuthResponseDTO.LoginResponse loginResponse = authService.socialLogin(SocialType.KAKAO, "access_token", "deviceInfo");
+        given(oAuthClientService.getUserInfoByCode(SocialType.KAKAO, "sample_code", null)).willReturn(kakaoUserInfo);
 
-        // when - 코드 생성
-        String tempCode = authService.generateTempExchangeCode(loginResponse);
+        // when - 콜백 시점: 임시 코드 생성
+        String tempCode = authService.generateTempCodeByCode(SocialType.KAKAO, "sample_code", null, "deviceInfo");
         assertThat(tempCode).isNotBlank();
 
-        // when - 1차 교환 성공
-        AuthResponseDTO.LoginResponse exchangedResponse = authService.exchangeTempCode(tempCode);
-        assertThat(exchangedResponse.userId()).isEqualTo(loginResponse.userId());
+        // when - /token/exchange 시점: 토큰 교환 & DB Hash 갱신
+        AuthResponseDTO.LoginResponse response = authService.exchangeTempCode(tempCode);
+
+        // then
+        assertThat(response.tokenInfo().accessToken()).isNotBlank();
+        assertThat(response.tokenInfo().refreshToken()).isNotBlank();
+
+        List<SocialAuth> socialAuths = socialAuthRepository.findAllByUser_UserId(response.userId());
+        assertThat(socialAuths).hasSize(1);
+        assertThat(socialAuths.get(0).getRefreshTokenHash()).isEqualTo(tokenProvider.hashToken(response.tokenInfo().refreshToken()));
 
         // then - 2차 재사용 시 예외 발생
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> authService.exchangeTempCode(tempCode))

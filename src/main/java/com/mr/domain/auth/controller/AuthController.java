@@ -178,14 +178,12 @@ public class AuthController {
         }
 
         try {
-            AuthResponseDTO.LoginResponse loginResponse = authService.socialLoginByCode(
+            String tempCode = authService.generateTempCodeByCode(
                     socialType,
                     code,
                     backendOAuthRedirectUri,
                     deviceInfo
             );
-
-            String tempCode = authService.generateTempExchangeCode(loginResponse);
             String targetFrontendUrl = oAuthClientService.buildFrontendRedirectUrl(tempCode, frontendTargetRedirectUri);
             response.sendRedirect(targetFrontendUrl);
         } catch (Exception e) {

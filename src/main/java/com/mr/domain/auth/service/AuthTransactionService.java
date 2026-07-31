@@ -31,38 +31,45 @@ public class AuthTransactionService {
     @Value("${app.profile.default-image-url}")
     private String defaultProfileImageUrl;
 
-    public AuthResponseDTO.LoginResponse executeSocialLogin(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
+    public record SocialLoginPrepareResult(Long userId, String socialId, boolean isNewUser) {}
+
+    public SocialLoginPrepareResult prepareSocialLogin(SocialType socialType, OAuthUserInfo userInfo) {
         Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId());
         boolean isNewUser = optionalSocialAuth.isEmpty();
 
         User user;
-        SocialAuth socialAuth;
-
         if (optionalSocialAuth.isPresent()) {
-            socialAuth = optionalSocialAuth.get();
-            user = socialAuth.getUser();
+            user = optionalSocialAuth.get().getUser();
         } else {
             user = registerNewUser(userInfo);
-            socialAuth = null;
         }
+
+        return new SocialLoginPrepareResult(user.getUserId(), userInfo.socialId(), isNewUser);
+    }
+
+    public AuthResponseDTO.LoginResponse completeTokenExchange(Long userId, SocialType socialType, String socialId, String deviceInfo, boolean isNewUser) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
         String newAccessToken = tokenProvider.createAccessToken(user.getUserId());
         String newRefreshToken = tokenProvider.createRefreshToken(user.getUserId());
         String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
         LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
 
-        if (isNewUser) {
-            socialAuth = SocialAuth.create(
+        Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, socialId);
+        if (optionalSocialAuth.isPresent()) {
+            SocialAuth socialAuth = optionalSocialAuth.get();
+            socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
+        } else {
+            SocialAuth newSocialAuth = SocialAuth.create(
                     user,
                     socialType,
-                    userInfo.socialId(),
+                    socialId,
                     refreshTokenHash,
                     expiryTime,
                     deviceInfo
             );
-            socialAuthRepository.saveAndFlush(socialAuth);
-        } else {
-            socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
+            socialAuthRepository.saveAndFlush(newSocialAuth);
         }
 
         AuthResponseDTO.TokenResponse tokenResponse = AuthResponseDTO.TokenResponse.builder()
@@ -78,6 +85,11 @@ public class AuthTransactionService {
                 .isOnboardingCompleted(user.isOnboardingCompleted())
                 .tokenInfo(tokenResponse)
                 .build();
+    }
+
+    public AuthResponseDTO.LoginResponse executeSocialLogin(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
+        SocialLoginPrepareResult prepareResult = prepareSocialLogin(socialType, userInfo);
+        return completeTokenExchange(prepareResult.userId(), socialType, prepareResult.socialId(), deviceInfo, prepareResult.isNewUser());
     }
 
     public AuthResponseDTO.LoginResponse executeSocialLoginForExistingUser(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {

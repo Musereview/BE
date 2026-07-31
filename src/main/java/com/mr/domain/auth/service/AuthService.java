@@ -54,6 +54,24 @@ public class AuthService {
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public String generateTempCodeByCode(SocialType socialType, String code, String redirectUri, String deviceInfo) {
+        OAuthUserInfo userInfo = oAuthClientService.getUserInfoByCode(socialType, code, redirectUri);
+        AuthTransactionService.SocialLoginPrepareResult prepareResult = authTransactionService.prepareSocialLogin(socialType, userInfo);
+
+        cleanExpiredTempCodes();
+        String tempCode = java.util.UUID.randomUUID().toString();
+        tempCodeStore.put(tempCode, new TempExchangeData(
+                prepareResult.userId(),
+                socialType,
+                prepareResult.socialId(),
+                deviceInfo,
+                prepareResult.isNewUser(),
+                LocalDateTime.now().plusSeconds(TEMP_CODE_EXPIRATION_SECONDS)
+        ));
+        return tempCode;
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthResponseDTO.TokenInfo linkSocialAccount(Long userId, SocialType socialType, String accessToken, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
         return authTransactionService.executeLinkSocialAccount(userId, socialType, userInfo, deviceInfo);
@@ -118,12 +136,26 @@ public class AuthService {
     private static final long TEMP_CODE_EXPIRATION_SECONDS = 120;
     private final java.util.concurrent.ConcurrentHashMap<String, TempExchangeData> tempCodeStore = new java.util.concurrent.ConcurrentHashMap<>();
 
-    private record TempExchangeData(AuthResponseDTO.LoginResponse loginResponse, LocalDateTime expiresAt) {}
+    private record TempExchangeData(
+            Long userId,
+            SocialType socialType,
+            String socialId,
+            String deviceInfo,
+            boolean isNewUser,
+            LocalDateTime expiresAt
+    ) {}
 
     public String generateTempExchangeCode(AuthResponseDTO.LoginResponse loginResponse) {
         cleanExpiredTempCodes();
         String tempCode = java.util.UUID.randomUUID().toString();
-        tempCodeStore.put(tempCode, new TempExchangeData(loginResponse, LocalDateTime.now().plusSeconds(TEMP_CODE_EXPIRATION_SECONDS)));
+        tempCodeStore.put(tempCode, new TempExchangeData(
+                loginResponse.userId(),
+                null,
+                null,
+                null,
+                loginResponse.isNewUser(),
+                LocalDateTime.now().plusSeconds(TEMP_CODE_EXPIRATION_SECONDS)
+        ));
         return tempCode;
     }
 
@@ -136,7 +168,14 @@ public class AuthService {
         if (data == null || LocalDateTime.now().isAfter(data.expiresAt())) {
             throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
         }
-        return data.loginResponse();
+
+        return authTransactionService.completeTokenExchange(
+                data.userId(),
+                data.socialType(),
+                data.socialId(),
+                data.deviceInfo(),
+                data.isNewUser()
+        );
     }
 
     private void cleanExpiredTempCodes() {
