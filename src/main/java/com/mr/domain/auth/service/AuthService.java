@@ -12,16 +12,12 @@ import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -32,174 +28,31 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtTokenProvider tokenProvider;
     private final OAuthClientService oAuthClientService;
-    private final TransactionTemplate transactionTemplate;
+    private final AuthTransactionService authTransactionService;
 
-    @Value("${app.profile.default-image-url}")
-    private String defaultProfileImageUrl;
-
-    @Transactional
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String accessToken, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
 
         try {
-            return executeSocialLogin(socialType, userInfo, deviceInfo);
+            return authTransactionService.executeSocialLogin(socialType, userInfo, deviceInfo);
         } catch (DataIntegrityViolationException e) {
-            return executeSocialLoginForExistingUser(socialType, userInfo, deviceInfo);
+            return authTransactionService.executeSocialLoginForExistingUser(socialType, userInfo, deviceInfo);
         }
     }
 
-    @Transactional
     public AuthResponseDTO.LoginResponse socialLoginByCode(SocialType socialType, String code, String redirectUri, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfoByCode(socialType, code, redirectUri);
 
         try {
-            return executeSocialLogin(socialType, userInfo, deviceInfo);
+            return authTransactionService.executeSocialLogin(socialType, userInfo, deviceInfo);
         } catch (DataIntegrityViolationException e) {
-            return executeSocialLoginForExistingUser(socialType, userInfo, deviceInfo);
+            return authTransactionService.executeSocialLoginForExistingUser(socialType, userInfo, deviceInfo);
         }
     }
 
-    @Transactional
-    public AuthResponseDTO.LoginResponse executeSocialLogin(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
-        Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId());
-        boolean isNewUser = optionalSocialAuth.isEmpty();
-
-        User user;
-        SocialAuth socialAuth;
-
-        if (optionalSocialAuth.isPresent()) {
-            socialAuth = optionalSocialAuth.get();
-            user = socialAuth.getUser();
-        } else {
-            user = registerNewUser(userInfo);
-            socialAuth = null;
-        }
-
-        String newAccessToken = tokenProvider.createAccessToken(user.getUserId());
-        String newRefreshToken = tokenProvider.createRefreshToken(user.getUserId());
-        String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
-        LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
-
-        if (isNewUser) {
-            socialAuth = SocialAuth.create(
-                    user,
-                    socialType,
-                    userInfo.socialId(),
-                    refreshTokenHash,
-                    expiryTime,
-                    deviceInfo
-            );
-            socialAuthRepository.saveAndFlush(socialAuth);
-        } else {
-            socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
-        }
-
-        AuthResponseDTO.TokenResponse tokenResponse = AuthResponseDTO.TokenResponse.builder()
-                .accessToken(newAccessToken)
-                .refreshToken(newRefreshToken)
-                .accessTokenExpiresInSeconds(tokenProvider.getAccessTokenExpirationSeconds())
-                .build();
-
-        return AuthResponseDTO.LoginResponse.builder()
-                .userId(user.getUserId())
-                .nickname(user.getNickname())
-                .isNewUser(isNewUser)
-                .isOnboardingCompleted(user.isOnboardingCompleted())
-                .tokenInfo(tokenResponse)
-                .build();
-    }
-
-    @Transactional
-    public AuthResponseDTO.LoginResponse executeSocialLoginForExistingUser(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
-        SocialAuth socialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId())
-                .orElseThrow(() -> new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST));
-
-        User user = socialAuth.getUser();
-
-        String newAccessToken = tokenProvider.createAccessToken(user.getUserId());
-        String newRefreshToken = tokenProvider.createRefreshToken(user.getUserId());
-        String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
-        LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
-
-        socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
-
-        AuthResponseDTO.TokenResponse tokenResponse = AuthResponseDTO.TokenResponse.builder()
-                .accessToken(newAccessToken)
-                .refreshToken(newRefreshToken)
-                .accessTokenExpiresInSeconds(tokenProvider.getAccessTokenExpirationSeconds())
-                .build();
-
-        return AuthResponseDTO.LoginResponse.builder()
-                .userId(user.getUserId())
-                .nickname(user.getNickname())
-                .isNewUser(false)
-                .isOnboardingCompleted(user.isOnboardingCompleted())
-                .tokenInfo(tokenResponse)
-                .build();
-    }
-
-    @Transactional
     public AuthResponseDTO.TokenInfo linkSocialAccount(Long userId, SocialType socialType, String accessToken, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
-        return executeLinkSocialAccount(userId, socialType, userInfo, deviceInfo);
-    }
-
-    @Transactional
-    public AuthResponseDTO.TokenInfo executeLinkSocialAccount(Long userId, SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
-
-        Optional<SocialAuth> existingSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId());
-        if (existingSocialAuth.isPresent()) {
-            SocialAuth socialAuth = existingSocialAuth.get();
-            if (!socialAuth.getUser().getUserId().equals(userId)) {
-                throw new GeneralException(AuthErrorStatus.ALREADY_LINKED_SOCIAL_ACCOUNT);
-            }
-        }
-
-        Optional<SocialAuth> userSocialAuthForType = socialAuthRepository.findAllByUser_UserId(userId).stream()
-                .filter(sa -> sa.getSocialType() == socialType)
-                .findFirst();
-
-        if (userSocialAuthForType.isPresent() && !userSocialAuthForType.get().getSocialId().equals(userInfo.socialId())) {
-            throw new GeneralException(AuthErrorStatus.ALREADY_LINKED_SOCIAL_ACCOUNT);
-        }
-
-        String newAccessToken = tokenProvider.createAccessToken(userId);
-        String newRefreshToken = tokenProvider.createRefreshToken(userId);
-        String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
-        LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
-
-        if (existingSocialAuth.isPresent()) {
-            SocialAuth socialAuth = existingSocialAuth.get();
-            socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
-        } else {
-            SocialAuth newSocialAuth = SocialAuth.create(
-                    user,
-                    socialType,
-                    userInfo.socialId(),
-                    refreshTokenHash,
-                    expiryTime,
-                    deviceInfo
-            );
-            socialAuthRepository.save(newSocialAuth);
-        }
-
-        return AuthResponseDTO.TokenInfo.builder()
-                .accessToken(newAccessToken)
-                .refreshToken(newRefreshToken)
-                .accessTokenExpiresInSeconds(tokenProvider.getAccessTokenExpirationSeconds())
-                .build();
-    }
-
-    private User registerNewUser(OAuthUserInfo userInfo) {
-        String profileImgUrl = userInfo.profileImgUrl();
-        if (profileImgUrl == null || profileImgUrl.isBlank()) {
-            profileImgUrl = defaultProfileImageUrl;
-        }
-
-        User user = User.createFromOAuth(profileImgUrl);
-        return userRepository.save(user);
+        return authTransactionService.executeLinkSocialAccount(userId, socialType, userInfo, deviceInfo);
     }
 
     @Transactional
