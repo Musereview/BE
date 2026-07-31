@@ -138,8 +138,9 @@ public class OAuthClientService {
     private String exchangeGoogleCode(String code, String customRedirectUri) {
         OAuthProperties.ProviderProperties googleProps = oAuthProperties != null ? oAuthProperties.google() : null;
         String clientId = googleProps != null ? googleProps.clientId() : null;
-        if (clientId == null || clientId.isBlank()) {
-            log.error("Google OAuth configuration is missing (client_id is not set)");
+        String clientSecret = googleProps != null ? googleProps.clientSecret() : null;
+        if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
+            log.error("Google OAuth configuration is missing (client_id or client_secret is not set)");
             throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
         }
 
@@ -148,7 +149,7 @@ public class OAuthClientService {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("grant_type", "authorization_code");
         body.add("client_id", clientId);
-        body.add("client_secret", googleProps != null ? googleProps.clientSecret() : "");
+        body.add("client_secret", clientSecret);
         body.add("redirect_uri", redirectUri);
         body.add("code", code);
 
@@ -324,26 +325,7 @@ public class OAuthClientService {
                 .toUriString();
     }
 
-    public String buildFrontendRedirectUrl(com.mr.domain.auth.dto.res.AuthResponseDTO.LoginResponse loginResponse) {
-        return buildFrontendRedirectUrl(loginResponse, null);
-    }
 
-    public String buildFrontendRedirectUrl(com.mr.domain.auth.dto.res.AuthResponseDTO.LoginResponse loginResponse, String customFrontendRedirectUri) {
-        String baseUrl = (customFrontendRedirectUri != null && isFrontendAllowedRedirectUri(customFrontendRedirectUri))
-                ? customFrontendRedirectUri.trim()
-                : (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
-                ? oAuthProperties.frontendRedirectUri()
-                : "http://localhost:3000/oauth/callback";
-
-        return org.springframework.web.util.UriComponentsBuilder.fromUriString(baseUrl)
-                .queryParam("accessToken", loginResponse.tokenInfo().accessToken())
-                .queryParam("refreshToken", loginResponse.tokenInfo().refreshToken())
-                .queryParam("userId", loginResponse.userId())
-                .queryParam("isNewUser", loginResponse.isNewUser())
-                .queryParam("isOnboardingCompleted", loginResponse.isOnboardingCompleted())
-                .build()
-                .toUriString();
-    }
 
     public String buildFrontendErrorRedirectUrl(String error) {
         return buildFrontendErrorRedirectUrl(error, (String) null);
