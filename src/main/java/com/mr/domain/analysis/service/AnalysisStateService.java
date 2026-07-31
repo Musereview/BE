@@ -143,27 +143,27 @@ public class AnalysisStateService {
             AnalysisReport report,
             LlmCallMetadata metadata
     ) {
-        LlmCallLog log = metadata.status() == LlmCallStatus.SUCCESS
-                ? LlmCallLog.success(
-                        analysis.getUser(), analysis, report, null,
-                        LlmPurpose.REPORT_GENERATION, metadata.modelName(), metadata.promptVersion(),
-                        metadata.promptSnapshot(), metadata.promptTokens(), metadata.completionTokens(),
-                        metadata.totalTokens(), metadata.temperature(), metadata.latencyMs(),
-                        metadata.cacheHit(), metadata.inputHash()
-                )
-                : metadata.status() == LlmCallStatus.TIMEOUT
-                        ? LlmCallLog.timeout(
-                                analysis.getUser(), analysis, report, null,
-                                LlmPurpose.REPORT_GENERATION, metadata.modelName(), metadata.promptVersion(),
-                                metadata.promptSnapshot(), metadata.temperature(), metadata.latencyMs(),
-                                metadata.inputHash(), metadata.errorMessage()
-                        )
-                        : LlmCallLog.failed(
-                                analysis.getUser(), analysis, report, null,
-                                LlmPurpose.REPORT_GENERATION, metadata.modelName(), metadata.promptVersion(),
-                                metadata.promptSnapshot(), metadata.temperature(), metadata.latencyMs(),
-                                metadata.inputHash(), metadata.errorMessage()
-                        );
+        LlmCallLog log = switch (metadata.status()) {
+            case SUCCESS -> LlmCallLog.success(
+                    analysis.getUser(), analysis, report, null,
+                    LlmPurpose.REPORT_GENERATION, metadata.modelName(), metadata.promptVersion(),
+                    metadata.promptSnapshot(), metadata.promptTokens(), metadata.completionTokens(),
+                    metadata.totalTokens(), metadata.temperature(), metadata.latencyMs(),
+                    metadata.cacheHit(), metadata.inputHash()
+            );
+            case TIMEOUT -> LlmCallLog.timeout(
+                    analysis.getUser(), analysis, report, null,
+                    LlmPurpose.REPORT_GENERATION, metadata.modelName(), metadata.promptVersion(),
+                    metadata.promptSnapshot(), metadata.temperature(), metadata.latencyMs(),
+                    metadata.inputHash(), metadata.errorMessage()
+            );
+            case FAILED -> LlmCallLog.failed(
+                    analysis.getUser(), analysis, report, null,
+                    LlmPurpose.REPORT_GENERATION, metadata.modelName(), metadata.promptVersion(),
+                    metadata.promptSnapshot(), metadata.temperature(), metadata.latencyMs(),
+                    metadata.inputHash(), metadata.errorMessage()
+            );
+        };
         llmCallLogRepository.save(log);
     }
 

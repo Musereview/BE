@@ -30,6 +30,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -142,6 +143,49 @@ class AnalysisStateServiceTest {
     }
 
     @Test
+    void complete_persistsLlmReportAndSuccessfulCallLog() throws Exception {
+        JsonNode result = validResult();
+
+        service.complete(
+                1L,
+                PROCESSING_STARTED_AT,
+                result,
+                result.toString(),
+                generatedReport(ReportGenerationType.LLM, LlmCallStatus.SUCCESS)
+        );
+
+        ArgumentCaptor<AnalysisReport> reportCaptor = ArgumentCaptor.forClass(AnalysisReport.class);
+        ArgumentCaptor<LlmCallLog> logCaptor = ArgumentCaptor.forClass(LlmCallLog.class);
+        verify(analysisReportRepository).save(reportCaptor.capture());
+        verify(llmCallLogRepository).save(logCaptor.capture());
+        org.assertj.core.api.Assertions.assertThat(reportCaptor.getValue().getGenerationType())
+                .isEqualTo(ReportGenerationType.LLM);
+        org.assertj.core.api.Assertions.assertThat(logCaptor.getValue().getStatus())
+                .isEqualTo(LlmCallStatus.SUCCESS);
+        org.assertj.core.api.Assertions.assertThat(logCaptor.getValue().getTotalTokens()).isEqualTo(30);
+    }
+
+    @Test
+    void complete_persistsTimeoutCallLogForFallbackReport() throws Exception {
+        JsonNode result = validResult();
+
+        service.complete(
+                1L,
+                PROCESSING_STARTED_AT,
+                result,
+                result.toString(),
+                generatedReport(ReportGenerationType.RULE_BASED, LlmCallStatus.TIMEOUT)
+        );
+
+        ArgumentCaptor<LlmCallLog> logCaptor = ArgumentCaptor.forClass(LlmCallLog.class);
+        verify(llmCallLogRepository).save(logCaptor.capture());
+        org.assertj.core.api.Assertions.assertThat(logCaptor.getValue().getStatus())
+                .isEqualTo(LlmCallStatus.TIMEOUT);
+        org.assertj.core.api.Assertions.assertThat(logCaptor.getValue().getErrorMessage())
+                .isEqualTo("failed");
+    }
+
+    @Test
     void complete_ignoresStaleProcessingAttempt() throws Exception {
         JsonNode result = result("""
                 {
@@ -239,6 +283,23 @@ class AnalysisStateServiceTest {
         return objectMapper.readTree(json);
     }
 
+    private JsonNode validResult() throws Exception {
+        return result("""
+                {
+                  "scores": {
+                    "final_score": 80,
+                    "grade": "GOOD",
+                    "domains": {
+                      "스케일": 81,
+                      "텐션": 82,
+                      "진행": 83,
+                      "코드 연결": 84
+                    }
+                  }
+                }
+                """);
+    }
+
     private void assertInvalidRawResult(JsonNode result) {
         assertThatThrownBy(() -> service.complete(
                 1L, PROCESSING_STARTED_AT, result, result.toString(), generatedReport()
@@ -249,19 +310,26 @@ class AnalysisStateServiceTest {
     }
 
     private GeneratedAnalysisReport generatedReport() {
+        return generatedReport(ReportGenerationType.RULE_BASED, LlmCallStatus.FAILED);
+    }
+
+    private GeneratedAnalysisReport generatedReport(
+            ReportGenerationType generationType,
+            LlmCallStatus status
+    ) {
         return new GeneratedAnalysisReport(
-                ReportGenerationType.RULE_BASED,
+                generationType,
                 "리포트",
-                null,
+                "gemini-3-flash-preview",
                 "analysis-report-v1",
                 new LlmCallMetadata(
-                        LlmCallStatus.FAILED,
+                        status,
                         "gemini-3-flash-preview",
                         "analysis-report-v1",
                         objectMapper.createObjectNode(),
-                        null,
-                        null,
-                        null,
+                        10,
+                        20,
+                        30,
                         new BigDecimal("0.30"),
                         100,
                         false,

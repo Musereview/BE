@@ -9,7 +9,7 @@ import lombok.Getter;
 public class PlayingCompletedEvent {
     private Long userId;
 
-    // 완료 연주 소유자 식별자
+    // 클라이언트 입력이 아닌 완료된 Playing 소유자 식별자
     public static PlayingCompletedEvent of(Long userId) {
         return new PlayingCompletedEvent(userId);
     }

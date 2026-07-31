@@ -53,6 +53,8 @@ class AnalysisRequestFactoryTest {
         AiAnalysisRequest request = factory.create(playing, 2, 2);
 
         assertThat(request.notes()).hasSize(2);
+        assertThat(request.notes().get(0).type()).isEqualTo(AiAnalysisRequest.NoteType.NOTE_ON);
+        assertThat(request.notes().get(1).type()).isEqualTo(AiAnalysisRequest.NoteType.NOTE_OFF);
         assertThat(request.notes().get(0).timestampMs()).isEqualTo(0D);
         assertThat(request.notes().get(1).timestampMs()).isEqualTo(1_999D);
     }
