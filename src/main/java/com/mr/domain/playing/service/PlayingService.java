@@ -107,6 +107,11 @@ public class PlayingService {
             return;
         }
 
+        // TODO:
+        // ACADEMY 접근 정책은 User-학원 관계가 추가되면
+        // 같은 학원 사용자에게 접근을 허용하도록 수정한다.
+        // 현재는 PRIVATE와 동일하게 생성자만 접근 가능하도록 처리한다.
+
         if (backingTrack.getUser() == null || !backingTrack.getUser().getUserId().equals(userId)){
             throw new GeneralException(PlayingErrorStatus.BACKING_TRACK_ACCESS_FORBIDDEN);
         }
