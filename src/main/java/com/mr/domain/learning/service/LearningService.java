@@ -69,12 +69,13 @@ public class LearningService {
             Long learningId,
             LearningResultSaveRequestDTO.SaveResultDTO request
     ){
-        User user = userRepository.findById(userId)
+        // 같은 유저의 동시 저장 요청을 직렬화하기 위해 유저 행에 비관적 락을 걸고 조회
+        // (completedStepCountBefore/After 판정 구간 전체가 이 락 보유 중에 실행되어야 TOCTOU가 안 생김.
+        //  패키지가 아니라 유저 단위로 잠가서, 같은 패키지를 학습하는 다른 유저끼리는 잠기지 않는다)
+        User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(()-> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
-        // 같은 패키지에 대한 동시 저장 요청을 직렬화하기 위해 비관적 락으로 조회
-        // (completedStepCountBefore/After 판정 구간 전체가 이 락 보유 중에 실행되어야 TOCTOU가 안 생김)
-        Learning learning = learningRepository.findByIdForUpdate(learningId)
+        Learning learning = learningRepository.findByIdAndIsActiveTrue(learningId)
                 .orElseThrow(() -> new GeneralException(LearningErrorStatus.LEARNING_NOT_FOUND));
 
         LearningStep learningStep = learningStepRepository.findById(request.learningStepId())

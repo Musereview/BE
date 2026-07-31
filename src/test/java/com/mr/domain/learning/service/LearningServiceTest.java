@@ -1153,8 +1153,8 @@ class LearningServiceTest {
         when(existing.getLearning()).thenReturn(learning);
         when(existing.getLearningStatus()).thenReturn("COMPLETED");
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(learningRepository.findByIdForUpdate(learningId)).thenReturn(Optional.of(learning));
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(user));
+        when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
         when(learningStepRepository.findById(learningStepId)).thenReturn(Optional.of(learningStep));
         // 전체 2단계 중 1단계만 완료된 상태(before) → 저장 후 재조회 시 2/2로 완료 전환됨
         when(learningStepRepository.countByLearningId(learningId)).thenReturn(2L);
@@ -1192,8 +1192,8 @@ class LearningServiceTest {
         when(existing.getLearning()).thenReturn(learning);
         when(existing.getLearningStatus()).thenReturn("COMPLETED");
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(learningRepository.findByIdForUpdate(learningId)).thenReturn(Optional.of(learning));
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(user));
+        when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
         when(learningStepRepository.findById(learningStepId)).thenReturn(Optional.of(learningStep));
         // 전체 2단계 모두 이미 완료된 상태(before)
         when(learningStepRepository.countByLearningId(learningId)).thenReturn(2L);
@@ -1228,8 +1228,8 @@ class LearningServiceTest {
         when(existing.getLearning()).thenReturn(learning);
         when(existing.getLearningStatus()).thenReturn("RETRY");
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(learningRepository.findByIdForUpdate(learningId)).thenReturn(Optional.of(learning));
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(user));
+        when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
         when(learningStepRepository.findById(learningStepId)).thenReturn(Optional.of(learningStep));
         // 전체 3단계 중 1단계만 완료된 상태(before) → 저장 후 재조회해도 2/3(여전히 미완료)
         when(learningStepRepository.countByLearningId(learningId)).thenReturn(3L);
@@ -1268,8 +1268,8 @@ class LearningServiceTest {
         when(savedProgress.getLearning()).thenReturn(learning);
         when(savedProgress.getLearningStatus()).thenReturn("COMPLETED");
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(learningRepository.findByIdForUpdate(learningId)).thenReturn(Optional.of(learning));
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(user));
+        when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
         when(learningStepRepository.findById(learningStepId)).thenReturn(Optional.of(learningStep));
         // 유일한 1단계짜리 패키지, 이번이 첫 진행 기록(before completed=0) → 저장 후 재조회 시 1/1로 완료
         when(learningStepRepository.countByLearningId(learningId)).thenReturn(1L);

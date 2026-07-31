@@ -16,9 +16,12 @@ import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -69,7 +72,8 @@ class LearningServiceConcurrencyTest {
 
     @Test
     @DisplayName("같은 패키지의 서로 다른 두 단계를 동시에 완료해도 완료 알림은 정확히 1번만 발행된다")
-    void concurrentSaveResultForDifferentSteps_publishesCompletionEventExactlyOnce() throws InterruptedException {
+    void concurrentSaveResultForDifferentSteps_publishesCompletionEventExactlyOnce()
+            throws InterruptedException, ExecutionException, TimeoutException {
         // given: 3단계 패키지, 1단계는 이미 완료된 상태 → 나머지 2단계를 동시에 완료 처리
         User user = userRepository.save(User.createFromOAuth("https://cdn.example.com/profile/default.png"));
         userId = user.getUserId();
@@ -108,12 +112,16 @@ class LearningServiceConcurrencyTest {
                     new LearningResultSaveRequestDTO.SaveResultDTO(95, step3.getId()));
         };
 
-        executor.submit(saveStep2);
-        executor.submit(saveStep3);
+        Future<?> future2 = executor.submit(saveStep2);
+        Future<?> future3 = executor.submit(saveStep3);
         readyLatch.await(5, TimeUnit.SECONDS); // 두 스레드 다 대기 지점에 도달할 때까지 대기
         startLatch.countDown(); // 동시에 출발
         executor.shutdown();
         assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+
+        // saveResult 내부에서 예외가 나도 Runnable만으로는 조용히 묻히므로, Future.get으로 직접 전파시켜 확인
+        future2.get(5, TimeUnit.SECONDS);
+        future3.get(5, TimeUnit.SECONDS);
 
         // then: 완료 알림(제목에 패키지명 포함)이 정확히 1건만 발행됐는지 확인 (after-commit 리스너 반영 대기 포함)
         List<com.mr.domain.notification.entity.Notification> notifications =
