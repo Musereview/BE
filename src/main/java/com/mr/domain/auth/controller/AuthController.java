@@ -45,6 +45,14 @@ public class AuthController {
     @org.springframework.beans.factory.annotation.Value("${oauth.cookie.secure:false}")
     private boolean cookieSecure;
 
+    private String getStateCookieName(SocialType socialType) {
+        return "oauth_state_" + (socialType != null ? socialType.name().toLowerCase() : "default");
+    }
+
+    private String getRedirectCookieName(SocialType socialType) {
+        return "oauth_redirect_uri_" + (socialType != null ? socialType.name().toLowerCase() : "default");
+    }
+
     @SecurityRequirements
     @Operation(
             summary = "소셜 로그인 시작 (OAuth 인가 URL 반환)",
@@ -60,7 +68,7 @@ public class AuthController {
     ) throws IOException {
         String state = UUID.randomUUID().toString();
 
-        ResponseCookie stateCookie = ResponseCookie.from("oauth_state", state)
+        ResponseCookie stateCookie = ResponseCookie.from(getStateCookieName(socialType), state)
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .path("/")
@@ -73,7 +81,7 @@ public class AuthController {
             String trimmedUri = customRedirectUri.trim();
             if (oAuthClientService.isBackendAllowedRedirectUri(socialType, trimmedUri)
                     || oAuthClientService.isFrontendAllowedRedirectUri(trimmedUri)) {
-                ResponseCookie redirectCookie = ResponseCookie.from("oauth_redirect_uri", trimmedUri)
+                ResponseCookie redirectCookie = ResponseCookie.from(getRedirectCookieName(socialType), trimmedUri)
                         .httpOnly(true)
                         .secure(cookieSecure)
                         .path("/")
@@ -109,20 +117,22 @@ public class AuthController {
     ) throws IOException {
         String savedState = null;
         String savedCustomRedirectUri = null;
+        String stateCookieName = getStateCookieName(socialType);
+        String redirectCookieName = getRedirectCookieName(socialType);
 
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
-                if ("oauth_state".equals(cookie.getName())) {
+                if (stateCookieName.equals(cookie.getName())) {
                     savedState = cookie.getValue();
-                } else if ("oauth_redirect_uri".equals(cookie.getName())) {
+                } else if (redirectCookieName.equals(cookie.getName())) {
                     savedCustomRedirectUri = cookie.getValue();
                 }
             }
         }
 
-        ResponseCookie clearStateCookie = ResponseCookie.from("oauth_state", "")
+        ResponseCookie clearStateCookie = ResponseCookie.from(stateCookieName, "")
                 .httpOnly(true).secure(cookieSecure).path("/").maxAge(0).sameSite("Lax").build();
-        ResponseCookie clearRedirectCookie = ResponseCookie.from("oauth_redirect_uri", "")
+        ResponseCookie clearRedirectCookie = ResponseCookie.from(redirectCookieName, "")
                 .httpOnly(true).secure(cookieSecure).path("/").maxAge(0).sameSite("Lax").build();
         response.addHeader(HttpHeaders.SET_COOKIE, clearStateCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, clearRedirectCookie.toString());
