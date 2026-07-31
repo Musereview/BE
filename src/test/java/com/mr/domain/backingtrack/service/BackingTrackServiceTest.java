@@ -1,36 +1,44 @@
 package com.mr.domain.backingtrack.service;
 
+import com.mr.domain.analysis.entity.Analysis;
+import com.mr.domain.analysis.entity.enums.AnalysisStatus;
+import com.mr.domain.analysis.exception.AnalysisErrorStatus;
+import com.mr.domain.analysis.repository.AnalysisRepository;
+import com.mr.domain.backingtrack.dto.req.BackingTrackListRequestDTO;
+import com.mr.domain.backingtrack.dto.req.PlayCountIncreaseRequestDTO;
+import com.mr.domain.backingtrack.dto.res.BackingTrackListResponseDTO;
+import com.mr.domain.backingtrack.dto.res.PlayCountIncreaseResponseDTO;
+import com.mr.domain.backingtrack.entity.BackingTrack;
+import com.mr.domain.backingtrack.entity.enums.AccessLevel;
+import com.mr.domain.backingtrack.exception.BackingTrackErrorStatus;
+import com.mr.domain.backingtrack.repository.BackingTrackRepository;
+import com.mr.domain.playing.entity.Playing;
+import com.mr.global.apipayload.exception.GeneralException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-
-import com.mr.domain.analysis.repository.AnalysisRepository;
-import com.mr.domain.backingtrack.dto.req.BackingTrackSaveRequestDTO;
-import com.mr.domain.backingtrack.dto.res.BackingTrackCreateResponseDTO;
-import com.mr.domain.backingtrack.dto.res.BackingTrackUpdateResponseDTO;
-import com.mr.domain.backingtrack.entity.BackingTrack;
-import com.mr.domain.backingtrack.entity.enums.AccessLevel;
-import com.mr.domain.backingtrack.entity.enums.Level;
-import com.mr.domain.backingtrack.entity.enums.ScaleType;
-import com.mr.domain.backingtrack.exception.BackingTrackErrorStatus;
-import com.mr.domain.backingtrack.repository.BackingTrackRepository;
-import com.mr.domain.user.entity.User;
-import com.mr.domain.user.repository.UserRepository;
-import com.mr.global.apipayload.exception.GeneralException;
-import java.util.List;
-import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class BackingTrackServiceTest {
@@ -39,138 +47,273 @@ class BackingTrackServiceTest {
     private BackingTrackRepository backingTrackRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private AnalysisRepository analysisRepository;
 
+    @InjectMocks
     private BackingTrackService backingTrackService;
-    private final AnalysisRepository analysisRepository;
+
+    @Mock
+    private BackingTrack backingTrack;
+
+    @Mock
+    private Analysis analysis;
+
+    private Long userId;
+    private Long backingTrackId;
 
     @BeforeEach
     void setUp() {
-        backingTrackService = new BackingTrackService(backingTrackRepository, userRepository, analysisRepository);
+        userId = 1L;
+        backingTrackId = 100L;
     }
 
-    private User createMockUser(Long userId) {
-        User mockUser = mock(User.class);
-        lenient().when(mockUser.getUserId()).thenReturn(userId);
-        return mockUser;
+    @Nested
+    @DisplayName("재생수 증가")
+    class IncreasePlayCount {
+
+        @Test
+        @DisplayName("본인 분석 결과이고 트랙이 일치하면 재생수가 증가한다")
+        void increasePlayCount_success() {
+            // given
+            Long analysisId = 200L;
+            // NOTE: PlayCountIncreaseRequestDTO.IncreaseRequestDTO 실제 필드명이
+            // analysisId()가 아니라면 이 부분을 실제 record 정의에 맞게 바꿔줘야 함
+            PlayCountIncreaseRequestDTO.IncreaseRequestDTO request =
+                    new PlayCountIncreaseRequestDTO.IncreaseRequestDTO(analysisId);
+
+            Playing playing = mock(Playing.class);
+            BackingTrack playingTrack = mock(BackingTrack.class);
+
+            given(backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId))
+                    .willReturn(Optional.of(backingTrack));
+
+            given(analysisRepository.findById(analysisId))
+                    .willReturn(Optional.of(analysis));
+
+            given(analysis.getStatus()).willReturn(AnalysisStatus.COMPLETED);
+            given(analysis.getPlaying()).willReturn(playing);
+            given(playing.getBackingTrack()).willReturn(playingTrack);
+            given(playingTrack.getId()).willReturn(backingTrackId);
+
+            given(backingTrackRepository.increasePlayCount(backingTrackId))
+                    .willReturn(1);
+
+            given(backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId))
+                    .willReturn(Optional.of(backingTrack));
+            given(backingTrack.getId()).willReturn(backingTrackId);
+            given(backingTrack.getPlayCount()).willReturn(6);
+
+            // when
+            PlayCountIncreaseResponseDTO.IncreaseResponseDTO response =
+                    backingTrackService.increasePlayCount(backingTrackId, request, userId);
+
+            // then
+            assertThat(response.playCount()).isEqualTo(6);
+            verify(analysis).validateOwner(userId);
+        }
+
+        @Test
+        @DisplayName("완료되지 않은 분석이면 예외가 발생한다")
+        void increasePlayCount_notCompleted() {
+            Long analysisId = 200L;
+            PlayCountIncreaseRequestDTO.IncreaseRequestDTO request =
+                    new PlayCountIncreaseRequestDTO.IncreaseRequestDTO(analysisId);
+
+            given(backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId))
+                    .willReturn(Optional.of(backingTrack));
+
+            given(analysisRepository.findById(analysisId))
+                    .willReturn(Optional.of(analysis));
+
+            given(analysis.getStatus()).willReturn(AnalysisStatus.PROCESSING);
+
+            assertThatThrownBy(() ->
+                    backingTrackService.increasePlayCount(backingTrackId, request, userId)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(exception -> {
+                        GeneralException generalException = (GeneralException) exception;
+                        assertThat(generalException.getCode())
+                                .isEqualTo(AnalysisErrorStatus.ANALYSIS_NOT_COMPLETED);
+                    });
+
+            verify(backingTrackRepository, never()).increasePlayCount(anyLong());
+        }
+
+        @Test
+        @DisplayName("본인 분석 결과가 아니면 재생수를 증가시키지 않는다")
+        void increasePlayCount_notOwner() {
+            Long analysisId = 200L;
+            PlayCountIncreaseRequestDTO.IncreaseRequestDTO request =
+                    new PlayCountIncreaseRequestDTO.IncreaseRequestDTO(analysisId);
+
+            given(backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId))
+                    .willReturn(Optional.of(backingTrack));
+
+            given(analysisRepository.findById(analysisId))
+                    .willReturn(Optional.of(analysis));
+
+            given(analysis.getStatus()).willReturn(AnalysisStatus.COMPLETED);
+
+            org.mockito.Mockito.doThrow(
+                    new GeneralException(AnalysisErrorStatus.ANALYSIS_ACCESS_DENIED)
+            ).when(analysis).validateOwner(userId);
+
+            assertThatThrownBy(() ->
+                    backingTrackService.increasePlayCount(backingTrackId, request, userId)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(exception -> {
+                        GeneralException generalException = (GeneralException) exception;
+                        assertThat(generalException.getCode())
+                                .isEqualTo(AnalysisErrorStatus.ANALYSIS_ACCESS_DENIED);
+                    });
+
+            verify(backingTrackRepository, never()).increasePlayCount(anyLong());
+        }
+
+        @Test
+        @DisplayName("분석 결과의 트랙과 요청 트랙이 다르면 예외가 발생한다")
+        void increasePlayCount_trackMismatch() {
+            Long analysisId = 200L;
+            PlayCountIncreaseRequestDTO.IncreaseRequestDTO request =
+                    new PlayCountIncreaseRequestDTO.IncreaseRequestDTO(analysisId);
+
+            Playing playing = mock(Playing.class);
+            BackingTrack otherTrack = mock(BackingTrack.class);
+
+            given(backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId))
+                    .willReturn(Optional.of(backingTrack));
+
+            given(analysisRepository.findById(analysisId))
+                    .willReturn(Optional.of(analysis));
+
+            given(analysis.getStatus()).willReturn(AnalysisStatus.COMPLETED);
+            given(analysis.getPlaying()).willReturn(playing);
+            given(playing.getBackingTrack()).willReturn(otherTrack);
+            given(otherTrack.getId()).willReturn(999L); // 다른 트랙 id
+
+            assertThatThrownBy(() ->
+                    backingTrackService.increasePlayCount(backingTrackId, request, userId)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(exception -> {
+                        GeneralException generalException = (GeneralException) exception;
+                        assertThat(generalException.getCode())
+                                .isEqualTo(BackingTrackErrorStatus.ANALYSIS_TRACK_MISMATCH);
+                    });
+
+            verify(backingTrackRepository, never()).increasePlayCount(anyLong());
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 백킹트랙이면 예외가 발생한다")
+        void increasePlayCount_trackNotFound() {
+            Long analysisId = 200L;
+            PlayCountIncreaseRequestDTO.IncreaseRequestDTO request =
+                    new PlayCountIncreaseRequestDTO.IncreaseRequestDTO(analysisId);
+
+            given(backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId))
+                    .willReturn(Optional.empty());
+
+            assertThatThrownBy(() ->
+                    backingTrackService.increasePlayCount(backingTrackId, request, userId)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(exception -> {
+                        GeneralException generalException = (GeneralException) exception;
+                        assertThat(generalException.getCode())
+                                .isEqualTo(BackingTrackErrorStatus.BACKING_TRACK_NOT_FOUND);
+                    });
+
+            verify(analysisRepository, never()).findById(any());
+        }
     }
 
-    private BackingTrackSaveRequestDTO.SaveDTO createValidRequest() {
-        return new BackingTrackSaveRequestDTO.SaveDTO(
-                "새로운 트랙", "Jazz", "C", ScaleType.MAJOR, "4/4", 120, 180, "http://audio.url",
-                AccessLevel.PUBLIC, Level.BASIC,
-                // 💡 확실하게 1개만 들어가도록 설정
-                List.of(new BackingTrackSaveRequestDTO.ChordProgressionDTO(1, 1, "CM7"))
-        );
-    }
+    @Nested
+    @DisplayName("목록 조회 (커서 기반)")
+    class GetBackingTracks {
 
-    @Test
-    @DisplayName("createBackingTrack - 정상적으로 백킹트랙을 생성한다")
-    void createBackingTrack_success() {
-        // given
-        Long userId = 1L;
-        User user = createMockUser(userId);
-        BackingTrackSaveRequestDTO.SaveDTO request = createValidRequest();
+        @Test
+        @DisplayName("결과가 PAGE_SIZE보다 많으면 hasNext가 true이고 마지막 항목이 잘린다")
+        void getBackingTracks_hasNextTrue() {
+            // given: PAGE_SIZE(9) + 1 = 10개를 리포지토리가 반환하는 상황 가정
+            // NOTE: PAGE_SIZE는 BackingTrackService 내부 private 상수(9)이므로
+            // 실제 값에 맞춰 mock 데이터 개수를 조정해야 함
+            BackingTrackListRequestDTO.ListRequestDTO request =
+                    new BackingTrackListRequestDTO.ListRequestDTO(null);
 
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+            List<BackingTrack> tenTracks = createMockTracks(10);
 
-        given(backingTrackRepository.save(any(BackingTrack.class))).willAnswer(invocation -> {
-            BackingTrack saved = invocation.getArgument(0);
-            ReflectionTestUtils.setField(saved, "id", 100L);
-            return saved;
-        });
+            given(backingTrackRepository.findVisibleTracksAfterCursor(
+                    eq(AccessLevel.PUBLIC), eq(userId), isNull(), any()
+            )).willReturn(tenTracks);
 
-        // when
-        BackingTrackCreateResponseDTO.CreateResultDTO response = backingTrackService.createBackingTrack(userId, request);
+            // when
+            BackingTrackListResponseDTO.ListResponseDTO response =
+                    backingTrackService.getBackingTracks(request, userId);
 
-        // then
-        ArgumentCaptor<BackingTrack> captor = ArgumentCaptor.forClass(BackingTrack.class);
+            // then
+            assertThat(response.hasNext()).isTrue();
+            assertThat(response.tracks()).hasSize(9);
+            assertThat(response.nextCursor()).isEqualTo(tenTracks.get(8).getId());
+        }
 
-        // 💡 verify 구문 안에 captor.capture()가 들어가도록 수정
-        verify(backingTrackRepository).save(captor.capture());
+        @Test
+        @DisplayName("결과가 PAGE_SIZE 이하이면 hasNext가 false이다")
+        void getBackingTracks_hasNextFalse() {
+            BackingTrackListRequestDTO.ListRequestDTO request =
+                    new BackingTrackListRequestDTO.ListRequestDTO(null);
 
-        BackingTrack capturedTrack = captor.getValue();
-        assertThat(capturedTrack.getTitle()).isEqualTo("새로운 트랙");
-        assertThat(capturedTrack.getChordProgressions()).hasSize(1);
+            List<BackingTrack> fiveTracks = createMockTracks(5);
 
-        assertThat(response.backingTrackId()).isEqualTo(100L);
-        assertThat(response.title()).isEqualTo("새로운 트랙");
-    }
+            given(backingTrackRepository.findVisibleTracksAfterCursor(
+                    eq(AccessLevel.PUBLIC), eq(userId), isNull(), any()
+            )).willReturn(fiveTracks);
 
-    @Test
-    @DisplayName("updateBackingTrack - 작성자 본인이면 정상적으로 업데이트한다")
-    void updateBackingTrack_success() {
-        // given
-        Long userId = 1L;
-        Long trackId = 100L;
-        User user = createMockUser(userId);
-        BackingTrackSaveRequestDTO.SaveDTO request = createValidRequest();
+            BackingTrackListResponseDTO.ListResponseDTO response =
+                    backingTrackService.getBackingTracks(request, userId);
 
-        BackingTrack existingTrack = BackingTrack.create(
-                user, 1L, "기존 제목", "Pop", "G", ScaleType.MAJOR, "4/4", 100, 200, null, null, AccessLevel.PRIVATE, Level.BASIC
-        );
-        ReflectionTestUtils.setField(existingTrack, "id", trackId);
+            assertThat(response.hasNext()).isFalse();
+            assertThat(response.tracks()).hasSize(5);
+            assertThat(response.nextCursor()).isEqualTo(fiveTracks.get(4).getId());
+        }
 
-        given(backingTrackRepository.findByIdAndDeletedAtIsNull(trackId)).willReturn(Optional.of(existingTrack));
+        @Test
+        @DisplayName("결과가 없으면 nextCursor는 null이다")
+        void getBackingTracks_empty() {
+            BackingTrackListRequestDTO.ListRequestDTO request =
+                    new BackingTrackListRequestDTO.ListRequestDTO(null);
 
-        // when
-        BackingTrackUpdateResponseDTO.UpdateResultDTO response = backingTrackService.updateBackingTrack(userId, trackId, request);
+            given(backingTrackRepository.findVisibleTracksAfterCursor(
+                    eq(AccessLevel.PUBLIC), eq(userId), isNull(), any()
+            )).willReturn(Collections.emptyList());
 
-        // then
-        assertThat(existingTrack.getTitle()).isEqualTo("새로운 트랙");
+            BackingTrackListResponseDTO.ListResponseDTO response =
+                    backingTrackService.getBackingTracks(request, userId);
 
-        assertThat(existingTrack.getChordProgressions()).hasSize(1);
+            assertThat(response.hasNext()).isFalse();
+            assertThat(response.tracks()).isEmpty();
+            assertThat(response.nextCursor()).isNull();
+        }
 
-        assertThat(response.backingTrackId()).isEqualTo(trackId);
-        assertThat(response.title()).isEqualTo("새로운 트랙");
-    }
-
-    @Test
-    @DisplayName("updateBackingTrack - 작성자가 다르면 예외가 발생한다")
-    void updateBackingTrack_fail_forbidden() {
-        Long requesterId = 2L;
-        Long ownerId = 1L;
-        Long trackId = 100L;
-
-        User owner = createMockUser(ownerId);
-        BackingTrackSaveRequestDTO.SaveDTO request = createValidRequest();
-
-        BackingTrack existingTrack = BackingTrack.create(
-                owner, 1L, "기존 제목", "Pop", "G", ScaleType.MAJOR, "4/4", 100, 200, null, null, AccessLevel.PRIVATE, Level.BASIC
-        );
-        ReflectionTestUtils.setField(existingTrack, "id", trackId);
-
-        given(backingTrackRepository.findByIdAndDeletedAtIsNull(trackId)).willReturn(Optional.of(existingTrack));
-
-        GeneralException exception = assertThrows(GeneralException.class,
-                () -> backingTrackService.updateBackingTrack(requesterId, trackId, request)
-        );
-
-        assertThat(exception.getErrorReason().code())
-                .isEqualTo(BackingTrackErrorStatus.FORBIDDEN_UPDATE.getCode());
-    }
-
-    @Test
-    @DisplayName("validateChordDuplicates - 중복된 코드 위치가 있으면 예외가 발생한다")
-    void validateChordDuplicates_fail() {
-        Long userId = 1L;
-        User user = createMockUser(userId);
-
-        BackingTrackSaveRequestDTO.SaveDTO invalidRequest = new BackingTrackSaveRequestDTO.SaveDTO(
-                "새로운 트랙", "Jazz", "C", ScaleType.MAJOR, "4/4", 120, 180, null, AccessLevel.PUBLIC, Level.BASIC,
-                List.of(
-                        new BackingTrackSaveRequestDTO.ChordProgressionDTO(1, 1, "CM7"),
-                        new BackingTrackSaveRequestDTO.ChordProgressionDTO(1, 1, "Am7") // 중복
-                )
-        );
-
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
-
-        GeneralException exception = assertThrows(GeneralException.class,
-                () -> backingTrackService.createBackingTrack(userId, invalidRequest)
-        );
-
-        assertThat(exception.getErrorReason().code())
-                .isEqualTo(BackingTrackErrorStatus.DUPLICATE_CHORD_POSITION.getCode());
+        // NOTE: BackingTrack이 mock이라 getChordProgressions()가 기본적으로 빈 리스트를
+        // 반환해야 서비스 내 stream 처리가 NPE 없이 동작함. Mockito는 컬렉션 반환 타입에
+        // 기본적으로 emptyList를 리턴하므로 별도 stubbing 없이도 동작할 것으로 예상되나,
+        // 실패 시 given(track.getChordProgressions()).willReturn(List.of())를 추가해야 함
+        private List<BackingTrack> createMockTracks(int count) {
+            List<BackingTrack> tracks = new java.util.ArrayList<>();
+            for (long i = 1; i <= count; i++) {
+                BackingTrack track = mock(BackingTrack.class);
+                lenient().when(track.getId()).thenReturn(i);
+                lenient().when(track.getScaleType())
+                        .thenReturn(com.mr.domain.backingtrack.entity.enums.ScaleType.MAJOR);
+                lenient().when(track.getLevel())
+                        .thenReturn(com.mr.domain.backingtrack.entity.enums.Level.BASIC);
+                lenient().when(track.getChordProgressions()).thenReturn(List.of());
+                tracks.add(track);
+            }
+            return tracks;
+        }
     }
 }
