@@ -16,6 +16,7 @@ import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,14 @@ public class ReportGenerationService {
 
     static final String PROMPT_VERSION = "analysis-report-v1";
     private static final BigDecimal TEMPERATURE = new BigDecimal("0.30");
+    private static final List<String> REQUIRED_HEADINGS = List.of(
+            "# 연주 분석 리포트",
+            "## 총평",
+            "## 잘한 점",
+            "## 진행 맥락",
+            "## 개선 제안",
+            "## 점수 요약"
+    );
     private static final String SYSTEM_PROMPT = """
             당신은 재즈 화성학과 MIDI 연주 분석에 능숙한 친절한 음악 코치입니다.
             입력은 MuseReview 분석 서버가 생성한 JSON입니다. JSON에 존재하는 사실만 사용하세요.
@@ -56,6 +65,7 @@ public class ReportGenerationService {
         String inputHash = sha256(PROMPT_VERSION + ":" + input);
         try {
             GeminiGenerationResult result = geminiClient.generateReport(SYSTEM_PROMPT, input);
+            validateMarkdownStructure(result.content());
             return new GeneratedAnalysisReport(
                     ReportGenerationType.LLM,
                     result.content(),
@@ -98,6 +108,20 @@ public class ReportGenerationService {
                             exception.getMessage()
                     )
             );
+        }
+    }
+
+    private void validateMarkdownStructure(String content) {
+        List<String> lines = content.lines()
+                .map(String::stripTrailing)
+                .toList();
+        int previousIndex = -1;
+        for (String heading : REQUIRED_HEADINGS) {
+            int currentIndex = lines.subList(previousIndex + 1, lines.size()).indexOf(heading);
+            if (currentIndex < 0) {
+                throw new IllegalStateException("Gemini returned an invalid report structure.");
+            }
+            previousIndex += currentIndex + 1;
         }
     }
 
