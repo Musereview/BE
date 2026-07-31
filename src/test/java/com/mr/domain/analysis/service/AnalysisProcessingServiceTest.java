@@ -8,12 +8,16 @@ import static org.mockito.Mockito.verify;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
+import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import com.mr.domain.analysis.generator.AnalysisResultEnricher;
 import com.mr.domain.analysis.model.AnalysisProcessingClaim;
 import com.mr.domain.analysis.model.GeneratedAnalysisReport;
+import com.mr.domain.analysis.model.LlmCallMetadata;
+import com.mr.domain.mentor.entity.enums.LlmCallStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.client.ai.AiAnalysisRequest;
 import com.mr.global.client.ai.AiServerClient;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -127,7 +131,26 @@ class AnalysisProcessingServiceTest {
                 }
                 """);
         JsonNode enrichedResult = new AnalysisResultEnricher().enrich(validResult);
-        GeneratedAnalysisReport generatedReport = org.mockito.Mockito.mock(GeneratedAnalysisReport.class);
+        GeneratedAnalysisReport generatedReport = new GeneratedAnalysisReport(
+                ReportGenerationType.RULE_BASED,
+                "리포트",
+                "gemini-3-flash-preview",
+                "analysis-report-v1",
+                new LlmCallMetadata(
+                        LlmCallStatus.FAILED,
+                        "gemini-3-flash-preview",
+                        "analysis-report-v1",
+                        objectMapper.createObjectNode(),
+                        null,
+                        null,
+                        null,
+                        new BigDecimal("0.30"),
+                        100,
+                        false,
+                        "input-hash",
+                        "LLM 호출 실패"
+                )
+        );
         given(analysisStateService.startProcessing(1L))
                 .willReturn(Optional.of(new AnalysisProcessingClaim(
                         "{\"meta\":null,\"chords\":[],\"notes\":[]}",
