@@ -13,6 +13,7 @@ import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -145,19 +146,23 @@ public class AuthTransactionService {
         String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
         LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
 
-        if (existingSocialAuth.isPresent()) {
-            SocialAuth socialAuth = existingSocialAuth.get();
-            socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
-        } else {
-            SocialAuth newSocialAuth = SocialAuth.create(
-                    user,
-                    socialType,
-                    userInfo.socialId(),
-                    refreshTokenHash,
-                    expiryTime,
-                    deviceInfo
-            );
-            socialAuthRepository.save(newSocialAuth);
+        try {
+            if (existingSocialAuth.isPresent()) {
+                SocialAuth socialAuth = existingSocialAuth.get();
+                socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
+            } else {
+                SocialAuth newSocialAuth = SocialAuth.create(
+                        user,
+                        socialType,
+                        userInfo.socialId(),
+                        refreshTokenHash,
+                        expiryTime,
+                        deviceInfo
+                );
+                socialAuthRepository.saveAndFlush(newSocialAuth);
+            }
+        } catch (DataIntegrityViolationException e) {
+            throw new GeneralException(AuthErrorStatus.ALREADY_LINKED_SOCIAL_ACCOUNT);
         }
 
         return AuthResponseDTO.TokenInfo.builder()
