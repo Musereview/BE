@@ -31,7 +31,7 @@ class OAuthClientServiceTest {
     void setUp() {
         restClientBuilder = RestClient.builder();
         mockServer = MockRestServiceServer.bindTo(restClientBuilder).build();
-        oAuthClientService = new OAuthClientService(restClientBuilder.build(), new OAuthExceptionMapper());
+        oAuthClientService = new OAuthClientService(restClientBuilder.build(), new OAuthExceptionMapper(), null);
     }
 
     @AfterEach
@@ -154,5 +154,107 @@ class OAuthClientServiceTest {
 
         assertThat(userInfo.socialId()).isEqualTo("google_987654321");
         assertThat(userInfo.profileImgUrl()).isEqualTo("https://example.com/google_profile.png");
+    }
+
+    @Test
+    @DisplayName("OAuth 설정(clientId)이 누락된 경우 authorization_code 교환 요청 시 OAUTH_SERVER_ERROR 예외가 발생한다")
+    void exchangeCode_missingConfig_throwsOauthServerError() {
+        assertThatThrownBy(() -> oAuthClientService.getUserInfoByCode(SocialType.KAKAO, "sample_code", null))
+                .isInstanceOf(GeneralException.class)
+                .satisfies(e -> assertThat(((GeneralException) e).getCode()).isEqualTo(AuthErrorStatus.OAUTH_SERVER_ERROR));
+    }
+
+    @Test
+    @DisplayName("허용되지 않은 customRedirectUri로 authorization_code 교환 요청 시 기본 redirectUri로 자동 폴백 처리된다")
+    void exchangeCode_invalidCustomRedirectUri_fallsBackToDefaultUri() {
+        com.mr.global.config.OAuthProperties.ProviderProperties kakaoProps = new com.mr.global.config.OAuthProperties.ProviderProperties(
+                "sample_client_id",
+                "sample_secret",
+                "https://allowed.example.com/oauth/callback",
+                java.util.List.of("https://allowed.example.com/oauth/callback")
+        );
+        com.mr.global.config.OAuthProperties oAuthProperties = new com.mr.global.config.OAuthProperties(
+                "http://localhost:3000/oauth/callback", java.util.List.of("http://localhost:3000/oauth/callback"), kakaoProps, null);
+        OAuthClientService serviceWithProps = new OAuthClientService(
+                restClientBuilder.build(), new OAuthExceptionMapper(), oAuthProperties);
+
+        mockServer.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo("https://kauth.kakao.com/oauth/token"))
+                .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withServerError());
+
+        assertThatThrownBy(() -> serviceWithProps.getUserInfoByCode(SocialType.KAKAO, "sample_code", "https://unauthorized.malicious.com/callback"))
+                .isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    @DisplayName("Bearer 접두어가 포함된 accessToken이 입력되어도 정상적으로 제거 후 처리된다")
+    void getUserInfo_bearerPrefix_stripsPrefixAndSucceeds() {
+        String jsonResponse = """
+                {
+                    "id": 999888777,
+                    "kakao_account": {
+                        "profile": {
+                            "profile_image_url": "https://example.com/profile.png"
+                        }
+                    }
+                }
+                """;
+
+        mockServer.expect(MockRestRequestMatchers.requestTo("https://kapi.kakao.com/v2/user/me"))
+                .andExpect(MockRestRequestMatchers.header(HttpHeaders.AUTHORIZATION, "Bearer valid_token"))
+                .andRespond(MockRestResponseCreators.withSuccess(jsonResponse, MediaType.APPLICATION_JSON));
+
+        OAuthUserInfo userInfo = oAuthClientService.getUserInfo(SocialType.KAKAO, "Bearer valid_token");
+
+        assertThat(userInfo.socialId()).isEqualTo("999888777");
+    }
+
+    @Test
+    @DisplayName("buildFrontendRedirectUrl 및 buildFrontendErrorRedirectUrl에 허용된 customFrontendRedirectUri가 지정된 경우 해당 URI를 base로 URL이 구성된다")
+    void buildFrontendRedirectUrl_customUri_usesCustomUriBase() {
+        String customUri = "https://myfrontend.com/custom/callback";
+        com.mr.global.config.OAuthProperties oAuthProperties = new com.mr.global.config.OAuthProperties(
+                "http://localhost:5173/oauth/callback", java.util.List.of("http://localhost:5173/oauth/callback", customUri), null, null);
+        OAuthClientService serviceWithProps = new OAuthClientService(
+                restClientBuilder.build(), new OAuthExceptionMapper(), oAuthProperties);
+
+        String successUrl = serviceWithProps.buildFrontendRedirectUrl("tempCode123", customUri);
+        String errorUrl = serviceWithProps.buildFrontendErrorRedirectUrl("access_denied", customUri);
+
+        assertThat(successUrl).isEqualTo("https://myfrontend.com/custom/callback?code=tempCode123");
+        assertThat(errorUrl).isEqualTo("https://myfrontend.com/custom/callback?error=access_denied");
+    }
+
+    @Test
+    @DisplayName("buildFrontendRedirectUrl에 허용되지 않은 악성 customFrontendRedirectUri가 들어오면 기본 URI로 폴백되어 Open Redirect를 방지한다")
+    void buildFrontendRedirectUrl_unallowedCustomUri_fallsBackToDefault() {
+        String maliciousUri = "https://evil.example.com/collect";
+        com.mr.global.config.OAuthProperties oAuthProperties = new com.mr.global.config.OAuthProperties(
+                "http://localhost:5173/oauth/callback", java.util.List.of("http://localhost:5173/oauth/callback"), null, null);
+        OAuthClientService serviceWithProps = new OAuthClientService(
+                restClientBuilder.build(), new OAuthExceptionMapper(), oAuthProperties);
+
+        String successUrl = serviceWithProps.buildFrontendRedirectUrl("tempCode123", maliciousUri);
+        assertThat(successUrl).startsWith("http://localhost:5173/oauth/callback");
+    }
+
+    @Test
+    @DisplayName("isBackendAllowedRedirectUri는 등록된 백엔드 콜백 URI 여부를 정확히 판단한다")
+    void isBackendAllowedRedirectUri_validatesCorrectly() {
+        com.mr.global.config.OAuthProperties.ProviderProperties kakaoProps = new com.mr.global.config.OAuthProperties.ProviderProperties(
+                "sample_client_id",
+                "sample_secret",
+                "http://localhost:8080/api/auth/kakao/callback",
+                java.util.List.of("http://localhost:8080/api/auth/kakao/callback")
+        );
+        com.mr.global.config.OAuthProperties oAuthProperties = new com.mr.global.config.OAuthProperties(
+                "http://localhost:5173/oauth/callback", java.util.List.of("http://localhost:5173/oauth/callback"), kakaoProps, null);
+        OAuthClientService serviceWithProps = new OAuthClientService(
+                restClientBuilder.build(), new OAuthExceptionMapper(), oAuthProperties);
+
+        boolean isBackendUri = serviceWithProps.isBackendAllowedRedirectUri(SocialType.KAKAO, "http://localhost:8080/api/auth/kakao/callback");
+        boolean isFrontendUri = serviceWithProps.isBackendAllowedRedirectUri(SocialType.KAKAO, "http://localhost:5173/custom/callback");
+
+        assertThat(isBackendUri).isTrue();
+        assertThat(isFrontendUri).isFalse();
     }
 }
