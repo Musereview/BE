@@ -7,6 +7,9 @@ import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
+import com.mr.domain.analysis.model.AnalysisProcessingClaim;
+import com.mr.domain.analysis.model.GeneratedAnalysisReport;
+import com.mr.domain.analysis.model.LlmCallMetadata;
 import com.mr.domain.analysis.repository.AnalysisReportRepository;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.mentor.entity.LlmCallLog;
@@ -41,18 +44,19 @@ public class AnalysisStateService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public Optional<String> startProcessing(Long analysisId) {
+    public Optional<AnalysisProcessingClaim> startProcessing(Long analysisId) {
         Analysis analysis = analysisRepository.findByIdForUpdate(analysisId)
                 .orElseThrow(() -> new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_FOUND));
         if (analysis.getStatus() != AnalysisStatus.PENDING) {
             return Optional.empty();
         }
-        analysis.startProcessing();
-        return Optional.of(analysis.getAnalysisRequestJson());
+        String requestJson = requireRequestJson(analysis);
+        LocalDateTime processingStartedAt = analysis.startProcessing();
+        return Optional.of(new AnalysisProcessingClaim(requestJson, processingStartedAt));
     }
 
     @Transactional
-    public Optional<String> restartStaleProcessing(Long analysisId, LocalDateTime cutoff) {
+    public Optional<AnalysisProcessingClaim> restartStaleProcessing(Long analysisId, LocalDateTime cutoff) {
         Analysis analysis = analysisRepository.findByIdForUpdate(analysisId)
                 .orElseThrow(() -> new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_FOUND));
         if (analysis.getStatus() != AnalysisStatus.PROCESSING
@@ -60,18 +64,23 @@ public class AnalysisStateService {
                 || analysis.getProcessingStartedAt().isAfter(cutoff)) {
             return Optional.empty();
         }
-        analysis.restartProcessing();
-        return Optional.of(analysis.getAnalysisRequestJson());
+        String requestJson = requireRequestJson(analysis);
+        LocalDateTime processingStartedAt = analysis.restartProcessing();
+        return Optional.of(new AnalysisProcessingClaim(requestJson, processingStartedAt));
     }
 
     @Transactional
-    public void complete(
+    public boolean complete(
             Long analysisId,
+            LocalDateTime expectedProcessingStartedAt,
             JsonNode result,
             String rawResultJson,
             GeneratedAnalysisReport generatedReport
     ) {
-        Analysis analysis = getAnalysis(analysisId);
+        Analysis analysis = getAnalysisForUpdate(analysisId);
+        if (!analysis.isCurrentProcessing(expectedProcessingStartedAt)) {
+            return false;
+        }
         validateResult(result);
         JsonNode scores = result.path("scores");
         BigDecimal finalScore = requiredScore(scores, "final_score");
@@ -99,6 +108,7 @@ public class AnalysisStateService {
         eventPublisher.publishEvent(
                 AnalysisCompletedEvent.of(analysis.getUser().getUserId())
         );
+        return true;
     }
 
     public void validateResult(JsonNode result) {
@@ -120,43 +130,55 @@ public class AnalysisStateService {
         requiredScore(domains, VOICE_LEADING);
     }
 
+    private String requireRequestJson(Analysis analysis) {
+        String requestJson = analysis.getAnalysisRequestJson();
+        if (requestJson == null || requestJson.isBlank()) {
+            throw new GeneralException(AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST);
+        }
+        return requestJson;
+    }
+
     private void saveLlmCallLog(
             Analysis analysis,
             AnalysisReport report,
             LlmCallMetadata metadata
     ) {
-        LlmCallLog log = metadata.status() == LlmCallStatus.SUCCESS
-                ? LlmCallLog.success(
-                        analysis.getUser(), analysis, report, null,
-                        LlmPurpose.REPORT_GENERATION, metadata.modelName(), metadata.promptVersion(),
-                        metadata.promptSnapshot(), metadata.promptTokens(), metadata.completionTokens(),
-                        metadata.totalTokens(), metadata.temperature(), metadata.latencyMs(),
-                        metadata.cacheHit(), metadata.inputHash()
-                )
-                : metadata.status() == LlmCallStatus.TIMEOUT
-                        ? LlmCallLog.timeout(
-                                analysis.getUser(), analysis, report, null,
-                                LlmPurpose.REPORT_GENERATION, metadata.modelName(), metadata.promptVersion(),
-                                metadata.promptSnapshot(), metadata.temperature(), metadata.latencyMs(),
-                                metadata.inputHash(), metadata.errorMessage()
-                        )
-                        : LlmCallLog.failed(
-                                analysis.getUser(), analysis, report, null,
-                                LlmPurpose.REPORT_GENERATION, metadata.modelName(), metadata.promptVersion(),
-                                metadata.promptSnapshot(), metadata.temperature(), metadata.latencyMs(),
-                                metadata.inputHash(), metadata.errorMessage()
-                        );
+        LlmCallLog log = switch (metadata.status()) {
+            case SUCCESS -> LlmCallLog.success(
+                    analysis.getUser(), analysis, report, null,
+                    LlmPurpose.REPORT_GENERATION, metadata.modelName(), metadata.promptVersion(),
+                    metadata.promptSnapshot(), metadata.promptTokens(), metadata.completionTokens(),
+                    metadata.totalTokens(), metadata.temperature(), metadata.latencyMs(),
+                    metadata.cacheHit(), metadata.inputHash()
+            );
+            case TIMEOUT -> LlmCallLog.timeout(
+                    analysis.getUser(), analysis, report, null,
+                    LlmPurpose.REPORT_GENERATION, metadata.modelName(), metadata.promptVersion(),
+                    metadata.promptSnapshot(), metadata.temperature(), metadata.latencyMs(),
+                    metadata.inputHash(), metadata.errorMessage()
+            );
+            case FAILED -> LlmCallLog.failed(
+                    analysis.getUser(), analysis, report, null,
+                    LlmPurpose.REPORT_GENERATION, metadata.modelName(), metadata.promptVersion(),
+                    metadata.promptSnapshot(), metadata.temperature(), metadata.latencyMs(),
+                    metadata.inputHash(), metadata.errorMessage()
+            );
+        };
         llmCallLogRepository.save(log);
     }
 
     @Transactional
-    public void fail(Long analysisId, String reason) {
-        Analysis analysis = getAnalysis(analysisId);
+    public boolean fail(Long analysisId, LocalDateTime expectedProcessingStartedAt, String reason) {
+        Analysis analysis = getAnalysisForUpdate(analysisId);
+        if (!analysis.isCurrentProcessing(expectedProcessingStartedAt)) {
+            return false;
+        }
         analysis.fail(reason);
+        return true;
     }
 
-    private Analysis getAnalysis(Long analysisId) {
-        return analysisRepository.findById(analysisId)
+    private Analysis getAnalysisForUpdate(Long analysisId) {
+        return analysisRepository.findByIdForUpdate(analysisId)
                 .orElseThrow(() -> new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_FOUND));
     }
 

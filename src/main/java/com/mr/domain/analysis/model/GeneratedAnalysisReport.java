@@ -1,4 +1,4 @@
-package com.mr.domain.analysis.service;
+package com.mr.domain.analysis.model;
 
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 

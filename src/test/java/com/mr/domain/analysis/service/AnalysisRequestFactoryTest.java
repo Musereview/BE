@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
+import com.mr.domain.analysis.factory.AnalysisRequestFactory;
 import com.mr.domain.backingTrack.entity.BackingTrack;
 import com.mr.domain.backingTrack.entity.enums.Level;
 import com.mr.domain.backingTrack.entity.enums.ScaleType;
@@ -52,6 +53,8 @@ class AnalysisRequestFactoryTest {
         AiAnalysisRequest request = factory.create(playing, 2, 2);
 
         assertThat(request.notes()).hasSize(2);
+        assertThat(request.notes().get(0).type()).isEqualTo(AiAnalysisRequest.NoteType.NOTE_ON);
+        assertThat(request.notes().get(1).type()).isEqualTo(AiAnalysisRequest.NoteType.NOTE_OFF);
         assertThat(request.notes().get(0).timestampMs()).isEqualTo(0D);
         assertThat(request.notes().get(1).timestampMs()).isEqualTo(1_999D);
     }
@@ -61,5 +64,16 @@ class AnalysisRequestFactoryTest {
         assertThatThrownBy(() -> factory.create(playing, 1, 33))
                 .isInstanceOf(GeneralException.class)
                 .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.INVALID_BAR_RANGE);
+    }
+
+    @Test
+    void create_rejectsValidBarRangeWithoutNotes() {
+        given(playing.getMidiData()).willReturn(List.of(
+                MidiEventData.of(0, MidiType.NOTE_ON, 60, 100, 0L)
+        ));
+
+        assertThatThrownBy(() -> factory.create(playing, 2, 2))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.EMPTY_NOTE_RANGE);
     }
 }

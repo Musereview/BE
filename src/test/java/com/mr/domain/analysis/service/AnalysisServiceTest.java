@@ -22,8 +22,11 @@ import com.mr.domain.analysis.entity.enums.LlmStatus;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.event.AnalysisRequestedEvent;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
+import com.mr.domain.analysis.factory.AnalysisRequestFactory;
 import com.mr.domain.analysis.repository.AnalysisReportRepository;
 import com.mr.domain.analysis.repository.AnalysisRepository;
+import com.mr.domain.backingTrack.entity.BackingTrack;
+import com.mr.domain.backingTrack.entity.enums.ScaleType;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
@@ -74,8 +77,15 @@ class AnalysisServiceTest {
         given(user.getUserId()).willReturn(userId);
 
         Playing playing = mock(Playing.class);
+        BackingTrack backingTrack = mock(BackingTrack.class);
         lenient().when(playing.getId()).thenReturn(1L);
         lenient().when(playing.getUser()).thenReturn(user);
+        lenient().when(playing.getBackingTrack()).thenReturn(backingTrack);
+        lenient().when(playing.getBpm()).thenReturn(120);
+        lenient().when(backingTrack.getTitle()).thenReturn("테스트 트랙");
+        lenient().when(backingTrack.getGenre()).thenReturn("jazz");
+        lenient().when(backingTrack.getKeySignature()).thenReturn("C");
+        lenient().when(backingTrack.getScaleType()).thenReturn(ScaleType.MAJOR);
 
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
         analysis.startProcessing();
@@ -114,6 +124,8 @@ class AnalysisServiceTest {
         assertThat(response.report()).isNotNull();
         assertThat(response.report().content()).isEqualTo("리포트 본문");
         assertThat(response.report().llmStatus()).isEqualTo(LlmStatus.SUCCESS);
+        assertThat(response.title()).isEqualTo("테스트 트랙");
+        assertThat(response.key()).isEqualTo("C Major");
     }
 
     @Test

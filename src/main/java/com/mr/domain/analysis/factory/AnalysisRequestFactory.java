@@ -1,10 +1,11 @@
-package com.mr.domain.analysis.service;
+package com.mr.domain.analysis.factory;
 
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.backingTrack.entity.BackingTrack;
 import com.mr.domain.backingTrack.entity.ChordProgression;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
+import com.mr.domain.playing.entity.enums.MidiType;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.client.ai.AiAnalysisRequest;
 import java.util.Arrays;
@@ -39,14 +40,14 @@ public class AnalysisRequestFactory {
                         .thenComparingInt(MidiEventData::getSequence))
                 .map(event -> new AiAnalysisRequest.Note(
                         noteIndex.getAndIncrement(),
-                        AiAnalysisRequest.NoteType.valueOf(event.getType().name()),
+                        toNoteType(event.getType()),
                         event.getPitch(),
                         event.getVelocity(),
                         event.getTimestampMs() - startOffsetMs
                 ))
                 .toList();
         if (notes.isEmpty()) {
-            throw new GeneralException(AnalysisErrorStatus.INVALID_BAR_RANGE);
+            throw new GeneralException(AnalysisErrorStatus.EMPTY_NOTE_RANGE);
         }
 
         List<AiAnalysisRequest.Chord> chords = track.getChordProgressions().stream()
@@ -71,6 +72,13 @@ public class AnalysisRequestFactory {
                 track.getLevel().name().toLowerCase(Locale.ROOT)
         );
         return new AiAnalysisRequest(meta, chords, notes);
+    }
+
+    private AiAnalysisRequest.NoteType toNoteType(MidiType type) {
+        return switch (type) {
+            case NOTE_ON -> AiAnalysisRequest.NoteType.NOTE_ON;
+            case NOTE_OFF -> AiAnalysisRequest.NoteType.NOTE_OFF;
+        };
     }
 
     private void validateBarRange(

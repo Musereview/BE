@@ -1,6 +1,7 @@
-package com.mr.domain.analysis.service;
+package com.mr.domain.analysis.event.listener;
 
 import com.mr.domain.analysis.event.AnalysisRequestedEvent;
+import com.mr.domain.analysis.service.AnalysisProcessingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;

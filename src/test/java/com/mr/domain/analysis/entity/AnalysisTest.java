@@ -10,6 +10,7 @@ import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -70,6 +71,22 @@ class AnalysisTest {
 
         assertThat(analysis.getProcessingStartedAt()).isNotNull();
         assertThat(analysis.getStatus()).isEqualTo(AnalysisStatus.PROCESSING);
+    }
+
+    @Test
+    @DisplayName("restartProcessing - 새 처리 시작 시각으로 이전 작업을 펜싱한다")
+    void restartProcessing_renewsProcessingStartedAt() {
+        User user = mock(User.class);
+        Playing playing = mock(Playing.class);
+        given(playing.getUser()).willReturn(user);
+        Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
+        LocalDateTime firstAttempt = analysis.startProcessing();
+
+        LocalDateTime secondAttempt = analysis.restartProcessing();
+
+        assertThat(secondAttempt).isAfter(firstAttempt);
+        assertThat(analysis.isCurrentProcessing(firstAttempt)).isFalse();
+        assertThat(analysis.isCurrentProcessing(secondAttempt)).isTrue();
     }
 
     @Test
