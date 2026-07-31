@@ -94,4 +94,12 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
         Long getTotalDurationSec();
         LocalDateTime getLastEndedAt();
     }
+
+    Optional<Playing> findByIdAndDeletedAtIsNull(Long playingId);
+
+    boolean existsByUser_UserIdAndStatusAndEndedAtAfterAndDeletedAtIsNull(
+            Long userId,
+            PlayingStatus status,
+            LocalDateTime endedAt
+    );
 }
