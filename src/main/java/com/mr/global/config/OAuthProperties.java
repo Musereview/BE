@@ -7,9 +7,27 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "oauth")
 public record OAuthProperties(
         String frontendRedirectUri,
+        List<String> frontendRedirectUris,
         ProviderProperties kakao,
         ProviderProperties google
 ) {
+    public List<String> getAllowedFrontendRedirectUris() {
+        List<String> allowed = new ArrayList<>();
+        if (frontendRedirectUris != null) {
+            for (String uri : frontendRedirectUris) {
+                if (uri != null && !uri.isBlank()) {
+                    allowed.add(uri.trim());
+                }
+            }
+        }
+        if (frontendRedirectUri != null && !frontendRedirectUri.isBlank()) {
+            String trimmed = frontendRedirectUri.trim();
+            if (!allowed.contains(trimmed)) {
+                allowed.add(trimmed);
+            }
+        }
+        return allowed;
+    }
     public record ProviderProperties(
             String clientId,
             String clientSecret,
