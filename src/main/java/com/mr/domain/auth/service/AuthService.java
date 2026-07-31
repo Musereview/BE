@@ -161,14 +161,20 @@ public class AuthService {
             throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
         }
 
-        return authTransactionService.completeTokenExchange(
-                data.userId(),
-                data.socialType(),
-                data.socialId(),
-                data.profileImgUrl(),
-                data.deviceInfo(),
-                data.isNewUser()
-        );
+        try {
+            return authTransactionService.completeTokenExchange(
+                    data.userId(),
+                    data.socialType(),
+                    data.socialId(),
+                    data.profileImgUrl(),
+                    data.deviceInfo(),
+                    data.isNewUser()
+            );
+        } catch (DataIntegrityViolationException e) {
+            // socialLogin()/socialLoginByCode()와 달리 이 경로는 새 트랜잭션에서 재조회할
+            // 기존 계정 복구 로직이 없으므로, 곧바로 도메인 예외로 매핑한다.
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        }
     }
 
     private void cleanExpiredTempCodes() {

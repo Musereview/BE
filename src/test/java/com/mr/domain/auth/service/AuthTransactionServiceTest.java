@@ -9,11 +9,9 @@ import static org.mockito.Mockito.verify;
 
 import com.mr.domain.auth.dto.OAuthUserInfo;
 import com.mr.domain.auth.entity.enums.SocialType;
-import com.mr.domain.auth.exception.AuthErrorStatus;
 import com.mr.domain.auth.repository.SocialAuthRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
-import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.jwt.JwtTokenProvider;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
@@ -44,8 +42,9 @@ class AuthTransactionServiceTest {
 
     @Test
     @DisplayName("completeTokenExchange - SocialAuth 저장 중 동시 요청으로 유니크 제약 위반이 나면, "
-            + "이미 abort된 트랜잭션에서 복구 쿼리를 재시도하지 않고 곧바로 예외를 던진다")
-    void completeTokenExchange_socialAuthUniqueViolation_throwsWithoutRetryingQuery() {
+            + "이미 abort된 트랜잭션에서 복구 쿼리를 재시도하지 않고 DataIntegrityViolationException을 그대로 전파한다 "
+            + "(호출 쪽인 AuthService가 새 트랜잭션에서 복구를 시도할 수 있도록)")
+    void completeTokenExchange_socialAuthUniqueViolation_propagatesWithoutRetryingQuery() {
         User user = mock(User.class);
         given(user.getUserId()).willReturn(USER_ID);
         given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
@@ -65,9 +64,7 @@ class AuthTransactionServiceTest {
 
         assertThatThrownBy(() -> authTransactionService.completeTokenExchange(
                 USER_ID, SocialType.KAKAO, userInfo.socialId(), userInfo.profileImgUrl(), "device", false))
-                .isInstanceOf(GeneralException.class)
-                .extracting(e -> ((GeneralException) e).getCode())
-                .isEqualTo(AuthErrorStatus.INVALID_AUTH_REQUEST);
+                .isInstanceOf(DataIntegrityViolationException.class);
 
         // 복구를 위해 같은 트랜잭션에서 findBySocialTypeAndSocialId를 다시 호출하지 않는지 확인
         // (딱 1번, 최초 조회 시점에만 호출됨 — 예전 버그였다면 catch 블록에서 한 번 더 호출돼 2번이 됨)

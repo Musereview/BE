@@ -59,27 +59,24 @@ public class AuthTransactionService {
         String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
         LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
 
-        try {
-            Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, socialId);
-            if (optionalSocialAuth.isPresent()) {
-                SocialAuth socialAuth = optionalSocialAuth.get();
-                socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
-            } else {
-                SocialAuth newSocialAuth = SocialAuth.create(
-                        user,
-                        socialType,
-                        socialId,
-                        refreshTokenHash,
-                        expiryTime,
-                        deviceInfo
-                );
-                socialAuthRepository.saveAndFlush(newSocialAuth);
-            }
-        } catch (DataIntegrityViolationException e) {
-            // PostgreSQL은 제약 위반이 나는 즉시 트랜잭션 전체를 abort 상태로 만들어서,
-            // 같은 트랜잭션 안에서 복구 쿼리를 다시 시도하면 그 쿼리도 실패한다.
-            // 곧바로 도메인 예외를 던져 트랜잭션을 롤백시키고, 호출 쪽(동시 로그인 재시도 로직)에 맡긴다.
-            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        // PostgreSQL은 제약 위반이 나는 즉시 트랜잭션 전체를 abort 상태로 만들어서,
+        // 같은 트랜잭션 안에서 복구 쿼리를 다시 시도하면 그 쿼리도 실패한다.
+        // 여기서 잡아 도메인 예외로 변환하지 않고 그대로 전파해 트랜잭션을 롤백시키고,
+        // 호출 쪽(AuthService의 동시 로그인 재시도 로직)이 새 트랜잭션에서 복구를 시도하게 한다.
+        Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, socialId);
+        if (optionalSocialAuth.isPresent()) {
+            SocialAuth socialAuth = optionalSocialAuth.get();
+            socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
+        } else {
+            SocialAuth newSocialAuth = SocialAuth.create(
+                    user,
+                    socialType,
+                    socialId,
+                    refreshTokenHash,
+                    expiryTime,
+                    deviceInfo
+            );
+            socialAuthRepository.saveAndFlush(newSocialAuth);
         }
 
         AuthResponseDTO.TokenResponse tokenResponse = AuthResponseDTO.TokenResponse.builder()
