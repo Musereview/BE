@@ -67,6 +67,7 @@ public class AuthService {
                 prepareResult.userId(),
                 socialType,
                 prepareResult.socialId(),
+                prepareResult.profileImgUrl(),
                 deviceInfo,
                 prepareResult.isNewUser(),
                 LocalDateTime.now().plusSeconds(TEMP_CODE_EXPIRATION_SECONDS)
@@ -143,24 +144,11 @@ public class AuthService {
             Long userId,
             SocialType socialType,
             String socialId,
+            String profileImgUrl,
             String deviceInfo,
             boolean isNewUser,
             LocalDateTime expiresAt
     ) {}
-
-    public String generateTempExchangeCode(AuthResponseDTO.LoginResponse loginResponse) {
-        cleanExpiredTempCodes();
-        String tempCode = UUID.randomUUID().toString();
-        tempCodeStore.put(tempCode, new TempExchangeData(
-                loginResponse.userId(),
-                null,
-                null,
-                null,
-                loginResponse.isNewUser(),
-                LocalDateTime.now().plusSeconds(TEMP_CODE_EXPIRATION_SECONDS)
-        ));
-        return tempCode;
-    }
 
     public AuthResponseDTO.LoginResponse exchangeTempCode(String tempCode) {
         cleanExpiredTempCodes();
@@ -176,6 +164,7 @@ public class AuthService {
                 data.userId(),
                 data.socialType(),
                 data.socialId(),
+                data.profileImgUrl(),
                 data.deviceInfo(),
                 data.isNewUser()
         );
