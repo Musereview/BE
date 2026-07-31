@@ -1,6 +1,10 @@
 package com.mr.domain.analysis.dto.res;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.mr.domain.analysis.entity.enums.AnalysisStatus;
+import com.mr.domain.backingTrack.entity.BackingTrack;
+import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.AnalysisReport;
 import com.mr.domain.analysis.entity.enums.AnalysisGrade;
@@ -9,10 +13,17 @@ import com.mr.domain.analysis.entity.enums.LlmStatus;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 public record AnalysisResultResponseDTO(
         Long analysisId,
         Long playingId,
+        String title,
+        String genre,
+        String key,
+        Integer bpm,
+        LocalDateTime playedAt,
+        AnalysisStatus status,
         Integer startBar,
         Integer endBar,
         Integer totalScore,
@@ -20,7 +31,7 @@ public record AnalysisResultResponseDTO(
         String summary,
         DomainScores domainScores,
         Report report,
-        JsonNode rawResult,
+        @JsonProperty("result") JsonNode rawResult,
         LocalDateTime createdAt,
         LocalDateTime completedAt
 ) {
@@ -30,9 +41,17 @@ public record AnalysisResultResponseDTO(
             AnalysisReport analysisReport,
             JsonNode rawResult
     ) {
+        Playing playing = analysis.getPlaying();
+        BackingTrack backingTrack = playing.getBackingTrack();
         return new AnalysisResultResponseDTO(
                 analysis.getId(),
-                analysis.getPlaying().getId(),
+                playing.getId(),
+                backingTrack.getTitle(),
+                backingTrack.getGenre(),
+                formatKey(backingTrack),
+                playing.getBpm(),
+                playing.getEndedAt(),
+                analysis.getStatus(),
                 analysis.getStartBar(),
                 analysis.getEndBar(),
                 analysis.getTotalScore(),
@@ -46,11 +65,19 @@ public record AnalysisResultResponseDTO(
         );
     }
 
+    private static String formatKey(BackingTrack backingTrack) {
+        String scale = backingTrack.getScaleType().name().toLowerCase(Locale.ROOT);
+        return backingTrack.getKeySignature()
+                + " "
+                + Character.toUpperCase(scale.charAt(0))
+                + scale.substring(1);
+    }
+
     public record DomainScores(
-            BigDecimal scaleScore,
-            BigDecimal tensionScore,
-            BigDecimal progressionScore,
-            BigDecimal voiceLeadingScore
+            @JsonProperty("scale") BigDecimal scaleScore,
+            @JsonProperty("tension") BigDecimal tensionScore,
+            @JsonProperty("progression") BigDecimal progressionScore,
+            @JsonProperty("voiceLeading") BigDecimal voiceLeadingScore
     ) {
 
         private static DomainScores from(Analysis analysis) {

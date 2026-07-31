@@ -3,6 +3,7 @@ package com.mr.domain.playing.entity;
 import com.mr.domain.backingTrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.enums.PlayingMode;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
+import com.mr.domain.playing.exception.MidiEventErrorStatus;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
@@ -36,6 +37,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import static com.mr.domain.playing.constant.MidiEventConstants.MAX_MIDI_EVENT_COUNT;
+
 @Entity
 @Table(
         name = "playing",
@@ -55,7 +58,6 @@ public class Playing extends BaseCreatedDeletedEntity {
     private static final long MAX_DURATION_MS = MAX_DURATION_SEC * 1000L;
 
     private static final long MIDI_TIMESTAMP_TOLERANCE_MS = 500L;       // 실제 연주 시간과 MIDI 이벤트 수집 종료 시점 간 허용 오차
-    private static final int MAX_MIDI_EVENT_COUNT = 100_000;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -187,42 +189,32 @@ public class Playing extends BaseCreatedDeletedEntity {
 
     // 연주 완료 시 전체 MIDI 데이터를 저장하고 완료 상태로 전환
     public void completeWithMidiData(
-            List<MidiEventData> midiData
+            List<MidiEventData> requestedMidiData
     ) {
         validateCompletableStatus();
-        validateMidiData(midiData);
+        validateMidiData(requestedMidiData);
 
         LocalDateTime completedAt = LocalDateTime.now();
         long savedDurationMs = calculateDurationMs(this.startedAt, completedAt);
 
-        // 실제 연주 시간에 500ms의 오차를 허용하되, 최대 10분까지만 저장
-        long allowedTimestampMs = Math.min(savedDurationMs + MIDI_TIMESTAMP_TOLERANCE_MS,
-                MAX_DURATION_MS);
+        List<MidiEventData> normalizedMidiData = normalizeMidiData(requestedMidiData, savedDurationMs);
+        validateNormalizedMidiData(normalizedMidiData);
 
-        List<MidiEventData> sortedMidiData = midiData.stream()
-                .filter(event -> event.getTimestampMs() <= allowedTimestampMs)
-                .sorted(
-                        Comparator.comparingLong(MidiEventData::getTimestampMs)
-                        .thenComparingInt(MidiEventData::getSequence))
-                .toList();
-
-        if (sortedMidiData.isEmpty()) {
-            throw new GeneralException(
-                    PlayingErrorStatus.EMPTY_MIDI_EVENTS
-            );
-        }
-
-        LocalDateTime maxEndedAt = this.startedAt.plusSeconds(MAX_DURATION_SEC);
-
-        this.midiData = new ArrayList<>(sortedMidiData);
-        this.endedAt = completedAt.isAfter(maxEndedAt) ? maxEndedAt : completedAt;
-        this.durationSec = Math.toIntExact(Duration.ofMillis(savedDurationMs).toSeconds());
+        this.midiData = new ArrayList<>(normalizedMidiData);
+        this.endedAt = calculateEndedAt(completedAt);
+        this.durationSec = convertToDurationSec(savedDurationMs);
         this.status = PlayingStatus.COMPLETED;
+    }
+
+    public void validatePlayingOwner(Long userId) {
+        if (userId == null || this.user == null || !Objects.equals(this.user.getUserId(), userId)) {
+            throw new GeneralException(PlayingErrorStatus.PLAYING_ACCESS_DENIED);
+        }
     }
 
     private void validateCompletableStatus() {
         if (this.status != PlayingStatus.IN_PROGRESS) {
-            throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_STATUS);
+            throw new GeneralException(MidiEventErrorStatus.PLAYING_NOT_IN_PROGRESS);
         }
 
         if (startedAt == null) {
@@ -232,15 +224,19 @@ public class Playing extends BaseCreatedDeletedEntity {
 
     private static void validateMidiData(List<MidiEventData> midiData) {
         if (midiData == null || midiData.isEmpty()) {
-            throw new GeneralException(PlayingErrorStatus.EMPTY_MIDI_EVENTS);
+            throw new GeneralException(MidiEventErrorStatus.EMPTY_MIDI_EVENTS);
         }
 
         if (midiData.size() > MAX_MIDI_EVENT_COUNT) {
-            throw new GeneralException(PlayingErrorStatus.EXCEEDED_MIDI_EVENT_COUNT);
+            throw new GeneralException(MidiEventErrorStatus.EXCEEDED_MIDI_EVENT_COUNT);
         }
 
         if (midiData.stream().anyMatch(Objects::isNull)) {
-            throw new GeneralException(PlayingErrorStatus.INVALID_MIDI_EVENT);
+            throw new GeneralException(MidiEventErrorStatus.INVALID_MIDI_EVENT);
+        }
+
+        if (midiData.stream().anyMatch(Playing::hasInvalidEventOrder)) {
+            throw new GeneralException(MidiEventErrorStatus.INVALID_MIDI_EVENT);
         }
 
         Set<MidiEventOrder> seenOrders = new HashSet<>();
@@ -253,9 +249,19 @@ public class Playing extends BaseCreatedDeletedEntity {
 
             if (!seenOrders.add(order)) {
                 throw new GeneralException(
-                        PlayingErrorStatus.DUPLICATE_MIDI_SEQUENCE
+                        MidiEventErrorStatus.DUPLICATE_MIDI_SEQUENCE
                 );
             }
+        }
+    }
+
+    private static void validateNormalizedMidiData(
+            List<MidiEventData> normalizedMidiData
+    ) {
+        if (normalizedMidiData.isEmpty()) {
+            throw new GeneralException(
+                    MidiEventErrorStatus.EMPTY_MIDI_EVENTS
+            );
         }
     }
 
@@ -277,6 +283,25 @@ public class Playing extends BaseCreatedDeletedEntity {
         return Math.min(durationMs, MAX_DURATION_MS);
     }
 
+    private LocalDateTime calculateEndedAt(
+            LocalDateTime completedAt
+    ) {
+        LocalDateTime maxEndedAt =
+                this.startedAt.plusSeconds(MAX_DURATION_SEC);
+
+        return completedAt.isAfter(maxEndedAt)
+                ? maxEndedAt
+                : completedAt;
+    }
+
+    private static int convertToDurationSec(
+            long durationMs
+    ) {
+        return Math.toIntExact(
+                Duration.ofMillis(durationMs).toSeconds()
+        );
+    }
+
     public List<MidiEventData> getMidiData() {
 
         if (this.midiData == null) {
@@ -296,5 +321,26 @@ public class Playing extends BaseCreatedDeletedEntity {
         if (status != PlayingStatus.READY) {
             throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_STATUS);
         }
+    }
+
+    private static List<MidiEventData> normalizeMidiData(
+            List<MidiEventData> midiData, long savedDurationMs) {
+        long allowedTimestampMs =
+                Math.min(savedDurationMs + MIDI_TIMESTAMP_TOLERANCE_MS, MAX_DURATION_MS);
+
+        return midiData.stream()
+                .filter(event -> event.getTimestampMs() <= allowedTimestampMs)
+                .sorted(Comparator.comparingLong(MidiEventData::getTimestampMs)
+                                .thenComparingInt(MidiEventData::getSequence)
+                ).toList();
+    }
+
+    private static boolean hasInvalidEventOrder(
+            MidiEventData event
+    ) {
+        return event.getTimestampMs() == null
+                || event.getTimestampMs() < 0
+                || event.getSequence() == null
+                || event.getSequence() < 0;
     }
 }

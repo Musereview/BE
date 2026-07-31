@@ -45,9 +45,9 @@ class AiServerClientTest {
     private AiAnalysisRequest sampleRequest() {
         return new AiAnalysisRequest(
                 new AiAnalysisRequest.Meta(120.0, List.of(4, 4),
-                        new AiAnalysisRequest.Key("C", "major"), "jazz"),
+                        new AiAnalysisRequest.Key("C", "major"), "jazz", "basic"),
                 List.of(new AiAnalysisRequest.Chord(1, 1.0, "Dm7")),
-                List.of(new AiAnalysisRequest.Note(0, 62, 0.0, 1.0, 90))
+                List.of(new AiAnalysisRequest.Note(0, AiAnalysisRequest.NoteType.NOTE_ON, 62, 90, 0.0))
         );
     }
 
