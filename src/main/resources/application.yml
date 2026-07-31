@@ -16,7 +16,7 @@ spring:
   # 공통 JPA 및 하이버네이트 구동 설정
   jpa:
     hibernate:
-      ddl-auto: ${SPRING_JPA_DDL_AUTO:update} # 배포 환경(prod)에선 validate로 덮어씌워짐
+      ddl-auto: ${SPRING_JPA_DDL_AUTO} # 배포 환경(prod)에선 validate로 덮어씌워짐
     show-sql: true
     properties:
       hibernate:
