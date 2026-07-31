@@ -65,4 +65,15 @@ class AnalysisRequestFactoryTest {
                 .isInstanceOf(GeneralException.class)
                 .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.INVALID_BAR_RANGE);
     }
+
+    @Test
+    void create_rejectsValidBarRangeWithoutNotes() {
+        given(playing.getMidiData()).willReturn(List.of(
+                MidiEventData.of(0, MidiType.NOTE_ON, 60, 100, 0L)
+        ));
+
+        assertThatThrownBy(() -> factory.create(playing, 2, 2))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.EMPTY_NOTE_RANGE);
+    }
 }

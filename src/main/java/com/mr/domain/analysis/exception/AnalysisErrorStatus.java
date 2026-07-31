@@ -17,6 +17,8 @@ public enum AnalysisErrorStatus implements BaseCode {
 
     ANALYSIS_OWNER_MISMATCH(HttpStatus.BAD_REQUEST, "ANALYSIS_400_04", "playing 소유자와 user가 일치하지 않습니다."),
 
+    EMPTY_NOTE_RANGE(HttpStatus.BAD_REQUEST, "ANALYSIS_400_05", "선택한 마디 범위에 분석할 연주 노트가 없습니다."),
+
     ANALYSIS_ACCESS_DENIED(HttpStatus.FORBIDDEN, "ANALYSIS_403_01", "해당 분석 결과에 접근할 수 없습니다."),
 
     ANALYSIS_NOT_FOUND(HttpStatus.NOT_FOUND, "ANALYSIS_404_01", "분석 결과를 찾을 수 없습니다."),

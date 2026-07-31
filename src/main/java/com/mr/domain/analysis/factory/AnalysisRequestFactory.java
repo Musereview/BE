@@ -47,7 +47,7 @@ public class AnalysisRequestFactory {
                 ))
                 .toList();
         if (notes.isEmpty()) {
-            throw new GeneralException(AnalysisErrorStatus.INVALID_BAR_RANGE);
+            throw new GeneralException(AnalysisErrorStatus.EMPTY_NOTE_RANGE);
         }
 
         List<AiAnalysisRequest.Chord> chords = track.getChordProgressions().stream()
