@@ -296,7 +296,7 @@ class PlayingServiceTest {
 
                         assertThat(generalException.getCode())
                                 .isEqualTo(
-                                        MidiEventErrorStatus
+                                        PlayingErrorStatus
                                                 .INVALID_PLAYING_ID
                                 );
                     });
@@ -326,7 +326,7 @@ class PlayingServiceTest {
 
                         assertThat(generalException.getCode())
                                 .isEqualTo(
-                                        MidiEventErrorStatus
+                                        PlayingErrorStatus
                                                 .INVALID_PLAYING_ID
                                 );
                     });
@@ -662,7 +662,7 @@ class PlayingServiceTest {
                                 (GeneralException) exception;
 
                         assertThat(generalException.getCode())
-                                .isEqualTo(MidiEventErrorStatus.INVALID_PLAYING_ID);
+                                .isEqualTo(PlayingErrorStatus.INVALID_PLAYING_ID);
                     });
         }
 
@@ -843,7 +843,7 @@ class PlayingServiceTest {
 
                         assertThat(generalException.getCode())
                                 .isEqualTo(
-                                        MidiEventErrorStatus.INVALID_PLAYING_ID
+                                        PlayingErrorStatus.INVALID_PLAYING_ID
                                 );
                     });
 

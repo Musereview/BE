@@ -123,7 +123,7 @@ public class PlayingService {
 
     private void validatePlayingId(Long playingId) {
         if (playingId == null || playingId < 1 ) {
-            throw new GeneralException(MidiEventErrorStatus.INVALID_PLAYING_ID);
+            throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_ID);
         }
     }
 
