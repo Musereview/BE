@@ -18,8 +18,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 
-// @Retryable/@Recover는 AOP 프록시를 거쳐야만 동작하므로, Mockito만으로 new해서 직접 호출하면
-// 재시도 자체가 발생하지 않아 검증할 수 없다. 최소한의 스프링 컨텍스트로 프록시를 실제로 태운다.
+// 재시도 검증용 AOP 프록시 컨텍스트
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = {
         StatisticsEventListener.class,

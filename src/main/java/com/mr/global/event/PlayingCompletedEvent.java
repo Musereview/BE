@@ -9,7 +9,7 @@ import lombok.Getter;
 public class PlayingCompletedEvent {
     private Long userId;
 
-    // userId는 완료 처리된 Playing의 소유자(playing.getUser().getUserId())에서만 채울 것 - 클라이언트 입력 금지
+    // 클라이언트 입력이 아닌 완료된 Playing 소유자 식별자
     public static PlayingCompletedEvent of(Long userId) {
         return new PlayingCompletedEvent(userId);
     }
