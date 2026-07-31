@@ -19,6 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -59,7 +62,7 @@ public class AuthService {
         AuthTransactionService.SocialLoginPrepareResult prepareResult = authTransactionService.prepareSocialLogin(socialType, userInfo);
 
         cleanExpiredTempCodes();
-        String tempCode = java.util.UUID.randomUUID().toString();
+        String tempCode = UUID.randomUUID().toString();
         tempCodeStore.put(tempCode, new TempExchangeData(
                 prepareResult.userId(),
                 socialType,
@@ -134,7 +137,7 @@ public class AuthService {
     }
 
     private static final long TEMP_CODE_EXPIRATION_SECONDS = 120;
-    private final java.util.concurrent.ConcurrentHashMap<String, TempExchangeData> tempCodeStore = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, TempExchangeData> tempCodeStore = new ConcurrentHashMap<>();
 
     private record TempExchangeData(
             Long userId,
@@ -147,7 +150,7 @@ public class AuthService {
 
     public String generateTempExchangeCode(AuthResponseDTO.LoginResponse loginResponse) {
         cleanExpiredTempCodes();
-        String tempCode = java.util.UUID.randomUUID().toString();
+        String tempCode = UUID.randomUUID().toString();
         tempCodeStore.put(tempCode, new TempExchangeData(
                 loginResponse.userId(),
                 null,
