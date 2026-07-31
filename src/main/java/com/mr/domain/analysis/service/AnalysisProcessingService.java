@@ -2,6 +2,7 @@ package com.mr.domain.analysis.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mr.domain.analysis.generator.AnalysisResultEnricher;
 import com.mr.domain.analysis.model.AnalysisProcessingClaim;
 import com.mr.domain.analysis.model.GeneratedAnalysisReport;
 import com.mr.global.client.ai.AiAnalysisRequest;
@@ -21,6 +22,7 @@ public class AnalysisProcessingService {
     private final AnalysisStateService analysisStateService;
     private final AiServerClient aiServerClient;
     private final ReportGenerationService reportGenerationService;
+    private final AnalysisResultEnricher analysisResultEnricher;
     private final ObjectMapper objectMapper;
 
     public void process(Long analysisId) {
@@ -42,6 +44,7 @@ public class AnalysisProcessingService {
             AiAnalysisRequest request = objectMapper.readValue(activeClaim.requestJson(), AiAnalysisRequest.class);
             JsonNode result = aiServerClient.requestAnalysis(request);
             analysisStateService.validateResult(result);
+            result = analysisResultEnricher.enrich(result);
             GeneratedAnalysisReport report = reportGenerationService.generate(result);
             boolean completed = analysisStateService.complete(
                     analysisId,

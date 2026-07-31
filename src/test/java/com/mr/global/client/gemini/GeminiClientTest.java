@@ -2,6 +2,7 @@ package com.mr.global.client.gemini;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
@@ -39,6 +40,7 @@ class GeminiClientTest {
         server.expect(requestTo(BASE_URL
                         + "/v1beta/models/gemini-3-flash-preview:generateContent"))
                 .andExpect(header("x-goog-api-key", "test-key"))
+                .andExpect(jsonPath("$.generationConfig.maxOutputTokens").value(4096))
                 .andRespond(withSuccess("""
                         {
                           "candidates": [{

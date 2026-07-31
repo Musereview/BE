@@ -69,6 +69,13 @@ class ReportGenerationServiceTest {
         assertThat(report.modelName()).isEqualTo("gemini-3-flash-preview");
         assertThat(report.llmCall().promptTokens()).isEqualTo(100);
         assertThat(report.llmCall().totalTokens()).isEqualTo(150);
+        org.mockito.Mockito.verify(geminiClient).generateReport(
+                org.mockito.ArgumentMatchers.argThat(prompt ->
+                        prompt.contains("700자 이상 1,500자 이하")
+                                && prompt.contains("문제점·근거·실행 가능한 연습 방법")
+                ),
+                org.mockito.ArgumentMatchers.anyString()
+        );
     }
 
     @Test
@@ -119,6 +126,35 @@ class ReportGenerationServiceTest {
     }
 
     @Test
+    void generate_fallsBackWhenGeminiReportIsStructurallyValidButTooShort() {
+        given(geminiClient.generateReport(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString()
+        )).willReturn(new GeminiGenerationResult(
+                """
+                        # 연주 분석 리포트
+                        ## 총평
+                        짧은 총평
+                        ## 잘한 점
+                        짧은 강점
+                        ## 진행 맥락
+                        짧은 맥락
+                        ## 개선 제안
+                        짧은 제안
+                        ## 점수 요약
+                        80점
+                        """,
+                100, 50, 150, false
+        ));
+
+        GeneratedAnalysisReport report = service.generate(result);
+
+        assertThat(report.generationType()).isEqualTo(ReportGenerationType.RULE_BASED);
+        assertThat(report.llmCall().status())
+                .isEqualTo(com.mr.domain.mentor.entity.enums.LlmCallStatus.FAILED);
+    }
+
+    @Test
     void generate_fallsBackToRuleBasedReportWhenGeminiFails() {
         given(geminiClient.generateReport(
                 org.mockito.ArgumentMatchers.anyString(),
@@ -139,15 +175,23 @@ class ReportGenerationServiceTest {
                 # 연주 분석 리포트
                 **조성** C major · **장르** jazz · **박자** 4/4 · **템포** 120 bpm
                 ## 총평
-                안정적인 연주입니다.
+                종합 점수는 80점으로 전반적인 코드 진행 이해도가 안정적입니다. 스케일 점수가 가장 높아 조성 안에서 음을 선택하는 능력이 잘 드러났습니다. 진행 점수 역시 안정적이어서 백킹트랙의 흐름을 크게 벗어나지 않았습니다. 다만 텐션과 코드 연결 점수는 상대적으로 낮으므로 다음 연습에서 우선 확인할 필요가 있습니다.
                 ## 잘한 점
-                스케일 선택이 좋습니다.
+                - 스케일 영역은 90점으로 네 영역 중 가장 높습니다. 입력 결과에서 확인된 조성 안의 음을 일관되게 선택한 점이 강점입니다.
+                - 진행 영역은 85점입니다. 코드가 바뀌는 구간에서도 전체 화성 흐름을 유지하여 연주의 맥락이 끊기지 않았습니다.
                 ## 진행 맥락
-                코드 진행을 잘 따랐습니다.
+                - 입력에 기록된 코드 진행을 따라 연주가 이어졌으며, 진행 점수 85점이 이러한 일관성을 뒷받침합니다.
+                - 코드 연결은 75점으로 기본 흐름은 유지했지만, 다음 코드로 이동할 때 더 가까운 음을 선택할 여지가 있습니다.
                 ## 개선 제안
-                텐션 활용을 연습하세요.
+                - 텐션 영역은 70점으로 가장 낮습니다. 먼저 코드톤을 확인한 뒤 9음이나 13음을 한 종류씩 추가하여 색채 변화를 비교해 보세요.
+                - 코드 연결 영역은 75점입니다. 같은 진행을 느린 템포로 반복하면서 이전 코드의 마지막 음과 다음 코드의 첫 음 사이 간격을 줄여 보세요.
+                - 점수를 높이기 위해 빠르게 반복하기보다, 각 코드에서 선택한 음이 코드톤인지 텐션인지 소리로 확인하는 연습이 적합합니다.
                 ## 점수 요약
-                종합 점수는 80점입니다.
+                - 종합 점수: 80 / 100
+                - 스케일: 90
+                - 텐션: 70
+                - 진행: 85
+                - 코드 연결: 75
                 """;
     }
 }
