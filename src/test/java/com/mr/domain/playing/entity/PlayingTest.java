@@ -1,6 +1,6 @@
 package com.mr.domain.playing.entity;
 
-import com.mr.domain.backingTrack.entity.BackingTrack;
+import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.enums.MidiType;
 import com.mr.domain.playing.entity.enums.PlayingMode;
 import com.mr.domain.playing.entity.enums.PlayingStatus;

@@ -1,4 +1,4 @@
-package com.mr.domain.backingTrack.entity.enums;
+package com.mr.domain.backingtrack.entity.enums;
 
 public enum AccessLevel {
     PRIVATE,

@@ -1,4 +1,4 @@
-package com.mr.domain.backingTrack.dto.res;
+package com.mr.domain.backingtrack.dto.res;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 

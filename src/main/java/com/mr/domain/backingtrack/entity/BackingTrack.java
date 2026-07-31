@@ -1,10 +1,12 @@
-package com.mr.domain.backingTrack.entity;
+package com.mr.domain.backingtrack.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.mr.domain.backingTrack.entity.enums.AccessLevel;
-import com.mr.domain.backingTrack.entity.enums.Level;
-import com.mr.domain.backingTrack.entity.enums.ScaleType;
+import com.mr.domain.backingtrack.entity.enums.AccessLevel;
+import com.mr.domain.backingtrack.entity.enums.Level;
+import com.mr.domain.backingtrack.entity.enums.ScaleType;
+import com.mr.domain.backingtrack.exception.BackingTrackErrorStatus;
 import com.mr.domain.user.entity.User;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseTimeDeletedEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -180,4 +182,12 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     public void addChordProgression(ChordProgression chordProgression) {
         this.chordProgressions.add(chordProgression);
     }
+
+    // 수정 권한 검증을 엔티티 내부로 위임
+    public void validateOwner(Long userId) {
+        if (!this.user.getUserId().equals(userId)) {
+            throw new GeneralException(BackingTrackErrorStatus.FORBIDDEN_UPDATE);
+        }
+    }
+
 }
