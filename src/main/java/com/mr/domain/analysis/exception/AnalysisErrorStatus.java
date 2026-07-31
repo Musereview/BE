@@ -23,7 +23,11 @@ public enum AnalysisErrorStatus implements BaseCode {
 
     ANALYSIS_NOT_FOUND(HttpStatus.NOT_FOUND, "ANALYSIS_404_01", "분석 결과를 찾을 수 없습니다."),
 
-    ANALYSIS_ALREADY_IN_PROGRESS(HttpStatus.CONFLICT, "ANALYSIS_409_01", "이미 진행 중인 분석 요청이 있습니다."),
+    ANALYSIS_ALREADY_IN_PROGRESS(
+            HttpStatus.CONFLICT,
+            "ANALYSIS_409_01",
+            "이미 처리 중이거나 완료된 분석 요청이 있습니다."
+    ),
 
     ANALYSIS_NOT_COMPLETED(HttpStatus.CONFLICT, "ANALYSIS_409_02", "아직 완료되지 않은 분석입니다."),
 

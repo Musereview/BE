@@ -206,6 +206,14 @@ class AnalysisServiceTest {
                 1L, new AnalysisCreateRequestDTO(31L, 1, 8)
         );
 
+        verify(analysisRepository).existsByPlayingIdAndStatusIn(
+                31L,
+                List.of(
+                        AnalysisStatus.PENDING,
+                        AnalysisStatus.PROCESSING,
+                        AnalysisStatus.COMPLETED
+                )
+        );
         assertThat(response.playingId()).isEqualTo(31L);
         assertThat(response.status()).isEqualTo(AnalysisStatus.PENDING);
         verify(eventPublisher).publishEvent(any(AnalysisRequestedEvent.class));
