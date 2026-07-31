@@ -37,9 +37,20 @@ public class OAuthClientService {
     }
 
     public OAuthUserInfo getUserInfo(SocialType socialType, String accessToken) {
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        }
+        String cleanToken = accessToken.trim();
+        if (cleanToken.toLowerCase().startsWith("bearer ")) {
+            cleanToken = cleanToken.substring(7).trim();
+        }
+        if (cleanToken.isBlank()) {
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        }
+
         return switch (socialType) {
-            case KAKAO -> fetchKakaoUserInfo(accessToken);
-            case GOOGLE -> fetchGoogleUserInfo(accessToken);
+            case KAKAO -> fetchKakaoUserInfo(cleanToken);
+            case GOOGLE -> fetchGoogleUserInfo(cleanToken);
         };
     }
 
@@ -170,17 +181,55 @@ public class OAuthClientService {
                     .retrieve()
                     .body(GoogleUserResponse.class);
 
-            if (response == null || response.id() == null || response.id().isBlank() || "null".equalsIgnoreCase(response.id().trim())) {
-                throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+            if (response != null && response.id() != null && !response.id().isBlank() && !"null".equalsIgnoreCase(response.id().trim())) {
+                return OAuthUserInfo.builder()
+                        .socialId(response.id())
+                        .profileImgUrl(response.picture())
+                        .build();
             }
+        } catch (Exception primaryEx) {
+            if (isJwtFormat(accessToken)) {
+                log.debug("Google v2 userinfo fetch failed for JWT-like token, attempting tokeninfo fallback: {}", primaryEx.getMessage());
+                try {
+                    GoogleUserResponse fallbackResponse = restClient.get()
+                            .uri("https://oauth2.googleapis.com/tokeninfo?id_token=" + accessToken)
+                            .accept(MediaType.APPLICATION_JSON)
+                            .retrieve()
+                            .body(GoogleUserResponse.class);
 
-            return OAuthUserInfo.builder()
-                    .socialId(response.id())
-                    .profileImgUrl(response.picture())
-                    .build();
-        } catch (Exception e) {
-            throw exceptionMapper.map(e, "Google");
+                    if (fallbackResponse != null && fallbackResponse.id() != null && !fallbackResponse.id().isBlank() && !"null".equalsIgnoreCase(fallbackResponse.id().trim())) {
+                        return OAuthUserInfo.builder()
+                                .socialId(fallbackResponse.id())
+                                .profileImgUrl(fallbackResponse.picture())
+                                .build();
+                    }
+                } catch (Exception fallbackEx) {
+                    log.warn("Google tokeninfo fallback also failed: {}", fallbackEx.getMessage());
+                }
+            }
+            throw exceptionMapper.map(primaryEx, "Google");
         }
+
+        throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+    }
+
+    private boolean isJwtFormat(String token) {
+        if (token == null) return false;
+        int firstDot = token.indexOf('.');
+        return firstDot > 0 && token.indexOf('.', firstDot + 1) > firstDot;
+    }
+
+    public boolean isBackendAllowedRedirectUri(SocialType socialType, String redirectUri) {
+        if (redirectUri == null || redirectUri.isBlank()) {
+            return false;
+        }
+        OAuthProperties.ProviderProperties providerProps = oAuthProperties != null ? switch (socialType) {
+            case KAKAO -> oAuthProperties.kakao();
+            case GOOGLE -> oAuthProperties.google();
+        } : null;
+
+        List<String> allowedUris = providerProps != null ? providerProps.getAllowedRedirectUris() : List.of();
+        return allowedUris.contains(redirectUri.trim());
     }
 
     private String resolveRedirectUri(SocialType socialType, String customRedirectUri) {
@@ -245,7 +294,13 @@ public class OAuthClientService {
     }
 
     public String buildFrontendRedirectUrl(String code) {
-        String baseUrl = (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
+        return buildFrontendRedirectUrl(code, (String) null);
+    }
+
+    public String buildFrontendRedirectUrl(String code, String customFrontendRedirectUri) {
+        String baseUrl = (customFrontendRedirectUri != null && !customFrontendRedirectUri.isBlank())
+                ? customFrontendRedirectUri.trim()
+                : (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
                 ? oAuthProperties.frontendRedirectUri()
                 : "http://localhost:3000/oauth/callback";
 
@@ -256,7 +311,13 @@ public class OAuthClientService {
     }
 
     public String buildFrontendRedirectUrl(com.mr.domain.auth.dto.res.AuthResponseDTO.LoginResponse loginResponse) {
-        String baseUrl = (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
+        return buildFrontendRedirectUrl(loginResponse, null);
+    }
+
+    public String buildFrontendRedirectUrl(com.mr.domain.auth.dto.res.AuthResponseDTO.LoginResponse loginResponse, String customFrontendRedirectUri) {
+        String baseUrl = (customFrontendRedirectUri != null && !customFrontendRedirectUri.isBlank())
+                ? customFrontendRedirectUri.trim()
+                : (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
                 ? oAuthProperties.frontendRedirectUri()
                 : "http://localhost:3000/oauth/callback";
 
@@ -271,7 +332,13 @@ public class OAuthClientService {
     }
 
     public String buildFrontendErrorRedirectUrl(String error) {
-        String baseUrl = (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
+        return buildFrontendErrorRedirectUrl(error, (String) null);
+    }
+
+    public String buildFrontendErrorRedirectUrl(String error, String customFrontendRedirectUri) {
+        String baseUrl = (customFrontendRedirectUri != null && !customFrontendRedirectUri.isBlank())
+                ? customFrontendRedirectUri.trim()
+                : (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
                 ? oAuthProperties.frontendRedirectUri()
                 : "http://localhost:3000/oauth/callback";
 

@@ -44,7 +44,7 @@ class SecurityConfigTest {
     @Test
     @DisplayName("GET /api/auth/kakao/callback 요청은 인증 없이 permitAll 처리되어 302 리다이렉트가 수행된다")
     void oAuthCallback_permitAll_redirectsSuccessfully() throws Exception {
-        given(oAuthClientService.buildFrontendErrorRedirectUrl(any()))
+        given(oAuthClientService.buildFrontendErrorRedirectUrl(any(), any()))
                 .willReturn("http://localhost:3000/oauth/callback?error=invalid_state");
 
         mockMvc.perform(get("/api/auth/kakao/callback?code=sample_code"))

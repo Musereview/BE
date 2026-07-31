@@ -118,48 +118,59 @@ public class AuthController {
         response.addHeader(HttpHeaders.SET_COOKIE, clearStateCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, clearRedirectCookie.toString());
 
+        String effectiveRedirectUri = (savedCustomRedirectUri != null && !savedCustomRedirectUri.isBlank())
+                ? savedCustomRedirectUri
+                : customRedirectUri;
+
+        String backendOAuthRedirectUri = null;
+        String frontendTargetRedirectUri = null;
+
+        if (effectiveRedirectUri != null && !effectiveRedirectUri.isBlank()) {
+            if (oAuthClientService.isBackendAllowedRedirectUri(socialType, effectiveRedirectUri)) {
+                backendOAuthRedirectUri = effectiveRedirectUri;
+            } else {
+                frontendTargetRedirectUri = effectiveRedirectUri;
+            }
+        }
+
         if (error != null || code == null || code.isBlank()) {
             log.warn("{} OAuth login failed/cancelled by user: error={}", socialType, error);
             String errorCode = "access_denied".equalsIgnoreCase(error) ? "access_denied" : "oauth_failed";
-            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl(errorCode);
+            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl(errorCode, frontendTargetRedirectUri);
             response.sendRedirect(errorRedirectUrl);
             return;
         }
 
         if (savedState != null && (state == null || !savedState.equals(state))) {
             log.warn("{} OAuth state mismatch: saved={}, received={}", socialType, savedState, state);
-            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl("invalid_state");
+            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl("invalid_state", frontendTargetRedirectUri);
             response.sendRedirect(errorRedirectUrl);
             return;
         }
 
         if (savedState == null) {
             log.warn("{} OAuth state cookie missing in callback request", socialType);
-            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl("invalid_auth_request");
+            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl("invalid_auth_request", frontendTargetRedirectUri);
             response.sendRedirect(errorRedirectUrl);
             return;
         }
-
-        String effectiveRedirectUri = (savedCustomRedirectUri != null && !savedCustomRedirectUri.isBlank())
-                ? savedCustomRedirectUri
-                : customRedirectUri;
 
         try {
             AuthResponseDTO.LoginResponse loginResponse = authService.socialLoginByCode(
                     socialType,
                     code,
-                    effectiveRedirectUri,
+                    backendOAuthRedirectUri,
                     deviceInfo
             );
 
             String tempCode = authService.generateTempExchangeCode(loginResponse);
-            String targetFrontendUrl = oAuthClientService.buildFrontendRedirectUrl(tempCode);
+            String targetFrontendUrl = oAuthClientService.buildFrontendRedirectUrl(tempCode, frontendTargetRedirectUri);
             response.sendRedirect(targetFrontendUrl);
         } catch (Exception e) {
             String errorCode = (e instanceof GeneralException ge && ge.getCode() != null)
                     ? ge.getCode().getCode()
                     : "authentication_failed";
-            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl(errorCode);
+            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl(errorCode, frontendTargetRedirectUri);
             response.sendRedirect(errorRedirectUrl);
         }
     }

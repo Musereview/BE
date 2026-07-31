@@ -43,7 +43,7 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        kakaoUserInfo = new OAuthUserInfo("12345", "https://example.com/profile.png");
+        kakaoUserInfo = new OAuthUserInfo("test_id_" + java.util.UUID.randomUUID(), "https://example.com/profile.png");
     }
 
     @Test
@@ -64,7 +64,7 @@ class AuthServiceTest {
 
         List<SocialAuth> socialAuths = socialAuthRepository.findAllByUser_UserId(response.userId());
         assertThat(socialAuths).hasSize(1);
-        assertThat(socialAuths.get(0).getSocialId()).isEqualTo("12345");
+        assertThat(socialAuths.get(0).getSocialId()).isEqualTo(kakaoUserInfo.socialId());
         assertThat(socialAuths.get(0).getSocialType()).isEqualTo(SocialType.KAKAO);
     }
 
@@ -144,11 +144,12 @@ class AuthServiceTest {
     @DisplayName("linkSocialAccount - 기존 사용자 계정에 다른 소셜 계정(구글)을 추가 연동할 수 있다")
     void linkSocialAccount_existingUser_addsSecondSocialAuth() {
         // given
-        given(oAuthClientService.getUserInfo(SocialType.KAKAO, "kakao_token")).willReturn(kakaoUserInfo);
+        OAuthUserInfo testKakaoInfo = new OAuthUserInfo("kakao_link_" + java.util.UUID.randomUUID(), "https://example.com/kakao.png");
+        given(oAuthClientService.getUserInfo(SocialType.KAKAO, "kakao_token")).willReturn(testKakaoInfo);
         AuthResponseDTO.LoginResponse loginResponse = authService.socialLogin(SocialType.KAKAO, "kakao_token", "deviceInfo");
         Long userId = loginResponse.userId();
 
-        OAuthUserInfo googleUserInfo = new OAuthUserInfo("google_67890", "https://example.com/google.png");
+        OAuthUserInfo googleUserInfo = new OAuthUserInfo("google_link_" + java.util.UUID.randomUUID(), "https://example.com/google.png");
         given(oAuthClientService.getUserInfo(SocialType.GOOGLE, "google_token")).willReturn(googleUserInfo);
 
         // when
