@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.AnalysisReport;
+import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.analysis.model.GeneratedAnalysisReport;
@@ -24,6 +25,7 @@ import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.AnalysisCompletedEvent;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,7 +67,35 @@ class AnalysisStateServiceTest {
         org.mockito.Mockito.lenient().when(user.getUserId()).thenReturn(1L);
         org.mockito.Mockito.lenient().when(analysis.getUser()).thenReturn(user);
         objectMapper = new ObjectMapper();
-        given(analysisRepository.findById(1L)).willReturn(Optional.of(analysis));
+        org.mockito.Mockito.lenient()
+                .when(analysisRepository.findById(1L))
+                .thenReturn(Optional.of(analysis));
+    }
+
+    @Test
+    void startProcessing_rejectsBlankRequestBeforeStateChange() {
+        given(analysisRepository.findByIdForUpdate(1L)).willReturn(Optional.of(analysis));
+        given(analysis.getStatus()).willReturn(AnalysisStatus.PENDING);
+        given(analysis.getAnalysisRequestJson()).willReturn(" ");
+
+        assertThatThrownBy(() -> service.startProcessing(1L))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST);
+        verify(analysis, never()).startProcessing();
+    }
+
+    @Test
+    void restartStaleProcessing_rejectsNullRequestBeforeStateChange() {
+        LocalDateTime cutoff = LocalDateTime.now();
+        given(analysisRepository.findByIdForUpdate(1L)).willReturn(Optional.of(analysis));
+        given(analysis.getStatus()).willReturn(AnalysisStatus.PROCESSING);
+        given(analysis.getProcessingStartedAt()).willReturn(cutoff.minusMinutes(1));
+        given(analysis.getAnalysisRequestJson()).willReturn(null);
+
+        assertThatThrownBy(() -> service.restartStaleProcessing(1L, cutoff))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST);
+        verify(analysis, never()).restartProcessing();
     }
 
     @Test

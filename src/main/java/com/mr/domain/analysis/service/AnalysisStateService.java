@@ -49,8 +49,9 @@ public class AnalysisStateService {
         if (analysis.getStatus() != AnalysisStatus.PENDING) {
             return Optional.empty();
         }
+        String requestJson = requireRequestJson(analysis);
         analysis.startProcessing();
-        return Optional.of(analysis.getAnalysisRequestJson());
+        return Optional.of(requestJson);
     }
 
     @Transactional
@@ -62,8 +63,9 @@ public class AnalysisStateService {
                 || analysis.getProcessingStartedAt().isAfter(cutoff)) {
             return Optional.empty();
         }
+        String requestJson = requireRequestJson(analysis);
         analysis.restartProcessing();
-        return Optional.of(analysis.getAnalysisRequestJson());
+        return Optional.of(requestJson);
     }
 
     @Transactional
@@ -120,6 +122,14 @@ public class AnalysisStateService {
         requiredScore(domains, TENSION);
         requiredScore(domains, PROGRESSION);
         requiredScore(domains, VOICE_LEADING);
+    }
+
+    private String requireRequestJson(Analysis analysis) {
+        String requestJson = analysis.getAnalysisRequestJson();
+        if (requestJson == null || requestJson.isBlank()) {
+            throw new GeneralException(AnalysisErrorStatus.INVALID_ANALYSIS_REQUEST);
+        }
+        return requestJson;
     }
 
     private void saveLlmCallLog(

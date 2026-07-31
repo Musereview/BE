@@ -27,6 +27,8 @@ public enum AnalysisErrorStatus implements BaseCode {
 
     INVALID_RAW_RESULT(HttpStatus.INTERNAL_SERVER_ERROR, "ANALYSIS_500_01", "저장된 분석 결과를 처리할 수 없습니다."),
 
+    INVALID_ANALYSIS_REQUEST(HttpStatus.INTERNAL_SERVER_ERROR, "ANALYSIS_500_02", "저장된 분석 요청을 처리할 수 없습니다."),
+
     ;
 
     private final HttpStatus status;
