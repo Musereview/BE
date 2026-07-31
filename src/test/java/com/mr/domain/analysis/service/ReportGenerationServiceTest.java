@@ -6,6 +6,8 @@ import static org.mockito.BDDMockito.given;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
+import com.mr.domain.analysis.generator.RuleBasedReportGenerator;
+import com.mr.domain.analysis.model.GeneratedAnalysisReport;
 import com.mr.global.client.gemini.GeminiClient;
 import com.mr.global.client.gemini.GeminiGenerationResult;
 import com.mr.global.config.GeminiProperties;

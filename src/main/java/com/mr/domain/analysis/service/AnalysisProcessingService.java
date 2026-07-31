@@ -2,6 +2,7 @@ package com.mr.domain.analysis.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mr.domain.analysis.model.GeneratedAnalysisReport;
 import com.mr.global.client.ai.AiAnalysisRequest;
 import com.mr.global.client.ai.AiServerClient;
 import java.time.LocalDateTime;

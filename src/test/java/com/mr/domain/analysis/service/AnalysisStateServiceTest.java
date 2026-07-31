@@ -13,6 +13,8 @@ import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.AnalysisReport;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
+import com.mr.domain.analysis.model.GeneratedAnalysisReport;
+import com.mr.domain.analysis.model.LlmCallMetadata;
 import com.mr.domain.analysis.repository.AnalysisReportRepository;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.mentor.entity.enums.LlmCallStatus;

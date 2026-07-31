@@ -1,4 +1,4 @@
-package com.mr.domain.analysis.service;
+package com.mr.domain.analysis.factory;
 
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.backingTrack.entity.BackingTrack;

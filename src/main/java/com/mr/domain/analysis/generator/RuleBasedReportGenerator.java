@@ -1,4 +1,4 @@
-package com.mr.domain.analysis.service;
+package com.mr.domain.analysis.generator;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.math.BigDecimal;

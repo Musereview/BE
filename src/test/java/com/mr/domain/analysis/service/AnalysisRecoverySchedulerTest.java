@@ -9,6 +9,8 @@ import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import java.time.Duration;
 import java.util.List;
+
+import com.mr.domain.analysis.scheduler.AnalysisRecoveryScheduler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;

@@ -1,10 +1,12 @@
-package com.mr.domain.analysis.service;
+package com.mr.domain.analysis.scheduler;
 
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import com.mr.domain.analysis.service.AnalysisProcessingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
