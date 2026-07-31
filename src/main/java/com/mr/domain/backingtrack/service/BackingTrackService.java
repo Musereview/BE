@@ -221,13 +221,16 @@ public class BackingTrackService {
             Long userId
     ) {
         try {
-            Pageable pageable = PageRequest.of(0, PAGE_SIZE);
+            Pageable pageable = PageRequest.of(0, PAGE_SIZE + 1);
 
             List<BackingTrack> tracks = backingTrackRepository.findVisibleTracksAfterCursor(
                     AccessLevel.PUBLIC, userId, request.cursor(), pageable
             );
 
-            List<BackingTrackListResponseDTO.TrackInfo> trackInfos = tracks.stream()
+            boolean hasNext = tracks.size() > PAGE_SIZE;
+            List<BackingTrack> pageTracks = hasNext ? tracks.subList(0, PAGE_SIZE) : tracks;
+
+            List<BackingTrackListResponseDTO.TrackInfo> trackInfos = pageTracks.stream()
                     .map(track -> {
                         List<String> chordNames = track.getChordProgressions().stream()
                                 .sorted(Comparator.comparing(ChordProgression::getMeasureNo)
@@ -247,8 +250,7 @@ public class BackingTrackService {
                                 track.getPlaytimeSec()
                         );
                     }).toList();
-            Long nextCursor = tracks.isEmpty() ? null : tracks.get(tracks.size()-1).getId();
-            boolean hasNext = tracks.size() == PAGE_SIZE;
+            Long nextCursor = pageTracks.isEmpty() ? null : pageTracks.get(pageTracks.size()-1).getId();
 
             return BackingTrackListResponseDTO.ListResponseDTO.of(trackInfos, nextCursor, hasNext);
         } catch (GeneralException e){
