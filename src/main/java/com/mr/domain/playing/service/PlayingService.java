@@ -10,7 +10,6 @@ import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
-import com.mr.domain.playing.exception.MidiEventErrorStatus;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
@@ -42,7 +41,7 @@ public class PlayingService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(PlayingErrorStatus.USER_NOT_FOUND));
 
-        BackingTrack backingTrack = backingTrackRepository.findByIdAndDeletedAtIsNull(request.backingTrackId())
+        BackingTrack backingTrack = backingTrackRepository.findByIdWithChordProgressions(request.backingTrackId())
                 .orElseThrow(() -> new GeneralException(PlayingErrorStatus.BACKING_TRACK_NOT_FOUND));
 
         validateBackingTrackAccessible(userId, backingTrack);
@@ -55,7 +54,6 @@ public class PlayingService {
         Playing savedPlaying = playingRepository.save(playing);
 
         return PlayingStartResponse.from(savedPlaying);
-
 
     }
 

@@ -1,8 +1,8 @@
 package com.mr.domain.playing.service;
 
-import com.mr.domain.backingTrack.entity.BackingTrack;
-import com.mr.domain.backingTrack.entity.enums.AccessLevel;
-import com.mr.domain.backingTrack.repository.BackingTrackRepository;
+import com.mr.domain.backingtrack.entity.BackingTrack;
+import com.mr.domain.backingtrack.entity.enums.AccessLevel;
+import com.mr.domain.backingtrack.repository.BackingTrackRepository;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
@@ -386,7 +386,7 @@ class PlayingServiceTest {
             given(userRepository.findById(userId))
                     .willReturn(Optional.of(user));
 
-            given(backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId))
+            given(backingTrackRepository.findByIdWithChordProgressions(backingTrackId))
                     .willReturn(Optional.of(backingTrack));
 
             given(backingTrack.getId())
@@ -499,7 +499,7 @@ class PlayingServiceTest {
             given(userRepository.findById(userId))
                     .willReturn(Optional.of(user));
 
-            given(backingTrackRepository.findByIdAndDeletedAtIsNull(backingTrackId))
+            given(backingTrackRepository.findByIdWithChordProgressions(backingTrackId))
                     .willReturn(Optional.empty());
 
             // when & then

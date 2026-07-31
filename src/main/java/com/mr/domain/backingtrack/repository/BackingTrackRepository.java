@@ -2,8 +2,6 @@ package com.mr.domain.backingtrack.repository;
 
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.backingtrack.entity.enums.AccessLevel;
-import com.mr.domain.backingtrack.entity.enums.ScaleType;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -58,5 +56,17 @@ public interface BackingTrackRepository extends JpaRepository<BackingTrack, Long
     @Query("UPDATE BackingTrack b SET b.playCount = b.playCount + 1 " +
             "WHERE b.id = :id AND b.deletedAt IS NULL")
     int increasePlayCount(@Param("id") Long id);
+
+    // 코드 진행 정보까지 함께 조회
+    @Query("""
+            SELECT DISTINCT bt
+            FROM BackingTrack bt
+            LEFT JOIN FETCH bt.chordProgressions cp
+            WHERE bt.id = :backingTrackId
+              AND bt.deletedAt IS NULL
+            """)
+    Optional<BackingTrack> findByIdWithChordProgressions(
+            @Param("backingTrackId") Long backingTrackId
+    );
 
 }
