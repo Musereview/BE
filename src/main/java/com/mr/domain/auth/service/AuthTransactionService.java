@@ -76,11 +76,10 @@ public class AuthTransactionService {
                 socialAuthRepository.saveAndFlush(newSocialAuth);
             }
         } catch (DataIntegrityViolationException e) {
-            SocialAuth socialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, socialId)
-                    .orElseThrow(() -> new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST));
-            socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
-            user = socialAuth.getUser();
-            isNewUser = false;
+            // PostgreSQL은 제약 위반이 나는 즉시 트랜잭션 전체를 abort 상태로 만들어서,
+            // 같은 트랜잭션 안에서 복구 쿼리를 다시 시도하면 그 쿼리도 실패한다.
+            // 곧바로 도메인 예외를 던져 트랜잭션을 롤백시키고, 호출 쪽(동시 로그인 재시도 로직)에 맡긴다.
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
         }
 
         AuthResponseDTO.TokenResponse tokenResponse = AuthResponseDTO.TokenResponse.builder()

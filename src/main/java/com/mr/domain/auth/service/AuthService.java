@@ -150,6 +150,7 @@ public class AuthService {
             LocalDateTime expiresAt
     ) {}
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthResponseDTO.LoginResponse exchangeTempCode(String tempCode) {
         cleanExpiredTempCodes();
         if (tempCode == null || tempCode.isBlank()) {
