@@ -2,6 +2,7 @@ package com.mr.domain.analysis.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mr.domain.analysis.model.AnalysisProcessingClaim;
 import com.mr.domain.analysis.model.GeneratedAnalysisReport;
 import com.mr.global.client.ai.AiAnalysisRequest;
 import com.mr.global.client.ai.AiServerClient;
@@ -30,30 +31,40 @@ public class AnalysisProcessingService {
         processClaimed(analysisId, () -> analysisStateService.restartStaleProcessing(analysisId, cutoff));
     }
 
-    private void processClaimed(Long analysisId, Supplier<Optional<String>> claim) {
-        boolean processingStarted = false;
+    private void processClaimed(Long analysisId, Supplier<Optional<AnalysisProcessingClaim>> claim) {
+        AnalysisProcessingClaim activeClaim = null;
         try {
-            Optional<String> claimedRequest = claim.get();
-            if (claimedRequest.isEmpty()) {
+            Optional<AnalysisProcessingClaim> claimed = claim.get();
+            if (claimed.isEmpty()) {
                 return;
             }
-            processingStarted = true;
-            String requestJson = claimedRequest.get();
-            AiAnalysisRequest request = objectMapper.readValue(requestJson, AiAnalysisRequest.class);
+            activeClaim = claimed.get();
+            AiAnalysisRequest request = objectMapper.readValue(activeClaim.requestJson(), AiAnalysisRequest.class);
             JsonNode result = aiServerClient.requestAnalysis(request);
             analysisStateService.validateResult(result);
             GeneratedAnalysisReport report = reportGenerationService.generate(result);
-            analysisStateService.complete(
+            boolean completed = analysisStateService.complete(
                     analysisId,
+                    activeClaim.processingStartedAt(),
                     result,
                     objectMapper.writeValueAsString(result),
                     report
             );
+            if (!completed) {
+                log.info("Ignoring stale AI analysis completion. analysisId={}", analysisId);
+            }
         } catch (Exception exception) {
             log.error("AI analysis failed. analysisId={}", analysisId, exception);
-            if (processingStarted) {
+            if (activeClaim != null) {
                 try {
-                    analysisStateService.fail(analysisId, exception.getMessage());
+                    boolean failed = analysisStateService.fail(
+                            analysisId,
+                            activeClaim.processingStartedAt(),
+                            exception.getMessage()
+                    );
+                    if (!failed) {
+                        log.info("Ignoring stale AI analysis failure. analysisId={}", analysisId);
+                    }
                 } catch (Exception failException) {
                     log.error("Failed to persist AI analysis failure. analysisId={}", analysisId, failException);
                 }

@@ -7,6 +7,7 @@ import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
+import com.mr.domain.analysis.model.AnalysisProcessingClaim;
 import com.mr.domain.analysis.model.GeneratedAnalysisReport;
 import com.mr.domain.analysis.model.LlmCallMetadata;
 import com.mr.domain.analysis.repository.AnalysisReportRepository;
@@ -43,19 +44,19 @@ public class AnalysisStateService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public Optional<String> startProcessing(Long analysisId) {
+    public Optional<AnalysisProcessingClaim> startProcessing(Long analysisId) {
         Analysis analysis = analysisRepository.findByIdForUpdate(analysisId)
                 .orElseThrow(() -> new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_FOUND));
         if (analysis.getStatus() != AnalysisStatus.PENDING) {
             return Optional.empty();
         }
         String requestJson = requireRequestJson(analysis);
-        analysis.startProcessing();
-        return Optional.of(requestJson);
+        LocalDateTime processingStartedAt = analysis.startProcessing();
+        return Optional.of(new AnalysisProcessingClaim(requestJson, processingStartedAt));
     }
 
     @Transactional
-    public Optional<String> restartStaleProcessing(Long analysisId, LocalDateTime cutoff) {
+    public Optional<AnalysisProcessingClaim> restartStaleProcessing(Long analysisId, LocalDateTime cutoff) {
         Analysis analysis = analysisRepository.findByIdForUpdate(analysisId)
                 .orElseThrow(() -> new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_FOUND));
         if (analysis.getStatus() != AnalysisStatus.PROCESSING
@@ -64,18 +65,22 @@ public class AnalysisStateService {
             return Optional.empty();
         }
         String requestJson = requireRequestJson(analysis);
-        analysis.restartProcessing();
-        return Optional.of(requestJson);
+        LocalDateTime processingStartedAt = analysis.restartProcessing();
+        return Optional.of(new AnalysisProcessingClaim(requestJson, processingStartedAt));
     }
 
     @Transactional
-    public void complete(
+    public boolean complete(
             Long analysisId,
+            LocalDateTime expectedProcessingStartedAt,
             JsonNode result,
             String rawResultJson,
             GeneratedAnalysisReport generatedReport
     ) {
-        Analysis analysis = getAnalysis(analysisId);
+        Analysis analysis = getAnalysisForUpdate(analysisId);
+        if (!analysis.isCurrentProcessing(expectedProcessingStartedAt)) {
+            return false;
+        }
         validateResult(result);
         JsonNode scores = result.path("scores");
         BigDecimal finalScore = requiredScore(scores, "final_score");
@@ -103,6 +108,7 @@ public class AnalysisStateService {
         eventPublisher.publishEvent(
                 AnalysisCompletedEvent.of(analysis.getUser().getUserId())
         );
+        return true;
     }
 
     public void validateResult(JsonNode result) {
@@ -162,13 +168,17 @@ public class AnalysisStateService {
     }
 
     @Transactional
-    public void fail(Long analysisId, String reason) {
-        Analysis analysis = getAnalysis(analysisId);
+    public boolean fail(Long analysisId, LocalDateTime expectedProcessingStartedAt, String reason) {
+        Analysis analysis = getAnalysisForUpdate(analysisId);
+        if (!analysis.isCurrentProcessing(expectedProcessingStartedAt)) {
+            return false;
+        }
         analysis.fail(reason);
+        return true;
     }
 
-    private Analysis getAnalysis(Long analysisId) {
-        return analysisRepository.findById(analysisId)
+    private Analysis getAnalysisForUpdate(Long analysisId) {
+        return analysisRepository.findByIdForUpdate(analysisId)
                 .orElseThrow(() -> new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_FOUND));
     }
 

@@ -37,6 +37,8 @@ import org.springframework.context.ApplicationEventPublisher;
 @ExtendWith(MockitoExtension.class)
 class AnalysisStateServiceTest {
 
+    private static final LocalDateTime PROCESSING_STARTED_AT = LocalDateTime.of(2026, 7, 31, 12, 0);
+
     @Mock
     private AnalysisRepository analysisRepository;
 
@@ -68,13 +70,15 @@ class AnalysisStateServiceTest {
         org.mockito.Mockito.lenient().when(analysis.getUser()).thenReturn(user);
         objectMapper = new ObjectMapper();
         org.mockito.Mockito.lenient()
-                .when(analysisRepository.findById(1L))
+                .when(analysisRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.of(analysis));
+        org.mockito.Mockito.lenient()
+                .when(analysis.isCurrentProcessing(PROCESSING_STARTED_AT))
+                .thenReturn(true);
     }
 
     @Test
     void startProcessing_rejectsBlankRequestBeforeStateChange() {
-        given(analysisRepository.findByIdForUpdate(1L)).willReturn(Optional.of(analysis));
         given(analysis.getStatus()).willReturn(AnalysisStatus.PENDING);
         given(analysis.getAnalysisRequestJson()).willReturn(" ");
 
@@ -87,7 +91,6 @@ class AnalysisStateServiceTest {
     @Test
     void restartStaleProcessing_rejectsNullRequestBeforeStateChange() {
         LocalDateTime cutoff = LocalDateTime.now();
-        given(analysisRepository.findByIdForUpdate(1L)).willReturn(Optional.of(analysis));
         given(analysis.getStatus()).willReturn(AnalysisStatus.PROCESSING);
         given(analysis.getProcessingStartedAt()).willReturn(cutoff.minusMinutes(1));
         given(analysis.getAnalysisRequestJson()).willReturn(null);
@@ -116,7 +119,7 @@ class AnalysisStateServiceTest {
                 }
                 """);
 
-        service.complete(1L, result, result.toString(), generatedReport());
+        service.complete(1L, PROCESSING_STARTED_AT, result, result.toString(), generatedReport());
 
         verify(analysis).complete(
                 81,
@@ -136,6 +139,44 @@ class AnalysisStateServiceTest {
                                 && completedEvent.getUserId().equals(1L)
                 )
         );
+    }
+
+    @Test
+    void complete_ignoresStaleProcessingAttempt() throws Exception {
+        JsonNode result = result("""
+                {
+                  "scores": {
+                    "final_score": 80,
+                    "domains": {
+                      "스케일": 81,
+                      "텐션": 82,
+                      "진행": 83,
+                      "코드 연결": 84
+                    }
+                  }
+                }
+                """);
+        given(analysis.isCurrentProcessing(PROCESSING_STARTED_AT)).willReturn(false);
+
+        boolean completed = service.complete(
+                1L, PROCESSING_STARTED_AT, result, result.toString(), generatedReport()
+        );
+
+        org.assertj.core.api.Assertions.assertThat(completed).isFalse();
+        verify(analysis, never()).complete(any(), any(), any(), any(), any(), any(), any(), any());
+        verify(analysisReportRepository, never()).save(any());
+        verify(llmCallLogRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void fail_ignoresStaleProcessingAttempt() {
+        given(analysis.isCurrentProcessing(PROCESSING_STARTED_AT)).willReturn(false);
+
+        boolean failed = service.fail(1L, PROCESSING_STARTED_AT, "timeout");
+
+        org.assertj.core.api.Assertions.assertThat(failed).isFalse();
+        verify(analysis, never()).fail(any());
     }
 
     @Test
@@ -199,7 +240,9 @@ class AnalysisStateServiceTest {
     }
 
     private void assertInvalidRawResult(JsonNode result) {
-        assertThatThrownBy(() -> service.complete(1L, result, result.toString(), generatedReport()))
+        assertThatThrownBy(() -> service.complete(
+                1L, PROCESSING_STARTED_AT, result, result.toString(), generatedReport()
+        ))
                 .isInstanceOf(GeneralException.class)
                 .hasFieldOrPropertyWithValue("code", AnalysisErrorStatus.INVALID_RAW_RESULT);
         verify(analysis, never()).complete(any(), any(), any(), any(), any(), any(), any(), any());

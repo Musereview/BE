@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
+import com.mr.domain.analysis.model.AnalysisProcessingClaim;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.client.ai.AiAnalysisRequest;
 import com.mr.global.client.ai.AiServerClient;
@@ -59,8 +60,12 @@ class AnalysisProcessingServiceTest {
     void process_doesNotGenerateReportWhenAiResultIsInvalid() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode invalidResult = objectMapper.readTree("{}");
+        LocalDateTime processingStartedAt = LocalDateTime.now();
         given(analysisStateService.startProcessing(1L))
-                .willReturn(Optional.of("{\"meta\":null,\"chords\":[],\"notes\":[]}"));
+                .willReturn(Optional.of(new AnalysisProcessingClaim(
+                        "{\"meta\":null,\"chords\":[],\"notes\":[]}",
+                        processingStartedAt
+                )));
         given(aiServerClient.requestAnalysis(org.mockito.ArgumentMatchers.any(AiAnalysisRequest.class)))
                 .willReturn(invalidResult);
         doThrow(new GeneralException(AnalysisErrorStatus.INVALID_RAW_RESULT))
@@ -74,6 +79,7 @@ class AnalysisProcessingServiceTest {
         verify(reportGenerationService, never()).generate(org.mockito.ArgumentMatchers.any());
         verify(analysisStateService).fail(
                 org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.eq(processingStartedAt),
                 org.mockito.ArgumentMatchers.any()
         );
     }

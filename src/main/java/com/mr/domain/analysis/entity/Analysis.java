@@ -11,6 +11,7 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -171,19 +172,34 @@ public class Analysis extends BaseCreatedEntity {
         }
     }
 
-    public void startProcessing() {
+    public LocalDateTime startProcessing() {
         if (this.status != AnalysisStatus.PENDING) {
             throw new IllegalStateException("PENDING 상태의 분석만 PROCESSING으로 변경할 수 있습니다.");
         }
         this.status = AnalysisStatus.PROCESSING;
-        this.processingStartedAt = LocalDateTime.now();
+        this.processingStartedAt = nextProcessingStartedAt();
+        return this.processingStartedAt;
     }
 
-    public void restartProcessing() {
+    public LocalDateTime restartProcessing() {
         if (this.status != AnalysisStatus.PROCESSING) {
             throw new IllegalStateException("PROCESSING 상태의 분석만 다시 시작할 수 있습니다.");
         }
-        this.processingStartedAt = LocalDateTime.now();
+        this.processingStartedAt = nextProcessingStartedAt();
+        return this.processingStartedAt;
+    }
+
+    public boolean isCurrentProcessing(LocalDateTime expectedProcessingStartedAt) {
+        return this.status == AnalysisStatus.PROCESSING
+                && Objects.equals(this.processingStartedAt, expectedProcessingStartedAt);
+    }
+
+    private LocalDateTime nextProcessingStartedAt() {
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
+        if (this.processingStartedAt != null && !now.isAfter(this.processingStartedAt)) {
+            return this.processingStartedAt.plus(1, ChronoUnit.MILLIS);
+        }
+        return now;
     }
 
     public void complete(Integer totalScore, AnalysisGrade grade, String summary, BigDecimal scaleScore,
