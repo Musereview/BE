@@ -43,7 +43,7 @@ public class PlayingService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(PlayingErrorStatus.USER_NOT_FOUND));
 
-        BackingTrack backingTrack = backingTrackRepository.findById(request.backingTrackId())
+        BackingTrack backingTrack = backingTrackRepository.findByIdAndDeletedAtIsNull(request.backingTrackId())
                 .orElseThrow(() -> new GeneralException(PlayingErrorStatus.BACKING_TRACK_NOT_FOUND));
 
         validateBackingTrackAccessible(userId, backingTrack);
