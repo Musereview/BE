@@ -59,20 +59,28 @@ public class AuthTransactionService {
         String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
         LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
 
-        Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, socialId);
-        if (optionalSocialAuth.isPresent()) {
-            SocialAuth socialAuth = optionalSocialAuth.get();
+        try {
+            Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, socialId);
+            if (optionalSocialAuth.isPresent()) {
+                SocialAuth socialAuth = optionalSocialAuth.get();
+                socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
+            } else {
+                SocialAuth newSocialAuth = SocialAuth.create(
+                        user,
+                        socialType,
+                        socialId,
+                        refreshTokenHash,
+                        expiryTime,
+                        deviceInfo
+                );
+                socialAuthRepository.saveAndFlush(newSocialAuth);
+            }
+        } catch (DataIntegrityViolationException e) {
+            SocialAuth socialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, socialId)
+                    .orElseThrow(() -> new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST));
             socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
-        } else {
-            SocialAuth newSocialAuth = SocialAuth.create(
-                    user,
-                    socialType,
-                    socialId,
-                    refreshTokenHash,
-                    expiryTime,
-                    deviceInfo
-            );
-            socialAuthRepository.saveAndFlush(newSocialAuth);
+            user = socialAuth.getUser();
+            isNewUser = false;
         }
 
         AuthResponseDTO.TokenResponse tokenResponse = AuthResponseDTO.TokenResponse.builder()
