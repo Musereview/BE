@@ -87,10 +87,4 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
     }
 
     Optional<Playing> findByIdAndDeletedAtIsNull(Long playingId);
-
-    boolean existsByUser_UserIdAndStatusAndEndedAtAfterAndDeletedAtIsNull(
-            Long userId,
-            PlayingStatus status,
-            LocalDateTime endedAt
-    );
 }

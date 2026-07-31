@@ -182,55 +182,6 @@ class PlayingServiceTest {
         }
 
         @Test
-        @DisplayName("동일 사용자가 1분 이내에 다시 완료 요청하면 예외가 발생한다")
-        void saveMidiEvents_requestedAgainWithinOneMinute() {
-            // given
-            MidiEventSaveRequest request = createRequest();
-
-            when(
-                    playingRepository
-                            .findByIdAndDeletedAtIsNull(playingId)
-            )
-                    .thenReturn(Optional.of(playing));
-
-            when(
-                    playingRepository
-                            .existsByUser_UserIdAndStatusAndEndedAtAfterAndDeletedAtIsNull(
-                                    eq(userId),
-                                    eq(PlayingStatus.COMPLETED),
-                                    any(LocalDateTime.class)
-                            )
-            )
-                    .thenReturn(true);
-
-            // when & then
-            assertThatThrownBy(() ->
-                    playingService.saveMidiEvents(
-                            userId,
-                            playingId,
-                            request
-                    )
-            )
-                    .isInstanceOf(GeneralException.class)
-                    .satisfies(exception -> {
-                        GeneralException generalException =
-                                (GeneralException) exception;
-
-                        assertThat(generalException.getCode())
-                                .isEqualTo(
-                                        MidiEventErrorStatus
-                                                .MIDI_SAVE_REQUEST_TOO_FREQUENT
-                                );
-                    });
-
-            verify(playing)
-                    .validatePlayingOwner(userId);
-
-            verify(playing, never())
-                    .completeWithMidiData(anyList());
-        }
-
-        @Test
         @DisplayName("요청 DTO의 MIDI 이벤트를 엔티티 값 객체로 변환한다")
         void saveMidiEvents_convertsRequestToEntity() {
             // given

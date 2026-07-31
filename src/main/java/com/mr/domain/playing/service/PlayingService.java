@@ -29,7 +29,6 @@ import static com.mr.domain.backingTrack.entity.enums.AccessLevel.PUBLIC;
 @Transactional(readOnly = true)
 public class PlayingService {
 
-    private static final long MIDI_SAVE_REQUEST_INTERVAL_MINUTES = 1L;
     private final PlayingRepository playingRepository;
     private final UserRepository userRepository;
     private final BackingTrackRepository backingTrackRepository;
@@ -70,7 +69,6 @@ public class PlayingService {
                 .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
 
         playing.validatePlayingOwner(userId);
-        validateMidiSaveRequestInterval(userId);
 
         List<MidiEventData> midiEvents = request.events()
                 .stream()
@@ -114,29 +112,6 @@ public class PlayingService {
 
         if (backingTrack.getUser() == null || !backingTrack.getUser().getUserId().equals(userId)){
             throw new GeneralException(PlayingErrorStatus.BACKING_TRACK_ACCESS_FORBIDDEN);
-        }
-    }
-
-    private void validateMidiSaveRequestInterval(Long userId) {
-        LocalDateTime oneMinuteAgo =
-                LocalDateTime.now()
-                        .minusMinutes(
-                                MIDI_SAVE_REQUEST_INTERVAL_MINUTES
-                        );
-
-        boolean recentlyCompleted =
-                playingRepository
-                        .existsByUser_UserIdAndStatusAndEndedAtAfterAndDeletedAtIsNull(
-                                userId,
-                                PlayingStatus.COMPLETED,
-                                oneMinuteAgo
-                        );
-
-        if (recentlyCompleted) {
-            throw new GeneralException(
-                    MidiEventErrorStatus
-                            .MIDI_SAVE_REQUEST_TOO_FREQUENT
-            );
         }
     }
 }
