@@ -3,7 +3,7 @@ package com.mr.domain.playing.entity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mr.domain.playing.entity.enums.MidiType;
-import com.mr.domain.playing.exception.PlayingErrorStatus;
+import com.mr.domain.playing.exception.MidiEventErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import lombok.Getter;
 
@@ -54,31 +54,31 @@ public class MidiEventData {
 
     private static void validateSequence(Integer sequence) {
         if (sequence == null || sequence < 0) {
-            throw new GeneralException(PlayingErrorStatus.INVALID_MIDI_SEQUENCE);
+            throw new GeneralException(MidiEventErrorStatus.INVALID_MIDI_SEQUENCE);
         }
     }
 
     private static void validateMidiType(MidiType type) {
         if (type == null) {
-            throw new GeneralException(PlayingErrorStatus.MISSING_MIDI_TYPE);
+            throw new GeneralException(MidiEventErrorStatus.INVALID_MIDI_TYPE);
         }
     }
 
     private static void validatePitch(Integer pitch) {
         if (pitch == null || pitch < 0 || pitch > 127) {
-            throw new GeneralException(PlayingErrorStatus.INVALID_PITCH_RANGE);
+            throw new GeneralException(MidiEventErrorStatus.INVALID_PITCH_RANGE);
         }
     }
 
     private static void validateVelocity(Integer velocity) {
         if (velocity == null || velocity < 0 || velocity > 127) {
-            throw new GeneralException(PlayingErrorStatus.INVALID_VELOCITY_RANGE);
+            throw new GeneralException(MidiEventErrorStatus.INVALID_VELOCITY_RANGE);
         }
     }
 
     private static void validateTimestampMs(Long timestampMs) {
         if (timestampMs == null || timestampMs < 0) {
-            throw new GeneralException(PlayingErrorStatus.INVALID_TIMESTAMP);
+            throw new GeneralException(MidiEventErrorStatus.INVALID_TIMESTAMP);
         }
     }
 }
