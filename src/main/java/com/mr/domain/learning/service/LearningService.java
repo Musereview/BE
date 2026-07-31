@@ -26,7 +26,9 @@ import com.mr.domain.user.entity.User;
 import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.event.NotificationEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,6 +60,7 @@ public class LearningService {
     private final ChordExampleRepository chordExampleRepository;
     // 임시 작명
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // 학습 결과 저장
     @Transactional
@@ -66,16 +69,24 @@ public class LearningService {
             Long learningId,
             LearningResultSaveRequestDTO.SaveResultDTO request
     ){
-        User user = userRepository.findById(userId)
+        // 같은 유저의 동시 저장 요청을 직렬화하기 위해 유저 행에 비관적 락을 걸고 조회
+        // (completedStepCountBefore/After 판정 구간 전체가 이 락 보유 중에 실행되어야 TOCTOU가 안 생김.
+        //  패키지가 아니라 유저 단위로 잠가서, 같은 패키지를 학습하는 다른 유저끼리는 잠기지 않는다)
+        User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(()-> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
-        Learning learning = learningRepository.findById(learningId)
+        Learning learning = learningRepository.findByIdAndIsActiveTrue(learningId)
                 .orElseThrow(() -> new GeneralException(LearningErrorStatus.LEARNING_NOT_FOUND));
 
         LearningStep learningStep = learningStepRepository.findById(request.learningStepId())
                 .orElseThrow(() -> new GeneralException(LearningErrorStatus.LEARNING_STEP_NOT_FOUND));
 
         learningStep.validateBelongsTo(learning);
+
+        // 이번 저장으로 패키지가 막 100% 완료되는지 판정하기 위해, 갱신 전 완료 개수를 먼저 스냅샷
+        long totalStepCount = learningStepRepository.countByLearningId(learningId);
+        long completedStepCountBefore = userLearningProgressRepository
+                .countCompletedStepsByUserIdAndLearningId(userId, learningId);
 
         UserLearningProgress progress = userLearningProgressRepository
                 .findByUser_UserIdAndLearningStep_Id(userId, request.learningStepId())
@@ -88,7 +99,29 @@ public class LearningService {
                     newProgress.updateProgress(request.score(), LocalDateTime.now());
                     return userLearningProgressRepository.save(newProgress);
                 });
+
+        notifyIfPackageJustCompleted(userId, learningId, learning, totalStepCount, completedStepCountBefore);
+
         return LearningResultResponseDTO.SaveResultResultDTO.from(progress);
+    }
+
+    // 이번 저장으로 패키지가 미완료 → 완료(100%)로 막 전환된 경우에만 완료 알림 발행.
+    // 완료 여부는 저장 전/후 스냅샷을 산술로 조합하지 않고, 저장 이후 시점의 완료 개수를 다시 조회해 판정한다
+    // (다른 단계가 동시에 저장되는 경우까지 고려해 실제 커밋된 값 기준으로 확인)
+    private void notifyIfPackageJustCompleted(
+            Long userId, Long learningId, Learning learning, long totalStepCount, long completedStepCountBefore
+    ) {
+        if (totalStepCount == 0 || completedStepCountBefore == totalStepCount) {
+            return;
+        }
+
+        long completedStepCountAfter = userLearningProgressRepository
+                .countCompletedStepsByUserIdAndLearningId(userId, learningId);
+
+        if (completedStepCountAfter == totalStepCount) {
+            String topicName = learning.getTitle() + " (" + learning.getDifficulty().getLabel() + ")";
+            eventPublisher.publishEvent(NotificationEvent.forLearning(userId, topicName));
+        }
     }
 
     // 학습 진행률 조회 로직
@@ -300,7 +333,7 @@ public class LearningService {
 
         return orderedSteps.stream()
                 .filter(step -> isStepIncomplete(scoreByStepId.get(step.getId())))
-                .filter(step -> excludeStepId == null || !step.getId().equals(excludeStepId))
+                .filter(step -> !step.getId().equals(excludeStepId))
                 .limit(RECOMMENDED_LEARNING_LIMIT)
                 .map(step -> LearningHomeResponseDTO.RecommendedLearning.of(learningById.get(step.getLearning().getId()), step))
                 .toList();

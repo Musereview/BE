@@ -172,20 +172,20 @@ public class Analysis extends BaseCreatedEntity {
         }
     }
 
-    public LocalDateTime startProcessing() {
+    public LocalDateTime startProcessing(LocalDateTime now) {
         if (this.status != AnalysisStatus.PENDING) {
             throw new IllegalStateException("PENDING 상태의 분석만 PROCESSING으로 변경할 수 있습니다.");
         }
         this.status = AnalysisStatus.PROCESSING;
-        this.processingStartedAt = nextProcessingStartedAt();
+        this.processingStartedAt = nextProcessingStartedAt(now);
         return this.processingStartedAt;
     }
 
-    public LocalDateTime restartProcessing() {
+    public LocalDateTime restartProcessing(LocalDateTime now) {
         if (this.status != AnalysisStatus.PROCESSING) {
             throw new IllegalStateException("PROCESSING 상태의 분석만 다시 시작할 수 있습니다.");
         }
-        this.processingStartedAt = nextProcessingStartedAt();
+        this.processingStartedAt = nextProcessingStartedAt(now);
         return this.processingStartedAt;
     }
 
@@ -194,17 +194,17 @@ public class Analysis extends BaseCreatedEntity {
                 && Objects.equals(this.processingStartedAt, expectedProcessingStartedAt);
     }
 
-    private LocalDateTime nextProcessingStartedAt() {
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
-        if (this.processingStartedAt != null && !now.isAfter(this.processingStartedAt)) {
+    private LocalDateTime nextProcessingStartedAt(LocalDateTime requestedAt) {
+        LocalDateTime next = Objects.requireNonNull(requestedAt).truncatedTo(ChronoUnit.MILLIS);
+        if (this.processingStartedAt != null && !next.isAfter(this.processingStartedAt)) {
             return this.processingStartedAt.plus(1, ChronoUnit.MILLIS);
         }
-        return now;
+        return next;
     }
 
     public void complete(Integer totalScore, AnalysisGrade grade, String summary, BigDecimal scaleScore,
                          BigDecimal tensionScore, BigDecimal progressionScore, BigDecimal voiceLeadingScore,
-                         String rawResultJson) {
+                         String rawResultJson, LocalDateTime completedAt) {
         if (this.status != AnalysisStatus.PROCESSING) {
             throw new IllegalStateException("PROCESSING 상태의 분석만 완료 처리할 수 있습니다.");
         }
@@ -217,15 +217,22 @@ public class Analysis extends BaseCreatedEntity {
         this.progressionScore = progressionScore;
         this.voiceLeadingScore = voiceLeadingScore;
         this.rawResultJson = rawResultJson;
-        this.completedAt = LocalDateTime.now();
+        this.completedAt = Objects.requireNonNull(completedAt);
     }
 
-    public void fail(String failedReason) {
+    public void fail(String failedReason, LocalDateTime completedAt) {
         if (this.status == AnalysisStatus.COMPLETED || this.status == AnalysisStatus.FAILED) {
             throw new IllegalStateException("이미 완료된 분석은 실패 처리할 수 없습니다.");
         }
         this.status = AnalysisStatus.FAILED;
         this.failedReason = failedReason;
-        this.completedAt = LocalDateTime.now();
+        this.completedAt = Objects.requireNonNull(completedAt);
+    }
+
+    // 재생수 증가 등 조회 이후 시점에, 요청자가 본인 분석 결과를 사용하는지 검증
+    public void validateOwner(Long userId) {
+        if (!this.user.getUserId().equals(userId)) {
+            throw new GeneralException(AnalysisErrorStatus.ANALYSIS_ACCESS_DENIED);
+        }
     }
 }

@@ -16,6 +16,8 @@ import org.junit.jupiter.api.Test;
 
 class AnalysisTest {
 
+    private static final LocalDateTime NOW = LocalDateTime.of(2026, 7, 31, 12, 0);
+
     @Test
     @DisplayName("createPending - user가 null이면 예외가 발생한다")
     void createPending_userNull_throwsException() {
@@ -67,9 +69,9 @@ class AnalysisTest {
         given(playing.getUser()).willReturn(user);
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
 
-        analysis.startProcessing();
+        analysis.startProcessing(NOW);
 
-        assertThat(analysis.getProcessingStartedAt()).isNotNull();
+        assertThat(analysis.getProcessingStartedAt()).isEqualTo(NOW);
         assertThat(analysis.getStatus()).isEqualTo(AnalysisStatus.PROCESSING);
     }
 
@@ -80,9 +82,9 @@ class AnalysisTest {
         Playing playing = mock(Playing.class);
         given(playing.getUser()).willReturn(user);
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
-        LocalDateTime firstAttempt = analysis.startProcessing();
+        LocalDateTime firstAttempt = analysis.startProcessing(NOW);
 
-        LocalDateTime secondAttempt = analysis.restartProcessing();
+        LocalDateTime secondAttempt = analysis.restartProcessing(NOW);
 
         assertThat(secondAttempt).isAfter(firstAttempt);
         assertThat(analysis.isCurrentProcessing(firstAttempt)).isFalse();

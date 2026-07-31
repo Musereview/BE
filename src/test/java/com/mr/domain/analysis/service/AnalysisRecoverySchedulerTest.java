@@ -7,7 +7,11 @@ import static org.mockito.Mockito.verify;
 
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import com.mr.domain.analysis.scheduler.AnalysisRecoveryScheduler;
@@ -20,6 +24,11 @@ import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 class AnalysisRecoverySchedulerTest {
+
+    private static final Clock FIXED_CLOCK = Clock.fixed(
+            Instant.parse("2026-07-31T03:00:00Z"),
+            ZoneId.of("Asia/Seoul")
+    );
 
     @Mock
     private AnalysisRepository analysisRepository;
@@ -39,6 +48,7 @@ class AnalysisRecoverySchedulerTest {
                 analysisRepository,
                 analysisProcessingService,
                 new SyncTaskExecutor(),
+                FIXED_CLOCK,
                 Duration.ofMinutes(1),
                 Duration.ofMinutes(2),
                 20
@@ -62,6 +72,7 @@ class AnalysisRecoverySchedulerTest {
                 analysisRepository,
                 analysisProcessingService,
                 new SyncTaskExecutor(),
+                FIXED_CLOCK,
                 Duration.ofMinutes(1),
                 Duration.ofMinutes(2),
                 20
@@ -69,6 +80,9 @@ class AnalysisRecoverySchedulerTest {
 
         scheduler.recoverPendingAnalyses();
 
-        verify(analysisProcessingService).recoverStaleProcessing(eq(21L), any());
+        verify(analysisProcessingService).recoverStaleProcessing(
+                21L,
+                LocalDateTime.of(2026, 7, 31, 11, 58)
+        );
     }
 }
