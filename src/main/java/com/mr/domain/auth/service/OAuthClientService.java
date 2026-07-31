@@ -317,7 +317,7 @@ public class OAuthClientService {
                 ? customFrontendRedirectUri.trim()
                 : (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
                 ? oAuthProperties.frontendRedirectUri()
-                : "http://localhost:3000/oauth/callback";
+                : "http://localhost:5173/oauth/callback";
 
         return org.springframework.web.util.UriComponentsBuilder.fromUriString(baseUrl)
                 .queryParam("code", code)
@@ -336,7 +336,7 @@ public class OAuthClientService {
                 ? customFrontendRedirectUri.trim()
                 : (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
                 ? oAuthProperties.frontendRedirectUri()
-                : "http://localhost:3000/oauth/callback";
+                : "http://localhost:5173/oauth/callback";
 
         return org.springframework.web.util.UriComponentsBuilder.fromUriString(baseUrl)
                 .queryParam("error", (error != null && !error.isBlank()) ? error : "authentication_failed")

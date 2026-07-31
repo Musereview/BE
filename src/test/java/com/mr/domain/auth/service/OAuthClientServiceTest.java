@@ -213,7 +213,7 @@ class OAuthClientServiceTest {
     void buildFrontendRedirectUrl_customUri_usesCustomUriBase() {
         String customUri = "https://myfrontend.com/custom/callback";
         com.mr.global.config.OAuthProperties oAuthProperties = new com.mr.global.config.OAuthProperties(
-                "http://localhost:3000/oauth/callback", java.util.List.of("http://localhost:3000/oauth/callback", customUri), null, null);
+                "http://localhost:5173/oauth/callback", java.util.List.of("http://localhost:5173/oauth/callback", customUri), null, null);
         OAuthClientService serviceWithProps = new OAuthClientService(
                 restClientBuilder.build(), new OAuthExceptionMapper(), oAuthProperties);
 
@@ -229,12 +229,12 @@ class OAuthClientServiceTest {
     void buildFrontendRedirectUrl_unallowedCustomUri_fallsBackToDefault() {
         String maliciousUri = "https://evil.example.com/collect";
         com.mr.global.config.OAuthProperties oAuthProperties = new com.mr.global.config.OAuthProperties(
-                "http://localhost:3000/oauth/callback", java.util.List.of("http://localhost:3000/oauth/callback"), null, null);
+                "http://localhost:5173/oauth/callback", java.util.List.of("http://localhost:5173/oauth/callback"), null, null);
         OAuthClientService serviceWithProps = new OAuthClientService(
                 restClientBuilder.build(), new OAuthExceptionMapper(), oAuthProperties);
 
         String successUrl = serviceWithProps.buildFrontendRedirectUrl("tempCode123", maliciousUri);
-        assertThat(successUrl).startsWith("http://localhost:3000/oauth/callback");
+        assertThat(successUrl).startsWith("http://localhost:5173/oauth/callback");
     }
 
     @Test
@@ -247,12 +247,12 @@ class OAuthClientServiceTest {
                 java.util.List.of("http://localhost:8080/api/auth/kakao/callback")
         );
         com.mr.global.config.OAuthProperties oAuthProperties = new com.mr.global.config.OAuthProperties(
-                "http://localhost:3000/oauth/callback", java.util.List.of("http://localhost:3000/oauth/callback"), kakaoProps, null);
+                "http://localhost:5173/oauth/callback", java.util.List.of("http://localhost:5173/oauth/callback"), kakaoProps, null);
         OAuthClientService serviceWithProps = new OAuthClientService(
                 restClientBuilder.build(), new OAuthExceptionMapper(), oAuthProperties);
 
         boolean isBackendUri = serviceWithProps.isBackendAllowedRedirectUri(SocialType.KAKAO, "http://localhost:8080/api/auth/kakao/callback");
-        boolean isFrontendUri = serviceWithProps.isBackendAllowedRedirectUri(SocialType.KAKAO, "http://localhost:3000/custom/callback");
+        boolean isFrontendUri = serviceWithProps.isBackendAllowedRedirectUri(SocialType.KAKAO, "http://localhost:5173/custom/callback");
 
         assertThat(isBackendUri).isTrue();
         assertThat(isFrontendUri).isFalse();
