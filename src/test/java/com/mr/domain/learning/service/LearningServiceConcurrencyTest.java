@@ -114,7 +114,8 @@ class LearningServiceConcurrencyTest {
 
         Future<?> future2 = executor.submit(saveStep2);
         Future<?> future3 = executor.submit(saveStep3);
-        readyLatch.await(5, TimeUnit.SECONDS); // 두 스레드 다 대기 지점에 도달할 때까지 대기
+        // 두 스레드 다 대기 지점에 도달할 때까지 대기 — 타임아웃되면 동시 실행 전제 자체가 깨진 것이므로 바로 실패시킨다
+        assertThat(readyLatch.await(5, TimeUnit.SECONDS)).isTrue();
         startLatch.countDown(); // 동시에 출발
         executor.shutdown();
         assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
@@ -132,7 +133,9 @@ class LearningServiceConcurrencyTest {
 
     private void await(CountDownLatch latch) {
         try {
-            latch.await(5, TimeUnit.SECONDS);
+            if (!latch.await(5, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("동시 시작 신호 대기 타임아웃");
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(e);
