@@ -6,6 +6,7 @@ import com.mr.domain.backingTrack.repository.BackingTrackRepository;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
+import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
@@ -623,5 +624,98 @@ class PlayingServiceTest {
                 );
 
         return new MidiEventSaveRequest(events);
+    }
+
+    @Nested
+    @DisplayName("연주 세션 단건 조회")
+    class GetPlayingDetail {
+
+        @Test
+        @DisplayName("본인의 완료된 연주 세션을 조회한다")
+        void getPlayingDetailSuccess() {
+
+            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+                    .thenReturn(Optional.of(playing));
+
+            when(playing.getId()).thenReturn(playingId);
+            when(playing.getStatus()).thenReturn(PlayingStatus.COMPLETED);
+
+            PlayingDetailResponse response =
+                    playingService.getPlayingDetail(userId, playingId);
+
+            assertThat(response.playingId()).isEqualTo(playingId);
+            assertThat(response.status()).isEqualTo(PlayingStatus.COMPLETED);
+
+            verify(playing).validatePlayingOwner(userId);
+            verify(playing).validateCompleted();
+        }
+
+        @Test
+        @DisplayName("연주 세션 ID가 1 미만이면 예외가 발생한다")
+        void invalidPlayingId() {
+            assertThatThrownBy(() ->
+                    playingService.getPlayingDetail(1L, 0L)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(exception -> {
+                        GeneralException generalException =
+                                (GeneralException) exception;
+
+                        assertThat(generalException.getCode())
+                                .isEqualTo(MidiEventErrorStatus.INVALID_PLAYING_ID);
+                    });
+        }
+
+        @Test
+        @DisplayName("연주 세션이 존재하지 않으면 예외가 발생한다")
+        void playingNotFound() {
+            // given
+            Long playingId = 10L;
+
+            given(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+                    .willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() ->
+                    playingService.getPlayingDetail(1L, playingId)
+            )
+                    .isInstanceOf(GeneralException.class);
+        }
+
+        @Test
+        @DisplayName("다른 사용자의 연주 세션이면 예외가 발생한다")
+        void playingAccessDenied() {
+
+            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+                    .thenReturn(Optional.of(playing));
+
+            doThrow(new GeneralException(
+                    PlayingErrorStatus.PLAYING_ACCESS_DENIED))
+                    .when(playing)
+                    .validatePlayingOwner(userId);
+
+            assertThatThrownBy(() ->
+                    playingService.getPlayingDetail(userId, playingId))
+                    .isInstanceOf(GeneralException.class);
+
+            verify(playing, never()).validateCompleted();
+        }
+
+        @Test
+        @DisplayName("완료되지 않은 연주 세션이면 예외가 발생한다")
+        void playingNotCompleted() {
+
+            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+                    .thenReturn(Optional.of(playing));
+
+            doThrow(new GeneralException(
+                    PlayingErrorStatus.PLAYING_NOT_COMPLETED))
+                    .when(playing)
+                    .validateCompleted();
+
+            assertThatThrownBy(() ->
+                    playingService.getPlayingDetail(userId, playingId))
+                    .isInstanceOf(GeneralException.class);
+        }
     }
 }

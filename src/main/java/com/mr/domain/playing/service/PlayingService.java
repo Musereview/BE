@@ -5,6 +5,7 @@ import com.mr.domain.backingTrack.repository.BackingTrackRepository;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
+import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
@@ -86,6 +87,18 @@ public class PlayingService {
                 playing.getId(),
                 playing.getMidiData().size()
         );
+    }
+
+    public PlayingDetailResponse getPlayingDetail(Long userId, Long playingId) {
+        validatePlayingId(playingId);
+
+        Playing playing = playingRepository.findByIdAndDeletedAtIsNull(playingId)
+                .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
+
+        playing.validatePlayingOwner(userId);
+        playing.validateCompleted();
+
+        return PlayingDetailResponse.from(playing);
     }
 
     private void validateUserId(Long userId) {

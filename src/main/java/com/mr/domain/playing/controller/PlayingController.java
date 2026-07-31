@@ -3,6 +3,7 @@ package com.mr.domain.playing.controller;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
+import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
 import com.mr.domain.playing.service.PlayingService;
 import com.mr.global.apipayload.ApiResponse;
@@ -11,11 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -56,6 +53,26 @@ public class PlayingController {
                 playingId,
                 request
         );
+
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(
+            summary = "연주 세션 단건 조회",
+            description = """
+                           완료된 연주 세션의 상세 정보를 조회합니다.
+                           로그인한 사용자 본인의 연주 세션만 조회할 수 있으며,
+                           삭제되지 않은 COMPLETED 상태의 연주 세션만 조회할 수 있습니다.
+                           """
+    )
+    @GetMapping("/{playingId}")
+    public ApiResponse<PlayingDetailResponse> getPlayingDetail(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long playingId
+    ){
+        Long userId = userDetails.getUserId();
+
+        PlayingDetailResponse response = playingService.getPlayingDetail(userId, playingId);
 
         return ApiResponse.onSuccess(response);
     }

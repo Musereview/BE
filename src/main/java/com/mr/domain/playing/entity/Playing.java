@@ -212,6 +212,12 @@ public class Playing extends BaseCreatedDeletedEntity {
         }
     }
 
+    public void validateCompleted() {
+        if (this.status != PlayingStatus.COMPLETED) {
+            throw new GeneralException(PlayingErrorStatus.PLAYING_NOT_COMPLETED);
+        }
+    }
+
     private void validateCompletableStatus() {
         if (this.status != PlayingStatus.IN_PROGRESS) {
             throw new GeneralException(MidiEventErrorStatus.PLAYING_NOT_IN_PROGRESS);
