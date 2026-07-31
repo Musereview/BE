@@ -1,6 +1,5 @@
 package com.mr.domain.auth.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -60,7 +59,7 @@ class AuthTransactionServiceTest {
         // 동시에 들어온 다른 요청이 먼저 저장을 마쳐서 실제 저장 시점엔 유니크 제약 위반이 남
         given(socialAuthRepository.findBySocialTypeAndSocialId(SocialType.KAKAO, "social-1"))
                 .willReturn(Optional.empty());
-        given(socialAuthRepository.saveAndFlush(any())).willThrow(uniqueViolation("social_auth_type_id_key"));
+        given(socialAuthRepository.saveAndFlush(any())).willThrow(uniqueViolation());
 
         OAuthUserInfo userInfo = new OAuthUserInfo("social-1", "https://example.com/profile.png");
 
@@ -75,10 +74,10 @@ class AuthTransactionServiceTest {
         verify(socialAuthRepository, times(1)).findBySocialTypeAndSocialId(SocialType.KAKAO, "social-1");
     }
 
-    private static DataIntegrityViolationException uniqueViolation(String constraintName) {
+    private static DataIntegrityViolationException uniqueViolation() {
         SQLException sqlException = new SQLException("duplicate key value violates unique constraint", "23505");
         ConstraintViolationException constraintViolationException =
-                new ConstraintViolationException("duplicate key", sqlException, constraintName);
+                new ConstraintViolationException("duplicate key", sqlException, "social_auth_type_id_key");
         return new DataIntegrityViolationException("duplicate key", constraintViolationException);
     }
 }
