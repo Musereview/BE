@@ -42,6 +42,9 @@ public class AuthController {
     private final AuthService authService;
     private final OAuthClientService oAuthClientService;
 
+    @org.springframework.beans.factory.annotation.Value("${oauth.cookie.secure:false}")
+    private boolean cookieSecure;
+
     @SecurityRequirements
     @Operation(
             summary = "소셜 로그인 시작 (OAuth 인가 URL 반환)",
@@ -59,7 +62,7 @@ public class AuthController {
 
         ResponseCookie stateCookie = ResponseCookie.from("oauth_state", state)
                 .httpOnly(true)
-                .secure(false)
+                .secure(cookieSecure)
                 .path("/")
                 .maxAge(300)
                 .sameSite("Lax")
@@ -67,14 +70,20 @@ public class AuthController {
         response.addHeader(HttpHeaders.SET_COOKIE, stateCookie.toString());
 
         if (customRedirectUri != null && !customRedirectUri.isBlank()) {
-            ResponseCookie redirectCookie = ResponseCookie.from("oauth_redirect_uri", customRedirectUri)
-                    .httpOnly(true)
-                    .secure(false)
-                    .path("/")
-                    .maxAge(300)
-                    .sameSite("Lax")
-                    .build();
-            response.addHeader(HttpHeaders.SET_COOKIE, redirectCookie.toString());
+            String trimmedUri = customRedirectUri.trim();
+            if (oAuthClientService.isBackendAllowedRedirectUri(socialType, trimmedUri)
+                    || oAuthClientService.isFrontendAllowedRedirectUri(trimmedUri)) {
+                ResponseCookie redirectCookie = ResponseCookie.from("oauth_redirect_uri", trimmedUri)
+                        .httpOnly(true)
+                        .secure(cookieSecure)
+                        .path("/")
+                        .maxAge(300)
+                        .sameSite("Lax")
+                        .build();
+                response.addHeader(HttpHeaders.SET_COOKIE, redirectCookie.toString());
+            } else {
+                log.warn("{} custom redirectUri [{}] is not in allowed backend/frontend list. Ignoring.", socialType, trimmedUri);
+            }
         }
 
         String authUrl = oAuthClientService.getAuthorizationUrl(socialType, customRedirectUri, state);
@@ -112,9 +121,9 @@ public class AuthController {
         }
 
         ResponseCookie clearStateCookie = ResponseCookie.from("oauth_state", "")
-                .httpOnly(true).secure(false).path("/").maxAge(0).sameSite("Lax").build();
+                .httpOnly(true).secure(cookieSecure).path("/").maxAge(0).sameSite("Lax").build();
         ResponseCookie clearRedirectCookie = ResponseCookie.from("oauth_redirect_uri", "")
-                .httpOnly(true).secure(false).path("/").maxAge(0).sameSite("Lax").build();
+                .httpOnly(true).secure(cookieSecure).path("/").maxAge(0).sameSite("Lax").build();
         response.addHeader(HttpHeaders.SET_COOKIE, clearStateCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, clearRedirectCookie.toString());
 
@@ -126,31 +135,34 @@ public class AuthController {
         String frontendTargetRedirectUri = null;
 
         if (effectiveRedirectUri != null && !effectiveRedirectUri.isBlank()) {
-            if (oAuthClientService.isBackendAllowedRedirectUri(socialType, effectiveRedirectUri)) {
-                backendOAuthRedirectUri = effectiveRedirectUri;
+            String trimmedUri = effectiveRedirectUri.trim();
+            if (oAuthClientService.isBackendAllowedRedirectUri(socialType, trimmedUri)) {
+                backendOAuthRedirectUri = trimmedUri;
+            } else if (oAuthClientService.isFrontendAllowedRedirectUri(trimmedUri)) {
+                frontendTargetRedirectUri = trimmedUri;
             } else {
-                frontendTargetRedirectUri = effectiveRedirectUri;
+                log.warn("{} effective redirectUri [{}] is not allowed for backend or frontend. Falling back to defaults.", socialType, trimmedUri);
             }
+        }
+
+        if (savedState == null) {
+            log.warn("{} OAuth state cookie missing in callback request", socialType);
+            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl("invalid_auth_request", frontendTargetRedirectUri);
+            response.sendRedirect(errorRedirectUrl);
+            return;
+        }
+
+        if (state == null || !savedState.equals(state)) {
+            log.warn("{} OAuth state mismatch detected in callback request", socialType);
+            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl("invalid_state", frontendTargetRedirectUri);
+            response.sendRedirect(errorRedirectUrl);
+            return;
         }
 
         if (error != null || code == null || code.isBlank()) {
             log.warn("{} OAuth login failed/cancelled by user: error={}", socialType, error);
             String errorCode = "access_denied".equalsIgnoreCase(error) ? "access_denied" : "oauth_failed";
             String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl(errorCode, frontendTargetRedirectUri);
-            response.sendRedirect(errorRedirectUrl);
-            return;
-        }
-
-        if (savedState != null && (state == null || !savedState.equals(state))) {
-            log.warn("{} OAuth state mismatch: saved={}, received={}", socialType, savedState, state);
-            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl("invalid_state", frontendTargetRedirectUri);
-            response.sendRedirect(errorRedirectUrl);
-            return;
-        }
-
-        if (savedState == null) {
-            log.warn("{} OAuth state cookie missing in callback request", socialType);
-            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl("invalid_auth_request", frontendTargetRedirectUri);
             response.sendRedirect(errorRedirectUrl);
             return;
         }
@@ -167,6 +179,7 @@ public class AuthController {
             String targetFrontendUrl = oAuthClientService.buildFrontendRedirectUrl(tempCode, frontendTargetRedirectUri);
             response.sendRedirect(targetFrontendUrl);
         } catch (Exception e) {
+            log.error("{} OAuth callback processing failed: {}", socialType, e.getMessage(), e);
             String errorCode = (e instanceof GeneralException ge && ge.getCode() != null)
                     ? ge.getCode().getCode()
                     : "authentication_failed";
