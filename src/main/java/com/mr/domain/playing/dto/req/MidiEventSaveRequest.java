@@ -15,7 +15,7 @@ import static com.mr.domain.playing.constant.MidiEventConstants.MAX_MIDI_EVENT_C
 public record MidiEventSaveRequest (
         @NotEmpty(message = "MIDI 이벤트 목록은 필수입니다")
         @Size(max = MAX_MIDI_EVENT_COUNT, message = "MIDI 이벤트는 최대 100,000개까지 저장할 수 있습니다.")
-        List<@Valid MidiEventRequest> events
+        List<@NotNull @Valid MidiEventRequest> events
 ) {
 
     public record MidiEventRequest (

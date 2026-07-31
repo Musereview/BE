@@ -21,7 +21,6 @@ public enum MidiEventErrorStatus implements BaseCode {
     DUPLICATE_MIDI_SEQUENCE(HttpStatus.BAD_REQUEST, "MIDI_400_10", "동일한 시간에 중복된 MIDI sequence 값이 존재합니다."),
 
     PLAYING_NOT_IN_PROGRESS(HttpStatus.CONFLICT, "MIDI_409_01", "진행 중인 연주 세션에만 MIDI 이벤트를 저장할 수 있습니다."),
-    MIDI_SAVE_REQUEST_TOO_FREQUENT(HttpStatus.TOO_MANY_REQUESTS, "MIDI_429_01", "연주 완료 요청은 1분에 한 번만 가능합니다."),
     ;
 
     private final HttpStatus status;

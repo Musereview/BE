@@ -71,7 +71,7 @@ class PlayingControllerTest {
 
         CustomUserDetails userDetails =
                 new CustomUserDetails(
-                        1L,
+                        USER_ID,
                         UserRole.ROLE_STUDENT
                 );
 
