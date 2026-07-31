@@ -8,6 +8,7 @@ import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.mentor.exception.MentorErrorStatus;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
+import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -40,5 +41,32 @@ class MentorChatSessionTest {
         assertThatThrownBy(session::increaseQuestionCount)
                 .isInstanceOf(GeneralException.class)
                 .hasFieldOrPropertyWithValue("code", MentorErrorStatus.MENTOR_SESSION_NOT_ACTIVE);
+    }
+
+    @Test
+    @DisplayName("생성 토큰이 일치할 때만 답변 완료 처리")
+    void completeGenerating_requiresMatchingToken() {
+        MentorChatSession session = MentorChatSession.createActive(mock(Analysis.class), mock(User.class));
+        String token = session.startGenerating(Duration.ofMinutes(2));
+
+        assertThatThrownBy(() -> session.completeGenerating("other-token"))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("code", MentorErrorStatus.MENTOR_SESSION_NOT_ACTIVE);
+
+        session.completeGenerating(token);
+
+        assertThat(session.getQuestionCount()).isEqualTo(1);
+        assertThat(session.getGenerationToken()).isNull();
+    }
+
+    @Test
+    @DisplayName("진행 중인 생성 요청은 중복 시작할 수 없다")
+    void startGenerating_inProgress_throwsException() {
+        MentorChatSession session = MentorChatSession.createActive(mock(Analysis.class), mock(User.class));
+        session.startGenerating(Duration.ofMinutes(2));
+
+        assertThatThrownBy(() -> session.startGenerating(Duration.ofMinutes(2)))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue("code", MentorErrorStatus.MENTOR_RESPONSE_IN_PROGRESS);
     }
 }

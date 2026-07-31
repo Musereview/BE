@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface MentorMessageRepository extends JpaRepository<MentorMessage, Long> {
 
     List<MentorMessage> findByMentorChatSessionAnalysisIdOrderByCreatedAtAscIdAsc(Long analysisId);
+
+    List<MentorMessage> findTop10ByMentorChatSessionAnalysisIdOrderByCreatedAtDescIdDesc(Long analysisId);
 }
