@@ -271,10 +271,6 @@ public class OAuthClientService {
         return allowedUris.get(0);
     }
 
-    public String getAuthorizationUrl(SocialType socialType, String customRedirectUri) {
-        return getAuthorizationUrl(socialType, customRedirectUri, null);
-    }
-
     public String getAuthorizationUrl(SocialType socialType, String customRedirectUri, String state) {
         OAuthProperties.ProviderProperties props = oAuthProperties != null ? switch (socialType) {
             case KAKAO -> oAuthProperties.kakao();

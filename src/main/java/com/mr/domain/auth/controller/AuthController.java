@@ -190,21 +190,9 @@ public class AuthController {
             response.sendRedirect(targetFrontendUrl);
         } catch (Exception e) {
             log.error("{} OAuth callback processing failed: {}", socialType, e.getMessage(), e);
-            String errorCode = (e instanceof GeneralException ge && ge.getCode() != null)
-                    ? ge.getCode().getCode()
-                    : "authentication_failed";
-            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl(errorCode, frontendTargetRedirectUri);
+            String errorRedirectUrl = oAuthClientService.buildFrontendErrorRedirectUrl("authentication_failed", frontendTargetRedirectUri);
             response.sendRedirect(errorRedirectUrl);
         }
-    }
-
-    private void deleteCookie(HttpServletResponse response, String name) {
-        ResponseCookie cookie = ResponseCookie.from(name, "")
-                .httpOnly(true)
-                .path("/")
-                .maxAge(0)
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     @SecurityRequirements
