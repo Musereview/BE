@@ -88,6 +88,7 @@ public class PlayingService {
         );
     }
 
+    @Transactional(readOnly = true)
     public PlayingDetailResponse getPlayingDetail(Long userId, Long playingId) {
         validatePlayingId(playingId);
 
