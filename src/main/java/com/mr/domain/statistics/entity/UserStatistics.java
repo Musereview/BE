@@ -11,7 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -19,7 +19,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// TODO: 사용자당 1행이 맞다면 @ManyToOne -> @OneToOne 전환 검토 (AnalysisReport 선례 참고)
 @Getter
 @Entity
 @Table(name = "user_statistics")
@@ -31,8 +30,8 @@ public class UserStatistics extends BaseTimeEntity {
     @Column(name = "user_statistic_id")
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
     @Column(name = "total_practice_minutes", nullable = false)
@@ -44,9 +43,11 @@ public class UserStatistics extends BaseTimeEntity {
     @Column(name = "total_analysis_count", nullable = false)
     private Integer totalAnalysisCount;
 
+    // 산출 기준 미확정(PM 확인 필요) - 집계 로직에서 채우지 않음
     @Column(name = "average_score", precision = 5, scale = 2)
     private BigDecimal averageScore;
 
+    // COMPLETED Analysis의 totalScore 평균 (전체 기간)
     @Column(name = "average_accuracy", precision = 5, scale = 2)
     private BigDecimal averageAccuracy;
 
@@ -86,16 +87,14 @@ public class UserStatistics extends BaseTimeEntity {
     }
 
     public void updatePracticeSummary(Integer totalPracticeMinutes, Integer totalPracticeCount,
-                                      BigDecimal averageScore, BigDecimal averageAccuracy, LocalDateTime recentPracticedAt) {
+                                      LocalDateTime recentPracticedAt) {
         this.totalPracticeMinutes = totalPracticeMinutes;
         this.totalPracticeCount = totalPracticeCount;
-        this.averageScore = averageScore;
-        this.averageAccuracy = averageAccuracy;
         this.recentPracticedAt = recentPracticedAt;
     }
 
-    public void updateAnalysisSummary(Integer totalAnalysisCount, BigDecimal averageScore) {
+    public void updateAnalysisSummary(Integer totalAnalysisCount, BigDecimal averageAccuracy) {
         this.totalAnalysisCount = totalAnalysisCount;
-        this.averageScore = averageScore;
+        this.averageAccuracy = averageAccuracy;
     }
 }
