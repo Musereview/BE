@@ -3,6 +3,7 @@ package com.mr.domain.playing.controller;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
+import com.mr.domain.playing.dto.res.PlayingDeleteResponse;
 import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
 import com.mr.domain.playing.service.PlayingService;
@@ -12,7 +13,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
@@ -73,6 +80,27 @@ public class PlayingController {
         Long userId = userDetails.getUserId();
 
         PlayingDetailResponse response = playingService.getPlayingDetail(userId, playingId);
+
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(
+            summary = "연주 기록 삭제",
+            description = """
+                            로그인한 사용자의 연주 기록을 삭제합니다.
+                            본인의 삭제되지 않은 연주 기록만 삭제할 수 있으며,
+                            실제 데이터는 제거하지 않고 삭제 일시를 기록하는 Soft Delete 방식으로 처리합니다.
+                            """
+    )
+    @DeleteMapping("/{playingId}")
+    public ApiResponse<PlayingDeleteResponse> deletePlaying(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long playingId
+    ){
+
+        Long userId = userDetails.getUserId();
+
+        PlayingDeleteResponse response = playingService.deletePlaying(userId, playingId);
 
         return ApiResponse.onSuccess(response);
     }

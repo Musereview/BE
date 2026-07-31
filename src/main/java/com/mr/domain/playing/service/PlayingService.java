@@ -5,11 +5,11 @@ import com.mr.domain.backingTrack.repository.BackingTrackRepository;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
+import com.mr.domain.playing.dto.res.PlayingDeleteResponse;
 import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
-import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.exception.MidiEventErrorStatus;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
@@ -20,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.mr.domain.backingTrack.entity.enums.AccessLevel.PUBLIC;
@@ -99,6 +98,20 @@ public class PlayingService {
         playing.validateCompleted();
 
         return PlayingDetailResponse.from(playing);
+    }
+
+    @Transactional
+    public PlayingDeleteResponse deletePlaying(Long userId, Long playingId) {
+
+        validatePlayingId(playingId);
+
+        Playing playing = playingRepository.findByIdAndDeletedAtIsNull(playingId)
+                .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
+
+        playing.validatePlayingOwner(userId);
+        playing.softDelete();
+
+        return PlayingDeleteResponse.from(playing);
     }
 
     private void validateUserId(Long userId) {
