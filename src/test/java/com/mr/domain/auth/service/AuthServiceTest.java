@@ -162,6 +162,24 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("linkSocialAccount - 동일한 socialType의 다른 계정을 이미 연동한 경우 ALREADY_LINKED_SOCIAL_ACCOUNT 예외가 발생한다")
+    void linkSocialAccount_sameSocialTypeDifferentAccount_throwsException() {
+        // given
+        OAuthUserInfo firstKakaoInfo = new OAuthUserInfo("kakao_1_" + java.util.UUID.randomUUID(), "https://example.com/kakao1.png");
+        given(oAuthClientService.getUserInfo(SocialType.KAKAO, "token_1")).willReturn(firstKakaoInfo);
+        AuthResponseDTO.LoginResponse loginResponse = authService.socialLogin(SocialType.KAKAO, "token_1", "deviceInfo");
+        Long userId = loginResponse.userId();
+
+        OAuthUserInfo secondKakaoInfo = new OAuthUserInfo("kakao_2_" + java.util.UUID.randomUUID(), "https://example.com/kakao2.png");
+        given(oAuthClientService.getUserInfo(SocialType.KAKAO, "token_2")).willReturn(secondKakaoInfo);
+
+        // when & then
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> authService.linkSocialAccount(userId, SocialType.KAKAO, "token_2", "deviceInfo"))
+                .isInstanceOf(com.mr.global.apipayload.exception.GeneralException.class)
+                .satisfies(e -> assertThat(((com.mr.global.apipayload.exception.GeneralException) e).getCode()).isEqualTo(com.mr.domain.auth.exception.AuthErrorStatus.ALREADY_LINKED_SOCIAL_ACCOUNT));
+    }
+
+    @Test
     @DisplayName("generateTempExchangeCode / exchangeTempCode - 일회성 교환 코드로 로그인 정보를 정상 교환하며, 1회 교환 후 재사용 시 예외가 발생한다")
     void tempExchangeCode_oneTimeUseSuccessAndFailsOnReuse() {
         // given

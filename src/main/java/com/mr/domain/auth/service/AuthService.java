@@ -151,6 +151,14 @@ public class AuthService {
             }
         }
 
+        Optional<SocialAuth> userSocialAuthForType = socialAuthRepository.findAllByUser_UserId(userId).stream()
+                .filter(sa -> sa.getSocialType() == socialType)
+                .findFirst();
+
+        if (userSocialAuthForType.isPresent() && !userSocialAuthForType.get().getSocialId().equals(userInfo.socialId())) {
+            throw new GeneralException(AuthErrorStatus.ALREADY_LINKED_SOCIAL_ACCOUNT);
+        }
+
         String newAccessToken = tokenProvider.createAccessToken(userId);
         String newRefreshToken = tokenProvider.createRefreshToken(userId);
         String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
