@@ -191,8 +191,14 @@ public class OAuthClientService {
             if (isJwtFormat(accessToken)) {
                 log.debug("Google v2 userinfo fetch failed for JWT-like token, attempting tokeninfo fallback: {}", primaryEx.getMessage());
                 try {
+                    String tokeninfoUrl = org.springframework.web.util.UriComponentsBuilder
+                            .fromUriString("https://oauth2.googleapis.com/tokeninfo")
+                            .queryParam("id_token", accessToken)
+                            .build()
+                            .toUriString();
+
                     GoogleUserResponse fallbackResponse = restClient.get()
-                            .uri("https://oauth2.googleapis.com/tokeninfo?id_token=" + accessToken)
+                            .uri(tokeninfoUrl)
                             .accept(MediaType.APPLICATION_JSON)
                             .retrieve()
                             .body(GoogleUserResponse.class);
@@ -229,6 +235,14 @@ public class OAuthClientService {
         } : null;
 
         List<String> allowedUris = providerProps != null ? providerProps.getAllowedRedirectUris() : List.of();
+        return allowedUris.contains(redirectUri.trim());
+    }
+
+    public boolean isFrontendAllowedRedirectUri(String redirectUri) {
+        if (redirectUri == null || redirectUri.isBlank()) {
+            return false;
+        }
+        List<String> allowedUris = oAuthProperties != null ? oAuthProperties.getAllowedFrontendRedirectUris() : List.of();
         return allowedUris.contains(redirectUri.trim());
     }
 
@@ -298,7 +312,7 @@ public class OAuthClientService {
     }
 
     public String buildFrontendRedirectUrl(String code, String customFrontendRedirectUri) {
-        String baseUrl = (customFrontendRedirectUri != null && !customFrontendRedirectUri.isBlank())
+        String baseUrl = (customFrontendRedirectUri != null && isFrontendAllowedRedirectUri(customFrontendRedirectUri))
                 ? customFrontendRedirectUri.trim()
                 : (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
                 ? oAuthProperties.frontendRedirectUri()
@@ -315,7 +329,7 @@ public class OAuthClientService {
     }
 
     public String buildFrontendRedirectUrl(com.mr.domain.auth.dto.res.AuthResponseDTO.LoginResponse loginResponse, String customFrontendRedirectUri) {
-        String baseUrl = (customFrontendRedirectUri != null && !customFrontendRedirectUri.isBlank())
+        String baseUrl = (customFrontendRedirectUri != null && isFrontendAllowedRedirectUri(customFrontendRedirectUri))
                 ? customFrontendRedirectUri.trim()
                 : (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
                 ? oAuthProperties.frontendRedirectUri()
@@ -336,7 +350,7 @@ public class OAuthClientService {
     }
 
     public String buildFrontendErrorRedirectUrl(String error, String customFrontendRedirectUri) {
-        String baseUrl = (customFrontendRedirectUri != null && !customFrontendRedirectUri.isBlank())
+        String baseUrl = (customFrontendRedirectUri != null && isFrontendAllowedRedirectUri(customFrontendRedirectUri))
                 ? customFrontendRedirectUri.trim()
                 : (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
                 ? oAuthProperties.frontendRedirectUri()
