@@ -37,7 +37,6 @@ public class AuthService {
     @Value("${app.profile.default-image-url}")
     private String defaultProfileImageUrl;
 
-    @Transactional
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String accessToken, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
 
@@ -48,7 +47,6 @@ public class AuthService {
         }
     }
 
-    @Transactional
     public AuthResponseDTO.LoginResponse socialLoginByCode(SocialType socialType, String code, String redirectUri, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfoByCode(socialType, code, redirectUri);
 
@@ -59,7 +57,8 @@ public class AuthService {
         }
     }
 
-    private AuthResponseDTO.LoginResponse executeSocialLogin(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
+    @Transactional
+    public AuthResponseDTO.LoginResponse executeSocialLogin(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
         Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId());
         boolean isNewUser = optionalSocialAuth.isEmpty();
 
@@ -108,7 +107,8 @@ public class AuthService {
                 .build();
     }
 
-    private AuthResponseDTO.LoginResponse executeSocialLoginForExistingUser(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
+    @Transactional
+    public AuthResponseDTO.LoginResponse executeSocialLoginForExistingUser(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
         SocialAuth socialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId())
                 .orElseThrow(() -> new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST));
 
@@ -136,10 +136,13 @@ public class AuthService {
                 .build();
     }
 
-    @Transactional
     public AuthResponseDTO.TokenInfo linkSocialAccount(Long userId, SocialType socialType, String accessToken, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
+        return executeLinkSocialAccount(userId, socialType, userInfo, deviceInfo);
+    }
 
+    @Transactional
+    public AuthResponseDTO.TokenInfo executeLinkSocialAccount(Long userId, SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
