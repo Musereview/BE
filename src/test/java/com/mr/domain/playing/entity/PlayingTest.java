@@ -2,6 +2,7 @@ package com.mr.domain.playing.entity;
 
 import com.mr.domain.backingTrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.enums.MidiType;
+import com.mr.domain.playing.entity.enums.PlayingMode;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.exception.MidiEventErrorStatus;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
@@ -10,6 +11,7 @@ import com.mr.domain.user.entity.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -561,6 +563,101 @@ class PlayingTest {
                                     PlayingErrorStatus.MISSING_BACKING_TRACK_ID
                             );
                 });
+    }
+
+    @Test
+    @DisplayName("READY 상태의 연주를 시작하면 IN_PROGRESS 상태가 되고 시작 시간이 기록된다")
+    void startPlaying_success() {
+        // given
+        User user = mock(User.class);
+        BackingTrack backingTrack = mock(BackingTrack.class);
+
+        Playing playing = Playing.createBackingTrack(
+                user,
+                backingTrack,
+                120
+        );
+
+        LocalDateTime beforeStart = LocalDateTime.now();
+
+        // when
+        playing.start();
+
+        LocalDateTime afterStart = LocalDateTime.now();
+
+        // then
+        assertThat(playing.getStatus())
+                .isEqualTo(PlayingStatus.IN_PROGRESS);
+
+        assertThat(playing.getStartedAt())
+                .isNotNull()
+                .isBetween(beforeStart, afterStart);
+    }
+
+    @Test
+    @DisplayName("IN_PROGRESS 상태의 연주를 다시 시작하면 예외가 발생한다")
+    void startPlaying_invalidStatus() {
+        // given
+        User user = mock(User.class);
+        BackingTrack backingTrack = mock(BackingTrack.class);
+
+        Playing playing = Playing.createBackingTrack(
+                user,
+                backingTrack,
+                120
+        );
+
+        playing.start();
+
+        // when & then
+        assertThatThrownBy(playing::start)
+                .isInstanceOf(GeneralException.class)
+                .satisfies(exception -> {
+                    GeneralException generalException =
+                            (GeneralException) exception;
+
+                    assertThat(generalException.getCode())
+                            .isEqualTo(
+                                    PlayingErrorStatus.INVALID_PLAYING_STATUS
+                            );
+                });
+    }
+
+    @Test
+    @DisplayName("백킹트랙 연주를 생성하면 READY 상태와 비공개 설정이 적용된다")
+    void createBackingTrackPlaying_success() {
+        // given
+        User user = mock(User.class);
+        BackingTrack backingTrack = mock(BackingTrack.class);
+
+        // when
+        Playing playing = Playing.createBackingTrack(
+                user,
+                backingTrack,
+                120
+        );
+
+        // then
+        assertThat(playing.getUser())
+                .isEqualTo(user);
+
+        assertThat(playing.getBackingTrack())
+                .isEqualTo(backingTrack);
+
+        assertThat(playing.getMode())
+                .isEqualTo(PlayingMode.BACKING_TRACK);
+
+        assertThat(playing.getStatus())
+                .isEqualTo(PlayingStatus.READY);
+
+        assertThat(playing.getBpm())
+                .isEqualTo(120);
+
+        assertThat(playing.isPublic())
+                .isFalse();
+
+        assertThat(playing.getStartedAt())
+                .isNull();
     }
 
     private Playing createReadyPlaying() {
