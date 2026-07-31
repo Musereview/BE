@@ -36,6 +36,7 @@ import com.mr.global.client.ai.AiAnalysisRequest;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -74,6 +75,10 @@ class AnalysisServiceTest {
     }
 
     private Analysis completedAnalysis(Long userId) {
+        return completedAnalysis(userId, ScaleType.MAJOR);
+    }
+
+    private Analysis completedAnalysis(Long userId, ScaleType scaleType) {
         User user = mock(User.class);
         given(user.getUserId()).willReturn(userId);
 
@@ -86,7 +91,7 @@ class AnalysisServiceTest {
         lenient().when(backingTrack.getTitle()).thenReturn("테스트 트랙");
         lenient().when(backingTrack.getGenre()).thenReturn("jazz");
         lenient().when(backingTrack.getKeySignature()).thenReturn("C");
-        lenient().when(backingTrack.getScaleType()).thenReturn(ScaleType.MAJOR);
+        lenient().when(backingTrack.getScaleType()).thenReturn(scaleType);
 
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
         LocalDateTime now = LocalDateTime.of(2026, 7, 31, 12, 0);
@@ -103,6 +108,25 @@ class AnalysisServiceTest {
                 now
         );
         return analysis;
+    }
+
+    @Test
+    @DisplayName("getAnalysisResult - JVM 로케일과 무관하게 조성명을 변환한다")
+    void getAnalysisResult_turkishLocale_formatsKeyConsistently() {
+        Locale previousLocale = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+            Analysis analysis = completedAnalysis(1L, ScaleType.MINOR);
+            given(analysisRepository.findById(1L)).willReturn(Optional.of(analysis));
+            given(analysisReportRepository.findFirstByAnalysisIdAndLlmStatusOrderByCreatedAtDesc(anyLong(), any()))
+                    .willReturn(Optional.empty());
+
+            AnalysisResultResponseDTO response = analysisService.getAnalysisResult(1L, 1L);
+
+            assertThat(response.key()).isEqualTo("C Minor");
+        } finally {
+            Locale.setDefault(previousLocale);
+        }
     }
 
     @Test

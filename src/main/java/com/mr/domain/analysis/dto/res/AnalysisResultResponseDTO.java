@@ -13,6 +13,7 @@ import com.mr.domain.analysis.entity.enums.LlmStatus;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 public record AnalysisResultResponseDTO(
         Long analysisId,
@@ -65,7 +66,7 @@ public record AnalysisResultResponseDTO(
     }
 
     private static String formatKey(BackingTrack backingTrack) {
-        String scale = backingTrack.getScaleType().name().toLowerCase();
+        String scale = backingTrack.getScaleType().name().toLowerCase(Locale.ROOT);
         return backingTrack.getKeySignature()
                 + " "
                 + Character.toUpperCase(scale.charAt(0))
