@@ -190,11 +190,4 @@ public class BackingTrack extends BaseTimeDeletedEntity {
         }
     }
 
-    // 재생 수 증가
-    public void increasePlayCount() {
-        if (this.playCount == null) {
-            this.playCount = 0;
-        }
-        this.playCount += 1;
-    }
 }
