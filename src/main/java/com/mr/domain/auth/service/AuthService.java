@@ -37,6 +37,7 @@ public class AuthService {
     @Value("${app.profile.default-image-url}")
     private String defaultProfileImageUrl;
 
+    @Transactional
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String accessToken, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
 
@@ -47,6 +48,7 @@ public class AuthService {
         }
     }
 
+    @Transactional
     public AuthResponseDTO.LoginResponse socialLoginByCode(SocialType socialType, String code, String redirectUri, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfoByCode(socialType, code, redirectUri);
 
@@ -136,6 +138,7 @@ public class AuthService {
                 .build();
     }
 
+    @Transactional
     public AuthResponseDTO.TokenInfo linkSocialAccount(Long userId, SocialType socialType, String accessToken, String deviceInfo) {
         OAuthUserInfo userInfo = oAuthClientService.getUserInfo(socialType, accessToken);
         return executeLinkSocialAccount(userId, socialType, userInfo, deviceInfo);
