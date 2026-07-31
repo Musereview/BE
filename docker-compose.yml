@@ -11,6 +11,35 @@ services:
       TZ: Asia/Seoul
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       APP_PROFILE_DEFAULTIMAGEURL: ${DEFAULT_PROFILE_IMAGE_URL:?DEFAULT_PROFILE_IMAGE_URL is required}
-        
+      AI_INTERNAL_BASE_URL: ${AI_INTERNAL_BASE_URL:?AI_INTERNAL_BASE_URL is required}
     ports:
       - "127.0.0.1:8080:8080"
+     
+    depends_on:
+      analysis:
+        condition: service_healthy
+
+  analysis:
+    build:
+      context: ../ANALYSIS
+      dockerfile: Dockerfile
+    image: musereview-analysis:latest
+    container_name: musereview-analysis
+    restart: unless-stopped
+
+    environment:
+      TZ: Asia/Seoul
+
+    ports:
+      - "127.0.0.1:8001:8000"
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

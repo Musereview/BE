@@ -117,6 +117,12 @@ class AnalysisControllerTest {
         AnalysisResultResponseDTO response = new AnalysisResultResponseDTO(
                 1L,
                 1L,
+                "Jazz Standard Practice",
+                "jazz",
+                "C Major",
+                120,
+                LocalDateTime.of(2026, 7, 24, 9, 0),
+                AnalysisStatus.COMPLETED,
                 1,
                 8,
                 85,
@@ -149,9 +155,13 @@ class AnalysisControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.data.analysisId").value(1L))
+                .andExpect(jsonPath("$.data.title").value("Jazz Standard Practice"))
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.data.totalScore").value(85))
                 .andExpect(jsonPath("$.data.grade").value("GOOD"))
-                .andExpect(jsonPath("$.data.domainScores.scaleScore").value(80.00))
+                .andExpect(jsonPath("$.data.domainScores.scale").value(80.00))
+                .andExpect(jsonPath("$.data.domainScores.scaleScore").doesNotExist())
+                .andExpect(jsonPath("$.data.result").doesNotExist())
                 .andExpect(jsonPath("$.data.report.modelName").value("gpt-4"));
     }
 
@@ -163,6 +173,6 @@ class AnalysisControllerTest {
 
         mockMvc.perform(get("/api/analyses/{analysisId}", 1L))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("ANALYSIS_409_01"));
+                .andExpect(jsonPath("$.code").value("ANALYSIS_409_02"));
     }
 }

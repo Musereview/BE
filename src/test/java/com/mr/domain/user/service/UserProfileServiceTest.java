@@ -206,11 +206,9 @@ class UserProfileServiceTest {
 
         given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
         given(studentRepository.findByUser(user)).willReturn(Optional.of(student));
-        given(studentInstrumentRepository.findByStudentAndPrimaryTrue(student))
+        given(studentInstrumentRepository.findFirstByStudentAndPrimaryTrue(student))
                 .willReturn(Optional.of(primaryInstrument));
-        given(subscriptionRepository
-                .findFirstByUserAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(
-                        any(), any(), any()))
+        given(subscriptionRepository.findFirstByUserOrderByStartDateDesc(any()))
                 .willReturn(Optional.of(subscription));
         given(userStatisticsRepository.findByUser_UserId(USER_ID)).willReturn(Optional.empty());
         given(userLearningProgressRepository.countDistinctCompletedLearningsByUserId(USER_ID)).willReturn(8L);
@@ -219,6 +217,31 @@ class UserProfileServiceTest {
 
         assertThat(response.statistics().completedLearningCount()).isEqualTo(8L);
         verify(userLearningProgressRepository).countDistinctCompletedLearningsByUserId(USER_ID);
+    }
+
+    @Test
+    @DisplayName("getMyProfile - 가입 30일이 지나 구독 end_date가 과거여도 조회가 성공한다 (만료 체크 없음)")
+    void getMyProfile_subscriptionPastOldEndDate_stillSucceeds() {
+        user.updateNickname("김뮤즈");
+        Student student = Student.create(user, TheoryLevel.INTERMEDIATE);
+        Instrument piano = Instrument.create("PIANO", "피아노");
+        StudentInstrument primaryInstrument = StudentInstrument.createPrimary(student, piano);
+        // 가입 40일 전 생성된 구독 (end_date = 시작일 + 30일 → 이미 10일 지남)
+        Subscription subscription = Subscription.create(
+                user, "PRO", LocalDateTime.now().minusDays(40), LocalDateTime.now().minusDays(10));
+
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
+        given(studentRepository.findByUser(user)).willReturn(Optional.of(student));
+        given(studentInstrumentRepository.findFirstByStudentAndPrimaryTrue(student))
+                .willReturn(Optional.of(primaryInstrument));
+        given(subscriptionRepository.findFirstByUserOrderByStartDateDesc(any()))
+                .willReturn(Optional.of(subscription));
+        given(userStatisticsRepository.findByUser_UserId(USER_ID)).willReturn(Optional.empty());
+        given(userLearningProgressRepository.countDistinctCompletedLearningsByUserId(USER_ID)).willReturn(0L);
+
+        UserProfileResponseDTO.ProfileResponse response = userProfileService.getMyProfile();
+
+        assertThat(response.subscriptionTier()).isEqualTo("PRO");
     }
 
     @Test

@@ -17,16 +17,22 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// TODO: (user, periodType, periodStart, periodEnd, skillType) 유니크 제약 필요한지 집계 로직 구현 시 확인
 @Getter
 @Entity
-@Table(name = "skill_statistics")
+@Table(
+        name = "skill_statistics",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_skill_statistics_user_period_skill",
+                        columnNames = {"user_id", "period_type", "period_start", "period_end", "skill_type"})
+        }
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SkillStatistics extends BaseCreatedEntity {
 
