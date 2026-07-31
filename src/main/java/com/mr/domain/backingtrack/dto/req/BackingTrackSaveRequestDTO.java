@@ -1,8 +1,8 @@
-package com.mr.domain.backingTrack.dto.req;
+package com.mr.domain.backingtrack.dto.req;
 
-import com.mr.domain.backingTrack.entity.enums.AccessLevel;
-import com.mr.domain.backingTrack.entity.enums.Level;
-import com.mr.domain.backingTrack.entity.enums.ScaleType;
+import com.mr.domain.backingtrack.entity.enums.AccessLevel;
+import com.mr.domain.backingtrack.entity.enums.Level;
+import com.mr.domain.backingtrack.entity.enums.ScaleType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -13,7 +13,6 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
-import java.util.Map;
 
 public class BackingTrackSaveRequestDTO {
 

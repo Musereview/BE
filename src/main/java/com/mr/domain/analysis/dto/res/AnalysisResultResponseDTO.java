@@ -3,7 +3,7 @@ package com.mr.domain.analysis.dto.res;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
-import com.mr.domain.backingTrack.entity.BackingTrack;
+import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.AnalysisReport;

@@ -1,8 +1,8 @@
 package com.mr.domain.analysis.factory;
 
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
-import com.mr.domain.backingTrack.entity.BackingTrack;
-import com.mr.domain.backingTrack.entity.ChordProgression;
+import com.mr.domain.backingtrack.entity.BackingTrack;
+import com.mr.domain.backingtrack.entity.ChordProgression;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.MidiType;

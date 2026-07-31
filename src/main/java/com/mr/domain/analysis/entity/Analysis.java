@@ -228,4 +228,11 @@ public class Analysis extends BaseCreatedEntity {
         this.failedReason = failedReason;
         this.completedAt = Objects.requireNonNull(completedAt);
     }
+
+    // 재생수 증가 등 조회 이후 시점에, 요청자가 본인 분석 결과를 사용하는지 검증
+    public void validateOwner(Long userId) {
+        if (!this.user.getUserId().equals(userId)) {
+            throw new GeneralException(AnalysisErrorStatus.ANALYSIS_ACCESS_DENIED);
+        }
+    }
 }
