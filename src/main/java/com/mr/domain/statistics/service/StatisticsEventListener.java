@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-// 트랜잭션 경계는 StatisticsAggregationService에서 관리(별도 빈으로 분리한 이유는 그쪽 주석 참고)
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -21,7 +20,7 @@ public class StatisticsEventListener {
 
     private final StatisticsAggregationService statisticsAggregationService;
 
-    // 유니크 제약 충돌(동시 upsert)만 재시도 대상 - 그 외 예외(유저 없음 등)는 즉시 전파해 조용히 삼키지 않음
+    // 동시 upsert 충돌 한정 재시도
     @Retryable(
             retryFor = {DataIntegrityViolationException.class},
             maxAttempts = 3,

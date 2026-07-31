@@ -74,8 +74,9 @@ class HistoryServiceTest {
         lenient().when(playing.getUser()).thenReturn(user);
 
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
-        analysis.startProcessing();
-        analysis.complete(totalScore, AnalysisGrade.GOOD, "요약", null, null, null, null, null);
+        LocalDateTime now = LocalDateTime.of(2026, 7, 31, 12, 0);
+        analysis.startProcessing(now);
+        analysis.complete(totalScore, AnalysisGrade.GOOD, "요약", null, null, null, null, null, now);
         return analysis;
     }
 

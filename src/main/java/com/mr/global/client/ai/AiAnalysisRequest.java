@@ -13,7 +13,8 @@ public record AiAnalysisRequest(
             Double bpm,
             @JsonProperty("time_signature") List<Integer> timeSignature,
             Key key,
-            String genre
+            String genre,
+            String level
     ) {
     }
 
@@ -32,10 +33,15 @@ public record AiAnalysisRequest(
 
     public record Note(
             Integer index,
+            NoteType type,
             Integer pitch,
-            @JsonProperty("onset_beats") Double onsetBeats,
-            @JsonProperty("duration_beats") Double durationBeats,
-            Integer velocity
+            Integer velocity,
+            @JsonProperty("timestamp_ms") Double timestampMs
     ) {
+    }
+
+    public enum NoteType {
+        NOTE_ON,
+        NOTE_OFF
     }
 }

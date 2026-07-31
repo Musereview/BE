@@ -65,7 +65,6 @@ public class StatisticsService {
         );
     }
 
-    // index 0=이번 주, 1=지난 주, 2=2주 전, 3=3주 전
     private ScoreAggregate[] buildWeeklyScoreAggregates(List<Analysis> analyses, LocalDateTime thisWeekStart) {
         ScoreAggregate[] aggregates = new ScoreAggregate[WEEKLY_TREND_WEEKS];
         for (int weeksAgo = 0; weeksAgo < WEEKLY_TREND_WEEKS; weeksAgo++) {
@@ -201,7 +200,6 @@ public class StatisticsService {
                 .intValue();
     }
 
-    // 평균 지표의 분모(count) 0 처리 공통화
     private record ScoreAggregate(BigDecimal sum, int count) {
         BigDecimal average() {
             if (count == 0) {

@@ -159,17 +159,17 @@ class StatisticsServiceTest {
         List<Playing> playings = List.of(
                 mockPlaying(thisWeekStart.plusDays(1), 600),
                 mockPlaying(thisWeekStart.plusDays(2), 600),
-                mockPlaying(thisWeekStart.minusDays(3), 1200) // 지난 주
+                mockPlaying(thisWeekStart.minusDays(3), 1200)
         );
         given(playingRepository.findByUserAndStatusSince(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(playings);
 
         StatisticsResponseDTO response = statisticsService.getStatistics(1L);
 
-        assertThat(response.weeklySummary().practiceMinutes()).isEqualTo(20); // (600+600)초 = 20분
+        assertThat(response.weeklySummary().practiceMinutes()).isEqualTo(20);
         assertThat(response.weeklySummary().completedSessionCount()).isEqualTo(2);
-        assertThat(response.weeklySummary().practiceMinutesDiff()).isEqualTo(0); // 20 - 20(1200초=20분)
-        assertThat(response.weeklySummary().completedSessionCountDiff()).isEqualTo(1); // 2 - 1
+        assertThat(response.weeklySummary().practiceMinutesDiff()).isEqualTo(0);
+        assertThat(response.weeklySummary().completedSessionCountDiff()).isEqualTo(1);
     }
 
     @Test
@@ -271,7 +271,7 @@ class StatisticsServiceTest {
         StatisticsResponseDTO response = statisticsService.getStatistics(1L);
 
         assertThat(response.weeklySummary().completedSessionCount()).isEqualTo(1);
-        assertThat(response.weeklySummary().accuracy()).isEqualByComparingTo(BigDecimal.valueOf(90.0)); // (80+90+100)/3
+        assertThat(response.weeklySummary().accuracy()).isEqualByComparingTo(BigDecimal.valueOf(90.0));
     }
 
     @Test
@@ -298,7 +298,7 @@ class StatisticsServiceTest {
         assertThat(items.get(3).label()).isEqualTo("이번주");
         assertThat(items.get(0).averageScore()).isEqualByComparingTo(BigDecimal.valueOf(60.0));
         assertThat(items.get(3).averageScore()).isEqualByComparingTo(BigDecimal.valueOf(93.0));
-        assertThat(response.weeklyTrend().diffFromPreviousWeek()).isEqualTo(30); // 93 - 63
+        assertThat(response.weeklyTrend().diffFromPreviousWeek()).isEqualTo(30);
     }
 
     @Test

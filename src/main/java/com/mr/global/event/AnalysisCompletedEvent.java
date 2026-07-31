@@ -9,7 +9,7 @@ import lombok.Getter;
 public class AnalysisCompletedEvent {
     private Long userId;
 
-    // userId는 완료 처리된 Analysis의 소유자(analysis.getUser().getUserId())에서만 채울 것 - 클라이언트 입력 금지
+    // 완료 분석 소유자 식별자
     public static AnalysisCompletedEvent of(Long userId) {
         return new AnalysisCompletedEvent(userId);
     }

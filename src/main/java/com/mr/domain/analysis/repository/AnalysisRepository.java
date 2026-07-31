@@ -2,13 +2,45 @@ package com.mr.domain.analysis.repository;
 
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
+import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
+
+    boolean existsByPlayingIdAndStatusIn(Long playingId, List<AnalysisStatus> statuses);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from Analysis a where a.id = :analysisId")
+    Optional<Analysis> findByIdForUpdate(@Param("analysisId") Long analysisId);
+
+    @Query("""
+            select a.id from Analysis a
+            where a.status = :status and a.createdAt <= :cutoff
+            order by a.createdAt asc, a.id asc
+            """)
+    List<Long> findIdsByStatusAndCreatedAtBefore(
+            @Param("status") AnalysisStatus status,
+            @Param("cutoff") LocalDateTime cutoff,
+            Pageable pageable
+    );
+
+    @Query("""
+            select a.id from Analysis a
+            where a.status = :status and a.processingStartedAt <= :cutoff
+            order by a.processingStartedAt asc, a.id asc
+            """)
+    List<Long> findIdsByStatusAndProcessingStartedAtBefore(
+            @Param("status") AnalysisStatus status,
+            @Param("cutoff") LocalDateTime cutoff,
+            Pageable pageable
+    );
 
     @Query("""
             select a from Analysis a
@@ -26,7 +58,6 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
     List<Analysis> findByPlayingIdAndUserIdOrderByStartBarAscIdAsc(
             @Param("playingId") Long playingId, @Param("userId") Long userId);
 
-    // 통계 집계용 - completedAt 기준(Analysis.complete()에서 세팅되는 값)
     @Query("""
             select a from Analysis a
             where a.user.userId = :userId
@@ -40,7 +71,6 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
             @Param("since") LocalDateTime since
     );
 
-    // 통계 집계용 전체 기간 요약 - row를 끌어오지 않고 단일 행으로 집계
     @Query("""
             select count(a) as analysisCount, avg(a.totalScore) as averageTotalScore
             from Analysis a
