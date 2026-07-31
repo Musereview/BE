@@ -1,7 +1,7 @@
 package com.mr.domain.playing.dto.res;
 
-import com.mr.domain.backingTrack.entity.BackingTrack;
-import com.mr.domain.backingTrack.entity.enums.ScaleType;
+import com.mr.domain.backingtrack.entity.BackingTrack;
+import com.mr.domain.backingtrack.entity.enums.ScaleType;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingMode;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
