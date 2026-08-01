@@ -42,4 +42,8 @@ public interface UserLearningProgressRepository extends JpaRepository<UserLearni
     @Query("SELECT COUNT(DISTINCT ulp.learning.id) FROM UserLearningProgress ulp " +
             "WHERE ulp.user.userId = :userId AND ulp.score >= 90")
     long countDistinctCompletedLearningsByUserId(@Param("userId") Long userId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("delete from UserLearningProgress ulp where ulp.user.userId = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 }
