@@ -40,7 +40,7 @@ oauth:
 
   frontend-redirect-uris:
     - http://localhost:5173/oauth/callback
-    - ${OAUTH_FRONTEND_REDIRECT_URI}
+    - https://musereview-sigma.vercel.app/oauth/callback
   
   kakao:
     client-id: ${KAKAO_CLIENT_ID:}
