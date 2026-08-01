@@ -42,6 +42,7 @@ class UserControllerTest {
         UserResponseDTO.NicknameCheckResponse response = UserResponseDTO.NicknameCheckResponse.builder()
                 .nickname("김뮤즈")
                 .available(true)
+                .message("사용 가능한 닉네임입니다.")
                 .build();
         given(userService.checkNicknameAvailable("김뮤즈")).willReturn(response);
 
@@ -49,7 +50,8 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.data.nickname").value("김뮤즈"))
-                .andExpect(jsonPath("$.data.available").value(true));
+                .andExpect(jsonPath("$.data.available").value(true))
+                .andExpect(jsonPath("$.data.message").value("사용 가능한 닉네임입니다."));
     }
 
     @Test

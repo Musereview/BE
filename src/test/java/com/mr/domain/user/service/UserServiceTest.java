@@ -35,6 +35,7 @@ class UserServiceTest {
 
         assertThat(response.nickname()).isEqualTo("김뮤즈");
         assertThat(response.available()).isTrue();
+        assertThat(response.message()).isEqualTo("사용 가능한 닉네임입니다.");
     }
 
     @Test
@@ -45,6 +46,7 @@ class UserServiceTest {
         UserResponseDTO.NicknameCheckResponse response = userService.checkNicknameAvailable("김뮤즈");
 
         assertThat(response.available()).isFalse();
+        assertThat(response.message()).isEqualTo("사용 중인 닉네임입니다.");
     }
 
     @Test

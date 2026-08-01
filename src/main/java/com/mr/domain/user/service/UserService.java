@@ -12,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class UserService {
 
+    private static final String NICKNAME_AVAILABLE_MESSAGE = "사용 가능한 닉네임입니다.";
+    private static final String NICKNAME_TAKEN_MESSAGE = "사용 중인 닉네임입니다.";
+
     private final UserRepository userRepository;
 
     public UserResponseDTO.NicknameCheckResponse checkNicknameAvailable(String nickname) {
@@ -23,6 +26,7 @@ public class UserService {
         return UserResponseDTO.NicknameCheckResponse.builder()
                 .nickname(trimmedNickname)
                 .available(available)
+                .message(available ? NICKNAME_AVAILABLE_MESSAGE : NICKNAME_TAKEN_MESSAGE)
                 .build();
     }
 }
