@@ -37,6 +37,10 @@ jwt:
 
 # 소셜 로그인 API 연동
 oauth:
+
+  frontend-redirect-uris:
+    - http://localhost:5173/oauth/callback
+    - ${OAUTH_FRONTEND_REDIRECT_URI}
   
   kakao:
     client-id: ${KAKAO_CLIENT_ID:}
