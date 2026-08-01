@@ -34,7 +34,8 @@ public class SecurityConfig {
             "/api/auth/login/**",
             "/api/auth/**/callback",
             "/api/auth/reissue",
-            "/api/auth/token/exchange"
+            "/api/auth/token/exchange",
+            "/api/users/verify-nickname"
     };
 
     /**

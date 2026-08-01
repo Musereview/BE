@@ -18,15 +18,20 @@ import com.mr.domain.learning.repository.LearningRepository;
 import com.mr.domain.learning.repository.LearningStepRepository;
 import com.mr.domain.learning.repository.PlayingExampleRepository;
 import com.mr.domain.learning.repository.UserLearningProgressRepository;
+import com.mr.domain.user.entity.User;
 import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.UserRepository;
+import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.event.NotificationEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Collections;
 import java.util.List;
@@ -59,6 +64,8 @@ class LearningServiceTest {
     private ChordExampleRepository chordExampleRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private LearningService learningService;
@@ -1123,5 +1130,162 @@ class LearningServiceTest {
                 .isInstanceOf(GeneralException.class)
                 .satisfies(e -> assertThat(((GeneralException) e).getCode())
                         .isEqualTo(UserErrorStatus.USER_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("saveResult - 마지막 단계 완료로 패키지가 100%가 되면 완료 알림 이벤트를 발행한다")
+    void saveResult_lastStepCompletesPackage_publishesNotificationEvent() {
+        Long userId = 1L;
+        Long learningId = 10L;
+        Long learningStepId = 12L;
+
+        User user = mock(User.class);
+        when(user.getUserId()).thenReturn(userId);
+        Learning learning = mock(Learning.class);
+        when(learning.getId()).thenReturn(learningId);
+        when(learning.getTitle()).thenReturn("Tension Notes");
+        when(learning.getDifficulty()).thenReturn(LearningDifficulty.ADVANCED);
+        LearningStep learningStep = mock(LearningStep.class);
+
+        UserLearningProgress existing = mock(UserLearningProgress.class);
+        when(existing.getScore()).thenReturn(50); // 이전엔 RETRY(미완료) 상태였음
+        when(existing.getUser()).thenReturn(user);
+        when(existing.getLearning()).thenReturn(learning);
+        when(existing.getLearningStatus()).thenReturn("COMPLETED");
+
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(user));
+        when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
+        when(learningStepRepository.findById(learningStepId)).thenReturn(Optional.of(learningStep));
+        // 전체 2단계 중 1단계만 완료된 상태(before) → 저장 후 재조회 시 2/2로 완료 전환됨
+        when(learningStepRepository.countByLearningId(learningId)).thenReturn(2L);
+        when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, learningId))
+                .thenReturn(1L, 2L);
+        when(userLearningProgressRepository.findByUser_UserIdAndLearningStep_Id(userId, learningStepId))
+                .thenReturn(Optional.of(existing));
+
+        LearningResultSaveRequestDTO.SaveResultDTO request =
+                new LearningResultSaveRequestDTO.SaveResultDTO(95, learningStepId);
+
+        learningService.saveResult(userId, learningId, request);
+
+        ArgumentCaptor<NotificationEvent> captor = ArgumentCaptor.forClass(NotificationEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().getTitle()).isEqualTo("Tension Notes (고급) 학습을 모두 완료했습니다.");
+    }
+
+    @Test
+    @DisplayName("saveResult - 이미 완료된 패키지를 재도전해도 완료 알림을 다시 보내지 않는다")
+    void saveResult_packageAlreadyComplete_doesNotPublishEventAgain() {
+        Long userId = 1L;
+        Long learningId = 10L;
+        Long learningStepId = 12L;
+
+        User user = mock(User.class);
+        when(user.getUserId()).thenReturn(userId);
+        Learning learning = mock(Learning.class);
+        when(learning.getId()).thenReturn(learningId);
+        LearningStep learningStep = mock(LearningStep.class);
+
+        UserLearningProgress existing = mock(UserLearningProgress.class);
+        when(existing.getScore()).thenReturn(95); // 이미 완료 상태였음
+        when(existing.getUser()).thenReturn(user);
+        when(existing.getLearning()).thenReturn(learning);
+        when(existing.getLearningStatus()).thenReturn("COMPLETED");
+
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(user));
+        when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
+        when(learningStepRepository.findById(learningStepId)).thenReturn(Optional.of(learningStep));
+        // 전체 2단계 모두 이미 완료된 상태(before)
+        when(learningStepRepository.countByLearningId(learningId)).thenReturn(2L);
+        when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, learningId)).thenReturn(2L);
+        when(userLearningProgressRepository.findByUser_UserIdAndLearningStep_Id(userId, learningStepId))
+                .thenReturn(Optional.of(existing));
+
+        LearningResultSaveRequestDTO.SaveResultDTO request =
+                new LearningResultSaveRequestDTO.SaveResultDTO(97, learningStepId); // 재도전, 여전히 완료
+
+        learningService.saveResult(userId, learningId, request);
+
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("saveResult - 저장 후에도 패키지가 미완료 상태면 완료 알림을 보내지 않는다")
+    void saveResult_packageStillIncomplete_doesNotPublishEvent() {
+        Long userId = 1L;
+        Long learningId = 10L;
+        Long learningStepId = 12L;
+
+        User user = mock(User.class);
+        when(user.getUserId()).thenReturn(userId);
+        Learning learning = mock(Learning.class);
+        when(learning.getId()).thenReturn(learningId);
+        LearningStep learningStep = mock(LearningStep.class);
+
+        UserLearningProgress existing = mock(UserLearningProgress.class);
+        when(existing.getScore()).thenReturn(50); // 이전엔 미완료
+        when(existing.getUser()).thenReturn(user);
+        when(existing.getLearning()).thenReturn(learning);
+        when(existing.getLearningStatus()).thenReturn("RETRY");
+
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(user));
+        when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
+        when(learningStepRepository.findById(learningStepId)).thenReturn(Optional.of(learningStep));
+        // 전체 3단계 중 1단계만 완료된 상태(before) → 저장 후 재조회해도 2/3(여전히 미완료)
+        when(learningStepRepository.countByLearningId(learningId)).thenReturn(3L);
+        when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, learningId))
+                .thenReturn(1L, 2L);
+        when(userLearningProgressRepository.findByUser_UserIdAndLearningStep_Id(userId, learningStepId))
+                .thenReturn(Optional.of(existing));
+
+        LearningResultSaveRequestDTO.SaveResultDTO request =
+                new LearningResultSaveRequestDTO.SaveResultDTO(95, learningStepId);
+
+        learningService.saveResult(userId, learningId, request);
+
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("saveResult - 신규 진행 기록 생성으로 패키지가 100%가 되면 완료 알림 이벤트를 발행한다")
+    void saveResult_newProgressRecordCompletesPackage_publishesNotificationEvent() {
+        Long userId = 1L;
+        Long learningId = 10L;
+        Long learningStepId = 12L;
+
+        User user = mock(User.class);
+        when(user.getUserId()).thenReturn(userId);
+        Learning learning = mock(Learning.class);
+        when(learning.getId()).thenReturn(learningId);
+        when(learning.getTitle()).thenReturn("Diatonic Chords");
+        when(learning.getDifficulty()).thenReturn(LearningDifficulty.BEGINNER);
+
+        LearningStep learningStep = mock(LearningStep.class);
+        when(learningStep.getLearning()).thenReturn(learning);
+
+        UserLearningProgress savedProgress = mock(UserLearningProgress.class);
+        when(savedProgress.getUser()).thenReturn(user);
+        when(savedProgress.getLearning()).thenReturn(learning);
+        when(savedProgress.getLearningStatus()).thenReturn("COMPLETED");
+
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(user));
+        when(learningRepository.findByIdAndIsActiveTrue(learningId)).thenReturn(Optional.of(learning));
+        when(learningStepRepository.findById(learningStepId)).thenReturn(Optional.of(learningStep));
+        // 유일한 1단계짜리 패키지, 이번이 첫 진행 기록(before completed=0) → 저장 후 재조회 시 1/1로 완료
+        when(learningStepRepository.countByLearningId(learningId)).thenReturn(1L);
+        when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, learningId))
+                .thenReturn(0L, 1L);
+        when(userLearningProgressRepository.findByUser_UserIdAndLearningStep_Id(userId, learningStepId))
+                .thenReturn(Optional.empty());
+        when(userLearningProgressRepository.save(any(UserLearningProgress.class))).thenReturn(savedProgress);
+
+        LearningResultSaveRequestDTO.SaveResultDTO request =
+                new LearningResultSaveRequestDTO.SaveResultDTO(95, learningStepId);
+
+        learningService.saveResult(userId, learningId, request);
+
+        ArgumentCaptor<NotificationEvent> captor = ArgumentCaptor.forClass(NotificationEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().getTitle()).isEqualTo("Diatonic Chords (입문) 학습을 모두 완료했습니다.");
     }
 }
