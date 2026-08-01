@@ -17,9 +17,14 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
         name = "mentor_chat_sessions",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_mentor_chat_sessions_analysis_id",
+                        columnNames = "analysis_id"
+                )
+        },
         indexes = {
-                @Index(name = "idx_mentor_chat_sessions_user_id", columnList = "user_id"),
-                @Index(name = "idx_mentor_chat_sessions_analysis_id", columnList = "analysis_id")
+                @Index(name = "idx_mentor_chat_sessions_user_id", columnList = "user_id")
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

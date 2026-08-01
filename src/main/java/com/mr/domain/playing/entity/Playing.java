@@ -212,6 +212,19 @@ public class Playing extends BaseCreatedDeletedEntity {
         }
     }
 
+    public void validateCompleted() {
+        if (this.status != PlayingStatus.COMPLETED) {
+            throw new GeneralException(PlayingErrorStatus.PLAYING_NOT_COMPLETED);
+        }
+    }
+
+    public void start() {
+        validateStartableStatus();
+
+        this.status = PlayingStatus.IN_PROGRESS;
+        this.startedAt = LocalDateTime.now();
+    }
+
     private void validateCompletableStatus() {
         if (this.status != PlayingStatus.IN_PROGRESS) {
             throw new GeneralException(MidiEventErrorStatus.PLAYING_NOT_IN_PROGRESS);
@@ -308,13 +321,6 @@ public class Playing extends BaseCreatedDeletedEntity {
             return List.of();
         }
         return List.copyOf(this.midiData);
-    }
-
-    public void start() {
-        validateStartableStatus();
-
-        this.status = PlayingStatus.IN_PROGRESS;
-        this.startedAt = LocalDateTime.now();
     }
 
     private void validateStartableStatus() {

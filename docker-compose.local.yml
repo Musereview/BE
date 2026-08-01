@@ -11,5 +11,17 @@ services:
     volumes:
       - musereview-postgres-data:/var/lib/postgresql
 
+  redis:
+    image: redis:7.4-alpine
+    container_name: musereview-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: ["redis-server", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
 volumes:
   musereview-postgres-data:

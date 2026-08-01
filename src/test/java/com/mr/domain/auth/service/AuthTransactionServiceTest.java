@@ -1,13 +1,17 @@
 package com.mr.domain.auth.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.mr.domain.auth.dto.OAuthUserInfo;
+import com.mr.domain.auth.dto.res.AuthResponseDTO;
+import com.mr.domain.auth.entity.SocialAuth;
 import com.mr.domain.auth.entity.enums.SocialType;
 import com.mr.domain.auth.repository.SocialAuthRepository;
 import com.mr.domain.user.entity.User;
@@ -63,12 +67,45 @@ class AuthTransactionServiceTest {
         OAuthUserInfo userInfo = new OAuthUserInfo("social-1", "https://example.com/profile.png");
 
         assertThatThrownBy(() -> authTransactionService.completeTokenExchange(
-                USER_ID, SocialType.KAKAO, userInfo.socialId(), userInfo.profileImgUrl(), "device", false))
+                USER_ID, SocialType.KAKAO, userInfo.socialId(), userInfo.profileImgUrl(), "device"))
                 .isInstanceOf(DataIntegrityViolationException.class);
 
         // 복구를 위해 같은 트랜잭션에서 findBySocialTypeAndSocialId를 다시 호출하지 않는지 확인
         // (딱 1번, 최초 조회 시점에만 호출됨 — 예전 버그였다면 catch 블록에서 한 번 더 호출돼 2번이 됨)
         verify(socialAuthRepository, times(1)).findBySocialTypeAndSocialId(SocialType.KAKAO, "social-1");
+    }
+
+    @Test
+    @DisplayName("completeTokenExchange - 준비 후 다른 요청이 가입을 완료했으면 기존 사용자로 로그인")
+    void completeTokenExchange_socialAuthCreatedAfterPrepare_usesExistingUser() {
+        User existingUser = mock(User.class);
+        SocialAuth existingSocialAuth = mock(SocialAuth.class);
+        given(existingUser.getUserId()).willReturn(USER_ID);
+        given(existingSocialAuth.getUser()).willReturn(existingUser);
+        given(socialAuthRepository.findBySocialTypeAndSocialId(SocialType.KAKAO, "social-1"))
+                .willReturn(Optional.of(existingSocialAuth));
+        given(tokenProvider.createAccessToken(USER_ID)).willReturn("access-token");
+        given(tokenProvider.createRefreshToken(USER_ID)).willReturn("refresh-token");
+        given(tokenProvider.hashToken("refresh-token")).willReturn("hashed-refresh-token");
+        given(tokenProvider.getRefreshTokenExpiryTime()).willReturn(LocalDateTime.now().plusDays(7));
+        given(tokenProvider.getAccessTokenExpirationSeconds()).willReturn(1800L);
+
+        AuthResponseDTO.LoginResponse response = authTransactionService.completeTokenExchange(
+                null,
+                SocialType.KAKAO,
+                "social-1",
+                "https://example.com/profile.png",
+                "device"
+        );
+
+        assertThat(response.userId()).isEqualTo(USER_ID);
+        assertThat(response.isNewUser()).isFalse();
+        verify(userRepository, never()).save(any());
+        verify(existingSocialAuth).updateRefreshToken(
+                org.mockito.ArgumentMatchers.eq("hashed-refresh-token"),
+                any(LocalDateTime.class),
+                org.mockito.ArgumentMatchers.eq("device")
+        );
     }
 
     private static DataIntegrityViolationException uniqueViolation() {
