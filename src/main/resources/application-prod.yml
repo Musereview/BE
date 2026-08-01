@@ -16,6 +16,23 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+
+oauth:
+  cookie:
+    secure: true
+  kakao:
+    redirect-uri: ${KAKAO_REDIRECT_URI}
+  google:
+    redirect-uri: ${GOOGLE_REDIRECT_URI}
+
+ai:
+  internal:
+    base-url: ${AI_INTERNAL_BASE_URL}
+
 aws:
   s3:
     bucket: ${AWS_S3_BUCKET}

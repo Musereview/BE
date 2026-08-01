@@ -16,7 +16,7 @@ spring:
   # 공통 JPA 및 하이버네이트 구동 설정
   jpa:
     hibernate:
-      ddl-auto: ${SPRING_JPA_DDL_AUTO} # 배포 환경(prod)에선 validate로 덮어씌워짐
+      ddl-auto: ${SPRING_JPA_DDL_AUTO:validate}
     show-sql: true
     properties:
       hibernate:
@@ -29,6 +29,16 @@ spring:
       max-file-size: 20MB
       max-request-size: 20MB
 
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      connect-timeout: ${SPRING_DATA_REDIS_CONNECT_TIMEOUT:2s}
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:2s}
+
+  flyway:
+    enabled: false
+
 # Spring Security 및 JWT 인증 설정
 jwt:
   secret: ${JWT_SECRET_KEY}
@@ -37,39 +47,43 @@ jwt:
 
 # 소셜 로그인 API 연동
 oauth:
-  
+  frontend-redirect-uri: ${OAUTH_FRONTEND_REDIRECT_URI:http://localhost:5173/oauth/callback}
+  temp-code-ttl: ${OAUTH_TEMP_CODE_TTL:2m}
+  cookie:
+    secure: ${OAUTH_COOKIE_SECURE:false}
+
   kakao:
     client-id: ${KAKAO_CLIENT_ID:}
     client-secret: ${KAKAO_CLIENT_SECRET:}
-    redirect-uri: ${KAKAO_REDIRECT_URI}
 
   google:
     client-id: ${GOOGLE_CLIENT_ID:}
     client-secret: ${GOOGLE_CLIENT_SECRET:}
-    redirect-uri: ${GOOGLE_REDIRECT_URI}
 
 # AI 도입 및 AWS S3 공통 구조
 external:
   ai:
-    base-url: ${AI_BASE_URL:}
-    api-key: ${AI_API_KEY:}
-    model: ${AI_MODEL:}
+    base-url: ${AI_BASE_URL:https://generativelanguage.googleapis.com}
+    api-key: ${GEMINI_API_KEY:${AI_API_KEY:}}
+    model: ${AI_MODEL:gemini-3-flash-preview}
+    connect-timeout: ${AI_CONNECT_TIMEOUT:5s}
+    read-timeout: ${AI_READ_TIMEOUT:120s}
 
 aws:
   s3:
     bucket: ${AWS_S3_BUCKET:}
     region: ${AWS_REGION:ap-northeast-2}
 
+
 # 내부 AI 분석 서버 설정
 ai:
   internal:
-    base-url: ${AI_INTERNAL_BASE_URL}
-    connect-timeout: ${AI_INTERNAL_CONNECT_TIMEOUT:3s}
-    read-timeout: ${AI_INTERNAL_READ_TIMEOUT:30s}
+    connect-timeout: ${AI_INTERNAL_CONNECT_TIMEOUT:5s}
+    read-timeout: ${AI_INTERNAL_READ_TIMEOUT:60s}
     endpoints:
-      analyze: ${AI_INTERNAL_ANALYZE_ENDPOINT}
+      analyze: ${AI_INTERNAL_ANALYZE_ENDPOINT:/analyze}
 
 # 프로필 관련 공통 설정
 app:
   profile:
-    default-image-url: ${DEFAULT_PROFILE_IMAGE_URL:}
+    default-image-url: ${DEFAULT_PROFILE_IMAGE_URL:https://musereview-storage-526426842030-ap-northeast-2.s3.ap-northeast-2.amazonaws.com/profile/default-profile.png}

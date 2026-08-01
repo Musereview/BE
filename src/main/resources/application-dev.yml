@@ -11,6 +11,12 @@ spring:
   flyway:
     enabled: false
 
+oauth:
+  kakao:
+    redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:8080/api/auth/kakao/callback}
+  google:
+    redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/api/auth/google/callback}
+
 decorator:
   datasource:
     p6spy:
