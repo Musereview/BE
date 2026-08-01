@@ -150,6 +150,10 @@ public class AuthService {
             LocalDateTime expiresAt
     ) {}
 
+    // ⚠️ 이 어노테이션을 지우면 클래스 레벨 @Transactional(readOnly=true)를 그대로 상속받아
+    // SocialAuth INSERT/UPDATE가 read-only 트랜잭션에서 실패한다 (#94 배포 서버 503 원인).
+    // AuthServiceTest는 클래스 전체가 @Transactional로 감싸져 있어 이 회귀를 못 잡으니 주의.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthResponseDTO.LoginResponse exchangeTempCode(String tempCode) {
         cleanExpiredTempCodes();
         if (tempCode == null || tempCode.isBlank()) {
@@ -160,14 +164,20 @@ public class AuthService {
             throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
         }
 
-        return authTransactionService.completeTokenExchange(
-                data.userId(),
-                data.socialType(),
-                data.socialId(),
-                data.profileImgUrl(),
-                data.deviceInfo(),
-                data.isNewUser()
-        );
+        try {
+            return authTransactionService.completeTokenExchange(
+                    data.userId(),
+                    data.socialType(),
+                    data.socialId(),
+                    data.profileImgUrl(),
+                    data.deviceInfo(),
+                    data.isNewUser()
+            );
+        } catch (DataIntegrityViolationException e) {
+            // socialLogin()/socialLoginByCode()와 달리 이 경로는 새 트랜잭션에서 재조회할
+            // 기존 계정 복구 로직이 없으므로, 곧바로 도메인 예외로 매핑한다.
+            throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+        }
     }
 
     private void cleanExpiredTempCodes() {
