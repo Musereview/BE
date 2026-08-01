@@ -28,7 +28,7 @@ public class UserController {
     @GetMapping("/verify-nickname")
     public ApiResponse<UserResponseDTO.NicknameCheckResponse> verifyNickname(
             @Parameter(description = "확인할 닉네임", example = "김뮤즈")
-            @RequestParam String nickname
+            @RequestParam(required = false) String nickname
     ) {
         return ApiResponse.onSuccess(userService.checkNicknameAvailable(nickname));
     }
