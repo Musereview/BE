@@ -78,6 +78,7 @@ aws:
 # 내부 AI 분석 서버 설정
 ai:
   internal:
+    base-url: ${AI_INTERNAL_BASE_URL}
     connect-timeout: ${AI_INTERNAL_CONNECT_TIMEOUT:5s}
     read-timeout: ${AI_INTERNAL_READ_TIMEOUT:60s}
     endpoints:

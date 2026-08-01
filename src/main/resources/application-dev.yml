@@ -17,6 +17,10 @@ oauth:
   google:
     redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/api/auth/google/callback}
 
+ai:
+  internal:
+    base-url: ${AI_INTERNAL_BASE_URL}
+
 decorator:
   datasource:
     p6spy:
