@@ -23,6 +23,7 @@ import java.util.UUID;
 import com.mr.domain.analysis.repository.AnalysisReportRepository;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.backingtrack.repository.BackingTrackRepository;
+import com.mr.domain.backingtrack.repository.ChordProgressionRepository;
 import com.mr.domain.learning.repository.UserLearningProgressRepository;
 import com.mr.domain.mentor.repository.LlmCallLogRepository;
 import com.mr.domain.mentor.repository.MentorChatSessionRepository;
@@ -59,6 +60,7 @@ public class AuthService {
     private final AnalysisReportRepository analysisReportRepository;
     private final AnalysisRepository analysisRepository;
     private final PlayingRepository playingRepository;
+    private final ChordProgressionRepository chordProgressionRepository;
     private final BackingTrackRepository backingTrackRepository;
     private final NotificationRepository notificationRepository;
     private final PracticeStatisticsRepository practiceStatisticsRepository;
@@ -173,6 +175,7 @@ public class AuthService {
         analysisRepository.deleteAllByUserId(userId);
 
         playingRepository.deleteAllByUserId(userId);
+        chordProgressionRepository.deleteAllByUserId(userId);
         backingTrackRepository.deleteAllByUserId(userId);
 
         notificationRepository.deleteAllByUserId(userId);
