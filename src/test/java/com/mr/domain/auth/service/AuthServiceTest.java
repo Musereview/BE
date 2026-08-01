@@ -1,7 +1,10 @@
 package com.mr.domain.auth.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willAnswer;
 
 import com.mr.domain.auth.dto.OAuthUserInfo;
 import com.mr.domain.auth.dto.res.AuthResponseDTO;
@@ -12,6 +15,8 @@ import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.security.jwt.JwtTokenProvider;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,11 +44,29 @@ class AuthServiceTest {
     @MockBean
     private OAuthClientService oAuthClientService;
 
+    @MockBean
+    private OAuthTempCodeStore tempCodeStore;
+
     private OAuthUserInfo kakaoUserInfo;
+    private final AtomicReference<String> storedTempCode = new AtomicReference<>();
+    private final AtomicReference<OAuthTempCodeStore.TempExchangeData> storedTempData = new AtomicReference<>();
 
     @BeforeEach
     void setUp() {
         kakaoUserInfo = new OAuthUserInfo("test_id_" + java.util.UUID.randomUUID(), "https://example.com/profile.png");
+        storedTempCode.set(null);
+        storedTempData.set(null);
+        willAnswer(invocation -> {
+            storedTempCode.set(invocation.getArgument(0));
+            storedTempData.set(invocation.getArgument(1));
+            return null;
+        }).given(tempCodeStore).save(anyString(), any(OAuthTempCodeStore.TempExchangeData.class));
+        given(tempCodeStore.consume(anyString())).willAnswer(invocation -> {
+            if (!invocation.getArgument(0).equals(storedTempCode.get())) {
+                return Optional.empty();
+            }
+            return Optional.ofNullable(storedTempData.getAndSet(null));
+        });
     }
 
     @Test

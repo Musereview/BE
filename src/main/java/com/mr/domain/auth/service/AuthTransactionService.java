@@ -32,26 +32,33 @@ public class AuthTransactionService {
     @Value("${app.profile.default-image-url}")
     private String defaultProfileImageUrl;
 
-    public record SocialLoginPrepareResult(Long userId, String socialId, String profileImgUrl, boolean isNewUser) {}
+    public record SocialLoginPrepareResult(Long userId, String socialId, String profileImgUrl) {}
 
     @Transactional(readOnly = true)
     public SocialLoginPrepareResult prepareSocialLogin(SocialType socialType, OAuthUserInfo userInfo) {
         Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, userInfo.socialId());
         if (optionalSocialAuth.isPresent()) {
             User user = optionalSocialAuth.get().getUser();
-            return new SocialLoginPrepareResult(user.getUserId(), userInfo.socialId(), userInfo.profileImgUrl(), false);
+            return new SocialLoginPrepareResult(user.getUserId(), userInfo.socialId(), userInfo.profileImgUrl());
         } else {
-            return new SocialLoginPrepareResult(null, userInfo.socialId(), userInfo.profileImgUrl(), true);
+            return new SocialLoginPrepareResult(null, userInfo.socialId(), userInfo.profileImgUrl());
         }
     }
 
-    public AuthResponseDTO.LoginResponse completeTokenExchange(Long userId, SocialType socialType, String socialId, String profileImgUrl, String deviceInfo, boolean isNewUser) {
+    public AuthResponseDTO.LoginResponse completeTokenExchange(Long userId, SocialType socialType, String socialId, String profileImgUrl, String deviceInfo) {
+        Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, socialId);
         User user;
-        if (userId != null) {
+        boolean actualNewUser;
+        if (optionalSocialAuth.isPresent()) {
+            user = optionalSocialAuth.get().getUser();
+            actualNewUser = false;
+        } else if (userId != null) {
             user = userRepository.findById(userId)
                     .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
+            actualNewUser = false;
         } else {
             user = registerNewUserByProfileUrl(profileImgUrl);
+            actualNewUser = true;
         }
 
         String newAccessToken = tokenProvider.createAccessToken(user.getUserId());
@@ -63,7 +70,6 @@ public class AuthTransactionService {
         // 같은 트랜잭션 안에서 복구 쿼리를 다시 시도하면 그 쿼리도 실패한다.
         // 여기서 잡아 도메인 예외로 변환하지 않고 그대로 전파해 트랜잭션을 롤백시키고,
         // 호출 쪽(AuthService의 동시 로그인 재시도 로직)이 새 트랜잭션에서 복구를 시도하게 한다.
-        Optional<SocialAuth> optionalSocialAuth = socialAuthRepository.findBySocialTypeAndSocialId(socialType, socialId);
         if (optionalSocialAuth.isPresent()) {
             SocialAuth socialAuth = optionalSocialAuth.get();
             socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
@@ -88,7 +94,7 @@ public class AuthTransactionService {
         return AuthResponseDTO.LoginResponse.builder()
                 .userId(user.getUserId())
                 .nickname(user.getNickname())
-                .isNewUser(isNewUser)
+                .isNewUser(actualNewUser)
                 .isOnboardingCompleted(user.isOnboardingCompleted())
                 .tokenInfo(tokenResponse)
                 .build();
@@ -96,7 +102,7 @@ public class AuthTransactionService {
 
     public AuthResponseDTO.LoginResponse executeSocialLogin(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
         SocialLoginPrepareResult prepareResult = prepareSocialLogin(socialType, userInfo);
-        return completeTokenExchange(prepareResult.userId(), socialType, prepareResult.socialId(), prepareResult.profileImgUrl(), deviceInfo, prepareResult.isNewUser());
+        return completeTokenExchange(prepareResult.userId(), socialType, prepareResult.socialId(), prepareResult.profileImgUrl(), deviceInfo);
     }
 
     public AuthResponseDTO.LoginResponse executeSocialLoginForExistingUser(SocialType socialType, OAuthUserInfo userInfo, String deviceInfo) {
