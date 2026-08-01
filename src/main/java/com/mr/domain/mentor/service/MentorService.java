@@ -13,9 +13,11 @@ import com.mr.global.apipayload.exception.GeneralException;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -35,7 +37,7 @@ public class MentorService {
                 .stream()
                 .map(message -> MentorMessageHistoryResponseDTO.Message.from(
                         message,
-                        parseReferences(message.getReferencesJson())
+                        parseReferences(message.getId(), message.getReferencesJson())
                 ))
                 .toList();
 
@@ -48,7 +50,7 @@ public class MentorService {
         }
     }
 
-    private JsonNode parseReferences(String referencesJson) {
+    private JsonNode parseReferences(Long mentorMessageId, String referencesJson) {
         if (referencesJson == null || referencesJson.isBlank()) {
             return null;
         }
@@ -56,7 +58,8 @@ public class MentorService {
         try {
             return objectMapper.readTree(referencesJson);
         } catch (JsonProcessingException exception) {
-            throw new GeneralException(MentorErrorStatus.MENTOR_HISTORY_RETRIEVAL_FAILED);
+            log.warn("AI 멘토 판단 근거 JSON 파싱 실패. mentorMessageId={}", mentorMessageId);
+            return null;
         }
     }
 }
