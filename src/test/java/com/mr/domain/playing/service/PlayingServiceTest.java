@@ -6,6 +6,8 @@ import com.mr.domain.backingtrack.repository.BackingTrackRepository;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
+import com.mr.domain.playing.dto.res.PlayingDeleteResponse;
+import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
@@ -37,7 +39,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -295,7 +296,7 @@ class PlayingServiceTest {
 
                         assertThat(generalException.getCode())
                                 .isEqualTo(
-                                        MidiEventErrorStatus
+                                        PlayingErrorStatus
                                                 .INVALID_PLAYING_ID
                                 );
                     });
@@ -325,7 +326,7 @@ class PlayingServiceTest {
 
                         assertThat(generalException.getCode())
                                 .isEqualTo(
-                                        MidiEventErrorStatus
+                                        PlayingErrorStatus
                                                 .INVALID_PLAYING_ID
                                 );
                     });
@@ -385,7 +386,7 @@ class PlayingServiceTest {
             given(userRepository.findById(userId))
                     .willReturn(Optional.of(user));
 
-            given(backingTrackRepository.findById(backingTrackId))
+            given(backingTrackRepository.findByIdWithChordProgressions(backingTrackId))
                     .willReturn(Optional.of(backingTrack));
 
             given(backingTrack.getId())
@@ -498,7 +499,7 @@ class PlayingServiceTest {
             given(userRepository.findById(userId))
                     .willReturn(Optional.of(user));
 
-            given(backingTrackRepository.findById(backingTrackId))
+            given(backingTrackRepository.findByIdWithChordProgressions(backingTrackId))
                     .willReturn(Optional.empty());
 
             // when & then
@@ -623,5 +624,231 @@ class PlayingServiceTest {
                 );
 
         return new MidiEventSaveRequest(events);
+    }
+
+    @Nested
+    @DisplayName("연주 세션 단건 조회")
+    class GetPlayingDetail {
+
+        @Test
+        @DisplayName("본인의 완료된 연주 세션을 조회한다")
+        void getPlayingDetailSuccess() {
+
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+
+            when(playing.getId()).thenReturn(playingId);
+            when(playing.getStatus()).thenReturn(PlayingStatus.COMPLETED);
+
+            PlayingDetailResponse response =
+                    playingService.getPlayingDetail(userId, playingId);
+
+            assertThat(response.playingId()).isEqualTo(playingId);
+            assertThat(response.status()).isEqualTo(PlayingStatus.COMPLETED);
+
+            verify(playing).validatePlayingOwner(userId);
+            verify(playing).validateCompleted();
+        }
+
+        @Test
+        @DisplayName("연주 세션 ID가 1 미만이면 예외가 발생한다")
+        void invalidPlayingId() {
+            assertThatThrownBy(() ->
+                    playingService.getPlayingDetail(1L, 0L)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(exception -> {
+                        GeneralException generalException =
+                                (GeneralException) exception;
+
+                        assertThat(generalException.getCode())
+                                .isEqualTo(PlayingErrorStatus.INVALID_PLAYING_ID);
+                    });
+        }
+
+        @Test
+        @DisplayName("연주 세션이 존재하지 않으면 예외가 발생한다")
+        void playingNotFound() {
+            // given
+            Long playingId = 10L;
+
+            given(playingRepository.findByIdWithBackingTrack(playingId))
+                    .willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() ->
+                    playingService.getPlayingDetail(1L, playingId)
+            )
+                    .isInstanceOf(GeneralException.class);
+        }
+
+        @Test
+        @DisplayName("다른 사용자의 연주 세션이면 예외가 발생한다")
+        void playingAccessDenied() {
+
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+
+            doThrow(new GeneralException(
+                    PlayingErrorStatus.PLAYING_ACCESS_DENIED))
+                    .when(playing)
+                    .validatePlayingOwner(userId);
+
+            assertThatThrownBy(() ->
+                    playingService.getPlayingDetail(userId, playingId))
+                    .isInstanceOf(GeneralException.class);
+
+            verify(playing, never()).validateCompleted();
+        }
+
+        @Test
+        @DisplayName("완료되지 않은 연주 세션이면 예외가 발생한다")
+        void playingNotCompleted() {
+
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+
+            doThrow(new GeneralException(
+                    PlayingErrorStatus.PLAYING_NOT_COMPLETED))
+                    .when(playing)
+                    .validateCompleted();
+
+            assertThatThrownBy(() ->
+                    playingService.getPlayingDetail(userId, playingId))
+                    .isInstanceOf(GeneralException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("연주 기록 삭제")
+    class DeletePlaying {
+
+        @Test
+        @DisplayName("본인의 연주 기록을 삭제한다")
+        void deletePlayingSuccess() {
+            // given
+            LocalDateTime deletedAt =
+                    LocalDateTime.of(2026, 1, 1, 15, 30);
+
+            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+                    .thenReturn(Optional.of(playing));
+
+            when(playing.getId())
+                    .thenReturn(playingId);
+
+            doAnswer(invocation -> {
+                when(playing.getDeletedAt())
+                        .thenReturn(deletedAt);
+
+                return null;
+            })
+                    .when(playing)
+                    .softDelete();
+
+            // when
+            PlayingDeleteResponse response =
+                    playingService.deletePlaying(userId, playingId);
+
+            // then
+            assertThat(response.playingId())
+                    .isEqualTo(playingId);
+
+            assertThat(response.deletedAt())
+                    .isEqualTo(deletedAt);
+
+            verify(playingRepository)
+                    .findByIdAndDeletedAtIsNull(playingId);
+
+            verify(playing)
+                    .validatePlayingOwner(userId);
+
+            verify(playing)
+                    .softDelete();
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 연주 기록은 삭제할 수 없다")
+        void deletePlayingNotFound() {
+            // given
+            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+                    .thenReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() ->
+                    playingService.deletePlaying(userId, playingId)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(exception -> {
+                        GeneralException generalException =
+                                (GeneralException) exception;
+
+                        assertThat(generalException.getCode())
+                                .isEqualTo(
+                                        PlayingErrorStatus.PLAYING_NOT_FOUND
+                                );
+                    });
+
+            verify(playing, never())
+                    .validatePlayingOwner(any());
+
+            verify(playing, never())
+                    .softDelete();
+        }
+
+        @Test
+        @DisplayName("다른 사용자의 연주 기록은 삭제할 수 없다")
+        void deletePlayingAccessDenied() {
+            // given
+            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+                    .thenReturn(Optional.of(playing));
+
+            doThrow(
+                    new GeneralException(
+                            PlayingErrorStatus.PLAYING_ACCESS_DENIED
+                    )
+            )
+                    .when(playing)
+                    .validatePlayingOwner(userId);
+
+            // when & then
+            assertThatThrownBy(() ->
+                    playingService.deletePlaying(userId, playingId)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(exception -> {
+                        GeneralException generalException =
+                                (GeneralException) exception;
+
+                        assertThat(generalException.getCode())
+                                .isEqualTo(
+                                        PlayingErrorStatus.PLAYING_ACCESS_DENIED
+                                );
+                    });
+
+            verify(playing, never())
+                    .softDelete();
+        }
+
+        @Test
+        @DisplayName("연주 기록 ID가 올바르지 않으면 삭제할 수 없다")
+        void deletePlayingInvalidId() {
+            // when & then
+            assertThatThrownBy(() ->
+                    playingService.deletePlaying(userId, 0L)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(exception -> {
+                        GeneralException generalException =
+                                (GeneralException) exception;
+
+                        assertThat(generalException.getCode())
+                                .isEqualTo(
+                                        PlayingErrorStatus.INVALID_PLAYING_ID
+                                );
+                    });
+
+            verify(playingRepository, never())
+                    .findByIdAndDeletedAtIsNull(any());
+        }
     }
 }

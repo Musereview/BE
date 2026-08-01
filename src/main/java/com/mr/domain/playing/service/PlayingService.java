@@ -5,11 +5,11 @@ import com.mr.domain.backingtrack.repository.BackingTrackRepository;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
+import com.mr.domain.playing.dto.res.PlayingDeleteResponse;
+import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
-import com.mr.domain.playing.entity.enums.PlayingStatus;
-import com.mr.domain.playing.exception.MidiEventErrorStatus;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
@@ -19,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.mr.domain.backingtrack.entity.enums.AccessLevel.PUBLIC;
@@ -42,7 +41,7 @@ public class PlayingService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(PlayingErrorStatus.USER_NOT_FOUND));
 
-        BackingTrack backingTrack = backingTrackRepository.findByIdAndDeletedAtIsNull(request.backingTrackId())
+        BackingTrack backingTrack = backingTrackRepository.findByIdWithChordProgressions(request.backingTrackId())
                 .orElseThrow(() -> new GeneralException(PlayingErrorStatus.BACKING_TRACK_NOT_FOUND));
 
         validateBackingTrackAccessible(userId, backingTrack);
@@ -55,7 +54,6 @@ public class PlayingService {
         Playing savedPlaying = playingRepository.save(playing);
 
         return PlayingStartResponse.from(savedPlaying);
-
 
     }
 
@@ -88,6 +86,33 @@ public class PlayingService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public PlayingDetailResponse getPlayingDetail(Long userId, Long playingId) {
+        validatePlayingId(playingId);
+
+        Playing playing = playingRepository.findByIdWithBackingTrack(playingId)
+                .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
+
+        playing.validatePlayingOwner(userId);
+        playing.validateCompleted();
+
+        return PlayingDetailResponse.from(playing);
+    }
+
+    @Transactional
+    public PlayingDeleteResponse deletePlaying(Long userId, Long playingId) {
+
+        validatePlayingId(playingId);
+
+        Playing playing = playingRepository.findByIdAndDeletedAtIsNull(playingId)
+                .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
+
+        playing.validatePlayingOwner(userId);
+        playing.softDelete();
+
+        return PlayingDeleteResponse.from(playing);
+    }
+
     private void validateUserId(Long userId) {
         if (userId == null || userId < 1) {
             throw new GeneralException(PlayingErrorStatus.MISSING_USER_ID);
@@ -96,7 +121,7 @@ public class PlayingService {
 
     private void validatePlayingId(Long playingId) {
         if (playingId == null || playingId < 1 ) {
-            throw new GeneralException(MidiEventErrorStatus.INVALID_PLAYING_ID);
+            throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_ID);
         }
     }
 
