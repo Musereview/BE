@@ -57,7 +57,11 @@ public class AnalysisService {
         }
         if (analysisRepository.existsByPlayingIdAndStatusIn(
                 playing.getId(),
-                List.of(AnalysisStatus.PENDING, AnalysisStatus.PROCESSING)
+                List.of(
+                        AnalysisStatus.PENDING,
+                        AnalysisStatus.PROCESSING,
+                        AnalysisStatus.COMPLETED
+                )
         )) {
             throw new GeneralException(AnalysisErrorStatus.ANALYSIS_ALREADY_IN_PROGRESS);
         }

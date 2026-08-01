@@ -1,9 +1,13 @@
 package com.mr.domain.auth.dto.res;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record GoogleUserResponse(
-        String id,
-        String picture,
-        String email
+        @JsonAlias({"sub", "id"}) String id,
+        String aud,
+        String email,
+        String name,
+        String picture
 ) {}

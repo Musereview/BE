@@ -2,6 +2,7 @@ package com.mr.domain.analysis.scheduler;
 
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,6 +23,7 @@ public class AnalysisRecoveryScheduler {
     private final AnalysisRepository analysisRepository;
     private final AnalysisProcessingService analysisProcessingService;
     private final TaskExecutor taskExecutor;
+    private final Clock clock;
     private final Duration pendingThreshold;
     private final Duration processingThreshold;
     private final int batchSize;
@@ -30,6 +32,7 @@ public class AnalysisRecoveryScheduler {
             AnalysisRepository analysisRepository,
             AnalysisProcessingService analysisProcessingService,
             @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
+            Clock clock,
             @Value("${analysis.recovery.pending-threshold:1m}") Duration pendingThreshold,
             @Value("${analysis.recovery.processing-threshold:5m}") Duration processingThreshold,
             @Value("${analysis.recovery.batch-size:20}") int batchSize
@@ -37,6 +40,7 @@ public class AnalysisRecoveryScheduler {
         this.analysisRepository = analysisRepository;
         this.analysisProcessingService = analysisProcessingService;
         this.taskExecutor = taskExecutor;
+        this.clock = clock;
         this.pendingThreshold = pendingThreshold;
         this.processingThreshold = processingThreshold;
         this.batchSize = batchSize;
@@ -47,7 +51,7 @@ public class AnalysisRecoveryScheduler {
             fixedDelayString = "${analysis.recovery.fixed-delay-ms:30000}"
     )
     public void recoverPendingAnalyses() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         List<Long> pendingIds = analysisRepository.findIdsByStatusAndCreatedAtBefore(
                 AnalysisStatus.PENDING,
                 now.minus(pendingThreshold),

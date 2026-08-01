@@ -113,18 +113,30 @@ class MentorServiceTest {
     }
 
     @Test
-    @DisplayName("저장된 판단 근거가 잘못된 JSON이면 조회 실패")
-    void getMessageHistory_invalidReferences_throwsRetrievalFailed() {
+    @DisplayName("판단 근거 JSON 하나가 손상되어도 나머지 대화 내역 반환")
+    void getMessageHistory_invalidReferences_returnsNullAndContinues() {
         Analysis analysis = analysisOwnedBy(1L);
-        MentorMessage message = mock(MentorMessage.class);
-        given(message.getReferencesJson()).willReturn("{invalid");
+        MentorMessage invalidMessage = mock(MentorMessage.class);
+        MentorMessage validMessage = mock(MentorMessage.class);
+
+        given(invalidMessage.getId()).willReturn(30L);
+        given(invalidMessage.getRole()).willReturn(MessageRole.ASSISTANT);
+        given(invalidMessage.getReferencesJson()).willReturn("{invalid");
+        given(invalidMessage.getContent()).willReturn("손상된 판단 근거를 가진 답변");
+        given(validMessage.getId()).willReturn(31L);
+        given(validMessage.getRole()).willReturn(MessageRole.USER);
+        given(validMessage.getContent()).willReturn("다음 질문");
         given(analysisRepository.findById(10L)).willReturn(Optional.of(analysis));
         given(mentorMessageRepository.findByMentorChatSessionAnalysisIdOrderByCreatedAtAscIdAsc(10L))
-                .willReturn(List.of(message));
+                .willReturn(List.of(invalidMessage, validMessage));
 
-        assertThatThrownBy(() -> mentorService.getMessageHistory(1L, 10L))
-                .isInstanceOf(GeneralException.class)
-                .hasFieldOrPropertyWithValue("code", MentorErrorStatus.MENTOR_HISTORY_RETRIEVAL_FAILED);
+        MentorMessageHistoryResponseDTO response = mentorService.getMessageHistory(1L, 10L);
+
+        assertThat(response.messages()).hasSize(2);
+        assertThat(response.messages().get(0).mentorMessageId()).isEqualTo(30L);
+        assertThat(response.messages().get(0).referencesJson()).isNull();
+        assertThat(response.messages().get(1).mentorMessageId()).isEqualTo(31L);
+        assertThat(response.messages().get(1).content()).isEqualTo("다음 질문");
     }
 
     private Analysis analysisOwnedBy(Long userId) {

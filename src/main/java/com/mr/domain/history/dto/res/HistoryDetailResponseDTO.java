@@ -3,7 +3,7 @@ package com.mr.domain.history.dto.res;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
-import com.mr.domain.backingTrack.entity.BackingTrack;
+import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.MidiType;

@@ -40,8 +40,18 @@ class AiServerPropertiesBindingTest {
         contextRunner
                 .withPropertyValues("ai.server.base-url=http://old-prefix-should-be-ignored:9999")
                 .run(context -> {
-                    AiServerProperties properties = context.getBean(AiServerProperties.class);
-                    assertThat(properties.baseUrl()).isNull();
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure()).hasMessageContaining("ai.internal");
+                });
+    }
+
+    @Test
+    void base_url_설정이_공백이면_컨텍스트_시작에_실패한다() {
+        contextRunner
+                .withPropertyValues("ai.internal.base-url= ")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure()).hasMessageContaining("ai.internal");
                 });
     }
 }

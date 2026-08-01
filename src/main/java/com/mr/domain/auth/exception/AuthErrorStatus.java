@@ -13,6 +13,7 @@ public enum AuthErrorStatus implements BaseCode {
     INVALID_AUTH_REQUEST(HttpStatus.BAD_REQUEST, "AUTH_400_01", "인증 관련 필수 입력값이 올바르지 않거나 누락되었습니다."),
     TOKEN_MISSING(HttpStatus.BAD_REQUEST, "AUTH_400_02", "토큰 값이 필요합니다."),
     INVALID_TOKEN_EXPIRY(HttpStatus.BAD_REQUEST, "AUTH_400_03", "만료 시간은 현재 시간 이후여야 합니다."),
+    INVALID_STATE(HttpStatus.BAD_REQUEST, "AUTH_400_04", "OAuth state 검증에 실패했거나 만료된 요청입니다."),
 
     // 인증 실패 및 토큰 오류
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_401_01", "유효하지 않은 토큰입니다."),
@@ -27,7 +28,8 @@ public enum AuthErrorStatus implements BaseCode {
 
     // 외부 소셜 연동 오류
     OAUTH_CLIENT_ERROR(HttpStatus.UNAUTHORIZED, "AUTH_401_04", "소셜 로그인 인증에 실패했거나 유효하지 않은 소셜 액세스 토큰입니다."),
-    OAUTH_SERVER_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "AUTH_503_01", "소셜 인증 제공자(카카오/구글) 서버와의 통신에 실패했습니다.");
+    OAUTH_SERVER_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "AUTH_503_01", "소셜 인증 제공자(카카오/구글) 서버와의 통신에 실패했습니다."),
+    TEMP_CODE_STORE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "AUTH_503_02", "로그인 인증 정보를 일시적으로 처리할 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;

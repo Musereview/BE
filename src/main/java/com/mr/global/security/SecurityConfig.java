@@ -32,11 +32,24 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/api/auth/login/**",
-            "/api/auth/reissue"
+            "/api/auth/**/callback",
+            "/api/auth/reissue",
+            "/api/auth/token/exchange",
+            "/api/users/verify-nickname"
     };
 
+    /**
+     * AntPathRequestMatcher를 명시적으로 사용하는 이유:
+     * Spring Security 6 환경에서 와일드카드 패턴 경로(/swagger-ui/**, /api/auth/** 등)에 대해
+     * Ant 매칭 규칙을 명시적으로 지정하여 URL 패턴 정규화 모호성을 방지하기 위함입니다.
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        org.springframework.security.web.util.matcher.AntPathRequestMatcher[] matchers =
+                java.util.Arrays.stream(PUBLIC_URLS)
+                        .map(org.springframework.security.web.util.matcher.AntPathRequestMatcher::antMatcher)
+                        .toArray(org.springframework.security.web.util.matcher.AntPathRequestMatcher[]::new);
+
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
@@ -46,7 +59,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(jwtAccessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(PUBLIC_URLS).permitAll()
+                        .requestMatchers(matchers).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
@@ -54,16 +67,23 @@ public class SecurityConfig {
         return http.build();
     }
 
+    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins:http://localhost:3000,http://localhost:5173,https://musereview-sigma.vercel.app}")
+    private String allowedOrigins;
+
     // CORS 설정
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOriginPatterns(List.of(
-                "http://localhost:3000",
-                "http://localhost:5173",
-                "https://*.musereview.site"
-        ));
+        List<String> origins = java.util.Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .toList();
+
+        if (origins.isEmpty()) {
+            throw new IllegalStateException("CORS allowed origins must not be empty");
+        }
+        configuration.setAllowedOrigins(origins);
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
 

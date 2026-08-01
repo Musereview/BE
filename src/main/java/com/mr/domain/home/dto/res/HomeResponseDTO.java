@@ -1,6 +1,6 @@
 package com.mr.domain.home.dto.res;
 
-import com.mr.domain.backingTrack.entity.BackingTrack;
+import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.learning.dto.res.LearningHomeResponseDTO;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.user.entity.enums.TheoryLevel;
