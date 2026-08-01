@@ -634,7 +634,7 @@ class PlayingServiceTest {
         @DisplayName("본인의 완료된 연주 세션을 조회한다")
         void getPlayingDetailSuccess() {
 
-            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+            when(playingRepository.findByIdWithBackingTrack(playingId))
                     .thenReturn(Optional.of(playing));
 
             when(playing.getId()).thenReturn(playingId);
@@ -672,7 +672,7 @@ class PlayingServiceTest {
             // given
             Long playingId = 10L;
 
-            given(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+            given(playingRepository.findByIdWithBackingTrack(playingId))
                     .willReturn(Optional.empty());
 
             // when & then
@@ -686,7 +686,7 @@ class PlayingServiceTest {
         @DisplayName("다른 사용자의 연주 세션이면 예외가 발생한다")
         void playingAccessDenied() {
 
-            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+            when(playingRepository.findByIdWithBackingTrack(playingId))
                     .thenReturn(Optional.of(playing));
 
             doThrow(new GeneralException(
@@ -705,7 +705,7 @@ class PlayingServiceTest {
         @DisplayName("완료되지 않은 연주 세션이면 예외가 발생한다")
         void playingNotCompleted() {
 
-            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+            when(playingRepository.findByIdWithBackingTrack(playingId))
                     .thenReturn(Optional.of(playing));
 
             doThrow(new GeneralException(

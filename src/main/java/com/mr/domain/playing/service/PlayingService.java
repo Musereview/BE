@@ -90,7 +90,7 @@ public class PlayingService {
     public PlayingDetailResponse getPlayingDetail(Long userId, Long playingId) {
         validatePlayingId(playingId);
 
-        Playing playing = playingRepository.findByIdAndDeletedAtIsNull(playingId)
+        Playing playing = playingRepository.findByIdWithBackingTrack(playingId)
                 .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
 
         playing.validatePlayingOwner(userId);
