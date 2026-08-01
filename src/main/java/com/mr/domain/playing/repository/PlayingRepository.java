@@ -33,6 +33,24 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
     );
 
     @Query("""
+            select p.id from Playing p
+            where p.user.userId = :userId
+              and p.status = :status
+              and p.deletedAt is null
+              and (:cutoff is null or p.endedAt >= :cutoff)
+              and (p.endedAt < :endedAt or (p.endedAt = :endedAt and p.id < :playingId))
+            order by p.endedAt desc, p.id desc
+            """)
+    List<Long> findNextPlayingId(
+            @Param("userId") Long userId,
+            @Param("status") PlayingStatus status,
+            @Param("cutoff") LocalDateTime cutoff,
+            @Param("endedAt") LocalDateTime endedAt,
+            @Param("playingId") Long playingId,
+            Pageable pageable
+    );
+
+    @Query("""
             select p from Playing p
             left join fetch p.backingTrack
             where p.id = :id
