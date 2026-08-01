@@ -61,11 +61,11 @@ public class User extends BaseTimeEntity {
 
     public void updateNickname(String nickname) {
         String trimmedNickname = nickname == null ? null : nickname.trim();
-        validateNickname(trimmedNickname);
+        validateNicknameFormat(trimmedNickname);
         this.nickname = trimmedNickname;
     }
 
-    private static void validateNickname(String nickname) {
+    public static void validateNicknameFormat(String nickname) {
         if (nickname == null || nickname.isBlank()) {
             throw new GeneralException(UserErrorStatus.NICKNAME_REQUIRED);
         }

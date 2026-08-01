@@ -157,6 +157,42 @@ class OAuthClientServiceTest {
     }
 
     @Test
+    @DisplayName("구글 ID Token fallback은 설정된 clientId와 audience가 일치해야 성공")
+    void getGoogleUserInfo_idToken_validatesAudience() {
+        String idToken = "header.payload.signature";
+        com.mr.global.config.OAuthProperties.ProviderProperties googleProps =
+                new com.mr.global.config.OAuthProperties.ProviderProperties(
+                        "google-client-id",
+                        "google-client-secret",
+                        "http://localhost:8080/api/auth/google/callback",
+                        java.util.List.of("http://localhost:8080/api/auth/google/callback")
+                );
+        com.mr.global.config.OAuthProperties properties = new com.mr.global.config.OAuthProperties(
+                "http://localhost:5173/oauth/callback",
+                java.util.List.of("http://localhost:5173/oauth/callback"),
+                null,
+                googleProps
+        );
+        OAuthClientService serviceWithProps = new OAuthClientService(
+                restClientBuilder.build(), new OAuthExceptionMapper(), properties);
+
+        mockServer.expect(MockRestRequestMatchers.requestTo("https://www.googleapis.com/oauth2/v2/userinfo"))
+                .andRespond(MockRestResponseCreators.withUnauthorizedRequest());
+        mockServer.expect(MockRestRequestMatchers.requestTo(
+                        "https://oauth2.googleapis.com/tokeninfo?id_token=header.payload.signature"))
+                .andRespond(MockRestResponseCreators.withSuccess(
+                        """
+                        {"sub":"google-user","aud":"google-client-id","picture":"https://example.com/profile.png"}
+                        """,
+                        MediaType.APPLICATION_JSON
+                ));
+
+        OAuthUserInfo userInfo = serviceWithProps.getUserInfo(SocialType.GOOGLE, idToken);
+
+        assertThat(userInfo.socialId()).isEqualTo("google-user");
+    }
+
+    @Test
     @DisplayName("OAuth 설정(clientId)이 누락된 경우 authorization_code 교환 요청 시 OAUTH_SERVER_ERROR 예외가 발생한다")
     void exchangeCode_missingConfig_throwsOauthServerError() {
         assertThatThrownBy(() -> oAuthClientService.getUserInfoByCode(SocialType.KAKAO, "sample_code", null))

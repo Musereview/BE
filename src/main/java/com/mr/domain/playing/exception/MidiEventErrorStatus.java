@@ -9,7 +9,6 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 public enum MidiEventErrorStatus implements BaseCode {
 
-    INVALID_PLAYING_ID(HttpStatus.BAD_REQUEST, "MIDI_400_01", "연주 ID가 올바르지 않습니다."),
     EMPTY_MIDI_EVENTS(HttpStatus.BAD_REQUEST,"MIDI_400_02", "MIDI 이벤트 목록은 필수입니다."),
     INVALID_MIDI_TYPE(HttpStatus.BAD_REQUEST, "MIDI_400_03", "MIDI 이벤트 타입이 올바르지 않습니다."),
     INVALID_PITCH_RANGE(HttpStatus.BAD_REQUEST, "MIDI_400_04", "피치 값은 0~127 사이의 값이어야 합니다."),

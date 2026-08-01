@@ -205,11 +205,14 @@ public class OAuthClientService {
                             .body(GoogleUserResponse.class);
 
                     if (fallbackResponse != null && fallbackResponse.id() != null && !fallbackResponse.id().isBlank() && !"null".equalsIgnoreCase(fallbackResponse.id().trim())) {
+                        validateGoogleAudience(fallbackResponse.aud());
                         return OAuthUserInfo.builder()
                                 .socialId(fallbackResponse.id())
                                 .profileImgUrl(fallbackResponse.picture())
                                 .build();
                     }
+                } catch (GeneralException generalException) {
+                    throw generalException;
                 } catch (Exception fallbackEx) {
                     log.warn("Google tokeninfo fallback also failed: {}", fallbackEx.getMessage());
                 }
@@ -218,6 +221,17 @@ public class OAuthClientService {
         }
 
         throw new GeneralException(AuthErrorStatus.INVALID_AUTH_REQUEST);
+    }
+
+    private void validateGoogleAudience(String audience) {
+        OAuthProperties.ProviderProperties googleProps = oAuthProperties != null ? oAuthProperties.google() : null;
+        String clientId = googleProps != null ? googleProps.clientId() : null;
+        if (clientId == null || clientId.isBlank()) {
+            throw new GeneralException(AuthErrorStatus.OAUTH_SERVER_ERROR);
+        }
+        if (audience == null || !clientId.equals(audience)) {
+            throw new GeneralException(AuthErrorStatus.OAUTH_CLIENT_ERROR);
+        }
     }
 
     private boolean isJwtFormat(String token) {
