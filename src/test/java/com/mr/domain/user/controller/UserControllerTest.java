@@ -55,16 +55,21 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/users/verify-nickname - 다른 유저가 이미 쓰는 닉네임이면 409로 응답한다")
-    void verifyNickname_duplicated_returns409() throws Exception {
+    @DisplayName("GET /api/users/verify-nickname - 다른 유저가 이미 쓰는 닉네임이면 예외 없이 200 + isAvailable=false로 응답한다")
+    void verifyNickname_duplicated_returns200WithAvailableFalse() throws Exception {
         mockMvc = setUp();
 
-        willThrow(new GeneralException(UserErrorStatus.NICKNAME_DUPLICATED))
-                .given(userService).checkNicknameAvailable("김뮤즈");
+        UserResponseDTO.NicknameCheckResponse response = UserResponseDTO.NicknameCheckResponse.builder()
+                .nickname("김뮤즈")
+                .isAvailable(false)
+                .message("이미 사용 중인 닉네임입니다.")
+                .build();
+        given(userService.checkNicknameAvailable("김뮤즈")).willReturn(response);
 
         mockMvc.perform(get("/api/users/verify-nickname").param("nickname", "김뮤즈"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("USER_409_01"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.isAvailable").value(false))
+                .andExpect(jsonPath("$.data.message").value("이미 사용 중인 닉네임입니다."));
     }
 
     @Test

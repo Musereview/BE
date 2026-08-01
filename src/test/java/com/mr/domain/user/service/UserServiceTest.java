@@ -60,14 +60,14 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("checkNicknameAvailable - 다른 유저가 이미 쓰는 닉네임이면 NICKNAME_DUPLICATED(409) 예외를 던진다")
-    void checkNicknameAvailable_takenByOtherUser_throwsNicknameDuplicated() {
+    @DisplayName("checkNicknameAvailable - 다른 유저가 이미 쓰는 닉네임이면 예외 없이 isAvailable=false를 반환한다")
+    void checkNicknameAvailable_takenByOtherUser_returnsAvailableFalse() {
         given(userRepository.existsByNicknameAndUserIdNot("김뮤즈", USER_ID)).willReturn(true);
 
-        assertThatThrownBy(() -> userService.checkNicknameAvailable("김뮤즈"))
-                .isInstanceOf(GeneralException.class)
-                .extracting(e -> ((GeneralException) e).getCode())
-                .isEqualTo(UserErrorStatus.NICKNAME_DUPLICATED);
+        UserResponseDTO.NicknameCheckResponse response = userService.checkNicknameAvailable("김뮤즈");
+
+        assertThat(response.isAvailable()).isFalse();
+        assertThat(response.message()).isEqualTo("이미 사용 중인 닉네임입니다.");
     }
 
     @Test
