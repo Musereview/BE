@@ -2,6 +2,7 @@ package com.mr.global.file.s3.service;
 
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.file.s3.config.S3Properties;
+import com.mr.global.file.s3.dto.ValidatedS3Object;
 import com.mr.global.file.s3.dto.req.RecordingPresignedUrlRequest;
 import com.mr.global.file.s3.dto.req.RecordingUploadCompleteRequest;
 import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
@@ -102,14 +103,14 @@ public class RecordingUploadService {
         validateUploadedObject(request, headObject);
 
         return new RecordingUploadCompleteResponse(
-                buildRecordingFileUrl(request.objectKey()),
+                buildFileUrl(request.objectKey()),
                 headObject.contentLength(),
                 headObject.contentType()
         );
     }
 
     // 연주 완료 시 Object Key에 해당하는 실제 S3 녹음 객체 검증
-    public RecordingUploadCompleteResponse validateRecordingObject(
+    public ValidatedS3Object validateObject(
             Long userId,
             String objectKey
     ) {
@@ -119,8 +120,9 @@ public class RecordingUploadService {
 
         validateUploadedObject(objectKey, headObject);
 
-        return new RecordingUploadCompleteResponse(
-                buildRecordingFileUrl(objectKey),
+        return new ValidatedS3Object(
+                objectKey,
+                buildFileUrl(objectKey),
                 headObject.contentLength(),
                 headObject.contentType()
         );
@@ -243,7 +245,7 @@ public class RecordingUploadService {
         }
     }
 
-    private String buildRecordingFileUrl(String objectKey) {
+    private String buildFileUrl(String objectKey) {
         return "https://%s.s3.%s.amazonaws.com/%s".formatted(
                 s3Properties.bucket(),
                 s3Properties.region(),

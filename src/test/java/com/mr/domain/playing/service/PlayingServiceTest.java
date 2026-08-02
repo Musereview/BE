@@ -20,9 +20,9 @@ import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.dto.ValidatedS3Object;
 import com.mr.global.file.s3.dto.req.RecordingPresignedUrlRequest;
 import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
-import com.mr.global.file.s3.dto.res.RecordingUploadCompleteResponse;
 import com.mr.global.file.s3.service.RecordingUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -91,9 +91,10 @@ class PlayingServiceTest {
     private Long playingId;
     private Long backingTrackId;
 
-    RecordingUploadCompleteResponse recordingResponse =
-            new RecordingUploadCompleteResponse(
+    ValidatedS3Object recordingResponse =
+            new ValidatedS3Object(
                     RECORDING_OBJECT_KEY,
+                    RECORDING_FILE_URL,
                     1_157_632L,
                     "audio/mpeg"
             );
@@ -121,7 +122,7 @@ class PlayingServiceTest {
             when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
                     .thenReturn(Optional.of(playing));
 
-            when(recordingUploadService.validateRecordingObject(
+            when(recordingUploadService.validateObject(
                     userId,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
@@ -142,7 +143,7 @@ class PlayingServiceTest {
                         .thenReturn(midiEvents);
 
                 return null;
-            }).when(playing).completeWithMidiData(anyList(), eq(RECORDING_OBJECT_KEY));
+            }).when(playing).completeWithMidiData(anyList(), eq(RECORDING_FILE_URL));
 
             // when
             MidiEventSaveResponse response =
@@ -166,13 +167,13 @@ class PlayingServiceTest {
                     .validatePlayingOwner(userId);
 
             verify(recordingUploadService)
-                    .validateRecordingObject(
+                    .validateObject(
                             userId,
                             RECORDING_OBJECT_KEY
                     );
 
             verify(playing)
-                    .completeWithMidiData(anyList(), anyString());
+                    .completeWithMidiData(anyList(), eq(RECORDING_FILE_URL));
         }
 
         @Test
@@ -226,7 +227,7 @@ class PlayingServiceTest {
             when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
                     .thenReturn(Optional.of(playing));
 
-            when(recordingUploadService.validateRecordingObject(
+            when(recordingUploadService.validateObject(
                     userId,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
@@ -273,7 +274,7 @@ class PlayingServiceTest {
 
             // then
             verify(recordingUploadService)
-                    .validateRecordingObject(
+                    .validateObject(
                             userId,
                             RECORDING_OBJECT_KEY
                     );
@@ -281,7 +282,7 @@ class PlayingServiceTest {
             verify(playing)
                     .completeWithMidiData(
                             anyList(),
-                            eq(RECORDING_OBJECT_KEY)
+                            eq(RECORDING_FILE_URL)
                     );
         }
 
@@ -333,7 +334,7 @@ class PlayingServiceTest {
                     .validateInProgress();
 
             verify(recordingUploadService, never())
-                    .validateRecordingObject(anyLong(), anyString());
+                    .validateObject(anyLong(), anyString());
 
             verify(playing, never())
                     .completeWithMidiData(anyList(), anyString());

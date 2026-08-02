@@ -15,9 +15,9 @@ import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.dto.ValidatedS3Object;
 import com.mr.global.file.s3.dto.req.RecordingPresignedUrlRequest;
 import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
-import com.mr.global.file.s3.dto.res.RecordingUploadCompleteResponse;
 import com.mr.global.file.s3.service.RecordingUploadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -89,8 +89,8 @@ public class PlayingService {
         playing.validatePlayingOwner(userId);
         playing.validateInProgress();
 
-        RecordingUploadCompleteResponse recording =
-                recordingUploadService.validateRecordingObject(userId, request.recordingObjectKey());
+        ValidatedS3Object recording =
+                recordingUploadService.validateObject(userId, request.recordingObjectKey());
 
         List<MidiEventData> midiEvents = request.events()
                 .stream()
@@ -104,7 +104,7 @@ public class PlayingService {
 
         playing.completeWithMidiData(
                 midiEvents,
-                recording.recordingFileUrl()
+                recording.fileUrl()
         );
 
         return MidiEventSaveResponse.of(
