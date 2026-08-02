@@ -246,10 +246,12 @@ public class RecordingUploadService {
     }
 
     private String buildFileUrl(String objectKey) {
-        return "https://%s.s3.%s.amazonaws.com/%s".formatted(
-                s3Properties.bucket(),
-                s3Properties.region(),
-                objectKey
-        );
+        String fileUrl = s3Client.utilities()
+                .getUrl(builder -> builder
+                        .bucket(s3Properties.bucket())
+                        .key(objectKey))
+                .toString();
+
+        return fileUrl;
     }
 }
