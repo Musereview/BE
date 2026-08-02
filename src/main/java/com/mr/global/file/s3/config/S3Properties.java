@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.time.Duration;
 import java.util.Set;
 
-@ConfigurationProperties(prefix = "cloud.aws.s3")
+@ConfigurationProperties(prefix = "aws.s3")
 public record S3Properties(
         Credentials credentials,
         String bucket,
