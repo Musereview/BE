@@ -59,4 +59,11 @@ class SecurityConfigTest {
                         .content("{\"code\":\"sample_code\"}"))
                 .andExpect(result -> org.assertj.core.api.Assertions.assertThat(result.getResponse().getStatus()).isNotEqualTo(401));
     }
+
+    @Test
+    @DisplayName("GET /api/users/verify-nickname 요청은 인증이 필요해 토큰 없이 호출하면 401(UNAUTHORIZED)이 발생한다")
+    void verifyNickname_requiresAuthentication_returnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/users/verify-nickname").param("nickname", "김뮤즈"))
+                .andExpect(status().isUnauthorized());
+    }
 }

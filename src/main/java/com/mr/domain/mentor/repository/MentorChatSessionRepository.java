@@ -5,6 +5,7 @@ import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -15,4 +16,8 @@ public interface MentorChatSessionRepository extends JpaRepository<MentorChatSes
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select session from MentorChatSession session where session.id = :sessionId")
     Optional<MentorChatSession> findByIdForUpdate(@Param("sessionId") Long sessionId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("delete from MentorChatSession mcs where mcs.user.userId = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 }

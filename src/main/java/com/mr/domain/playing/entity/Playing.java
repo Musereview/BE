@@ -189,20 +189,23 @@ public class Playing extends BaseCreatedDeletedEntity {
 
     // 연주 완료 시 전체 MIDI 데이터를 저장하고 완료 상태로 전환
     public void completeWithMidiData(
-            List<MidiEventData> requestedMidiData
+            List<MidiEventData> requestedMidiData,
+            String recordingFileUrl
     ) {
         validateCompletableStatus();
         validateMidiData(requestedMidiData);
 
         LocalDateTime completedAt = LocalDateTime.now();
-        long savedDurationMs = calculateDurationMs(this.startedAt, completedAt);
+        long savedDurationMs = calculateSavedDurationMs(completedAt);
 
         List<MidiEventData> normalizedMidiData = normalizeMidiData(requestedMidiData, savedDurationMs);
         validateNormalizedMidiData(normalizedMidiData);
 
         this.midiData = new ArrayList<>(normalizedMidiData);
-        this.endedAt = calculateEndedAt(completedAt);
-        this.durationSec = convertToDurationSec(savedDurationMs);
+        this.endedAt = this.startedAt.plusNanos(savedDurationMs * 1_000_000L);
+        this.durationSec = Math.toIntExact(
+                Duration.ofMillis(savedDurationMs).toSeconds());
+        this.recordingFileUrl = recordingFileUrl;
         this.status = PlayingStatus.COMPLETED;
     }
 
@@ -215,6 +218,12 @@ public class Playing extends BaseCreatedDeletedEntity {
     public void validateCompleted() {
         if (this.status != PlayingStatus.COMPLETED) {
             throw new GeneralException(PlayingErrorStatus.PLAYING_NOT_COMPLETED);
+        }
+    }
+
+    public void validateInProgress() {
+        if (this.status != PlayingStatus.IN_PROGRESS) {
+            throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_STATUS);
         }
     }
 
@@ -284,34 +293,39 @@ public class Playing extends BaseCreatedDeletedEntity {
     ) {
     }
 
-    private static long calculateDurationMs(
-            LocalDateTime startedAt, LocalDateTime completedAt
-    ) {
-        long durationMs = Duration.between(startedAt, completedAt).toMillis();
-
-        if (durationMs < 0) {
-            throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_DURATION);
+    private long calculateBackingTrackDurationMs() {
+        if (backingTrack == null
+                || backingTrack.getPlaytimeSec() == null
+                || backingTrack.getPlaytimeSec() <= 0) {
+            throw new GeneralException(
+                    PlayingErrorStatus.INVALID_PLAYING_DURATION
+            );
         }
 
-        return Math.min(durationMs, MAX_DURATION_MS);
+        return backingTrack.getPlaytimeSec() * 1000L;
     }
 
-    private LocalDateTime calculateEndedAt(
+    private long calculateSavedDurationMs(
             LocalDateTime completedAt
     ) {
-        LocalDateTime maxEndedAt =
-                this.startedAt.plusSeconds(MAX_DURATION_SEC);
+        long actualDurationMs =
+                Duration.between(
+                        this.startedAt,
+                        completedAt
+                ).toMillis();
 
-        return completedAt.isAfter(maxEndedAt)
-                ? maxEndedAt
-                : completedAt;
-    }
+        if (actualDurationMs < 0) {
+            throw new GeneralException(
+                    PlayingErrorStatus.INVALID_PLAYING_DURATION
+            );
+        }
 
-    private static int convertToDurationSec(
-            long durationMs
-    ) {
-        return Math.toIntExact(
-                Duration.ofMillis(durationMs).toSeconds()
+        long backingTrackDurationMs =
+                calculateBackingTrackDurationMs();
+
+        return Math.min(
+                Math.min(actualDurationMs, backingTrackDurationMs),
+                MAX_DURATION_MS
         );
     }
 
@@ -330,9 +344,9 @@ public class Playing extends BaseCreatedDeletedEntity {
     }
 
     private static List<MidiEventData> normalizeMidiData(
-            List<MidiEventData> midiData, long savedDurationMs) {
+            List<MidiEventData> midiData, long backingTrackDurationMs) {
         long allowedTimestampMs =
-                Math.min(savedDurationMs + MIDI_TIMESTAMP_TOLERANCE_MS, MAX_DURATION_MS);
+                Math.min(backingTrackDurationMs + MIDI_TIMESTAMP_TOLERANCE_MS, MAX_DURATION_MS);
 
         return midiData.stream()
                 .filter(event -> event.getTimestampMs() <= allowedTimestampMs)

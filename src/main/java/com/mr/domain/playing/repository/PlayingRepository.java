@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -22,10 +23,24 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
             where p.user.userId = :userId
               and p.status = :status
               and p.deletedAt is null
-              and (:cutoff is null or p.endedAt >= :cutoff)
             order by p.endedAt desc, p.id desc
             """)
     Slice<Playing> findPlayingsByUserAndStatus(
+            @Param("userId") Long userId,
+            @Param("status") PlayingStatus status,
+            Pageable pageable
+    );
+
+    @Query("""
+            select p from Playing p
+            left join fetch p.backingTrack
+            where p.user.userId = :userId
+              and p.status = :status
+              and p.deletedAt is null
+              and p.endedAt >= :cutoff
+            order by p.endedAt desc, p.id desc
+            """)
+    Slice<Playing> findPlayingsByUserAndStatusSince(
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status,
             @Param("cutoff") LocalDateTime cutoff,
@@ -96,4 +111,23 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
     }
 
     Optional<Playing> findByIdAndDeletedAtIsNull(Long playingId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("delete from Playing p where p.user.userId = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
+           
+    @Query("""
+            select coalesce(sum(p.durationSec), 0) from Playing p
+            where p.user.userId = :userId
+              and p.status = :status
+              and p.deletedAt is null 
+              and p.endedAt >= :since
+              and p.id != :excludePlayingId
+            """)
+    Long sumDurationSecExcludeCurrent(
+            @Param("userId") Long userId,
+            @Param("status") PlayingStatus status,
+            @Param("since") LocalDateTime since,
+            @Param("excludePlayingId") Long excludePlayingId
+    );
 }

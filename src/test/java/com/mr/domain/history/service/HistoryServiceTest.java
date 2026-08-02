@@ -8,12 +8,14 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
+import com.mr.domain.history.dto.req.HistoryPeriod;
 import com.mr.domain.history.dto.res.HistoryDetailResponseDTO;
 import com.mr.domain.history.dto.res.HistoryListResponseDTO;
 import com.mr.domain.history.exception.HistoryErrorStatus;
@@ -83,7 +85,7 @@ class HistoryServiceTest {
     @Test
     @DisplayName("getHistories - 결과가 0건이면 빈 목록을 반환하고 Analysis는 조회하지 않는다")
     void getHistories_empty_returnsEmptyList() {
-        given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any(), any()))
+        given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(new SliceImpl<>(List.of(), PageRequest.of(0, 10), false));
 
         HistoryListResponseDTO response = historyService.getHistories(1L, 0, 10, null);
@@ -97,7 +99,7 @@ class HistoryServiceTest {
     @DisplayName("getHistories - 최신 COMPLETED 분석이 없는 Playing은 latestAnalysisId가 null이다")
     void getHistories_noCompletedAnalysis_latestAnalysisIdIsNull() {
         Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
-        given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any(), any()))
+        given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(new SliceImpl<>(List.of(playing), PageRequest.of(0, 10), false));
         given(analysisRepository.findByPlayingIdInAndStatusOrderByCreatedAtDescIdDesc(
                 anyList(), eq(AnalysisStatus.COMPLETED)))
@@ -115,7 +117,7 @@ class HistoryServiceTest {
     void getHistories_scoreChange_adjacentComparisonOnly() {
         Playing playing1 = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
         Playing playing2 = mockPlaying(2L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now().minusDays(1));
-        given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any(), any()))
+        given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(new SliceImpl<>(List.of(playing1, playing2), PageRequest.of(0, 10), false));
 
         Analysis analysis1 = completedAnalysis(1L, 90);
@@ -128,6 +130,20 @@ class HistoryServiceTest {
 
         assertThat(response.items().get(0).scoreChange()).isEqualTo(10);
         assertThat(response.items().get(1).scoreChange()).isNull();
+    }
+
+    @Test
+    @DisplayName("getHistories - 기간 필터가 있으면 cutoff 전용 쿼리를 사용한다")
+    void getHistories_withPeriod_usesSinceQuery() {
+        given(playingRepository.findPlayingsByUserAndStatusSince(
+                eq(1L), eq(PlayingStatus.COMPLETED), any(LocalDateTime.class), eq(PageRequest.of(0, 10))))
+                .willReturn(new SliceImpl<>(List.of(), PageRequest.of(0, 10), false));
+
+        HistoryListResponseDTO response = historyService.getHistories(1L, 0, 10, HistoryPeriod.WEEKLY);
+
+        assertThat(response.items()).isEmpty();
+        verify(playingRepository).findPlayingsByUserAndStatusSince(
+                eq(1L), eq(PlayingStatus.COMPLETED), any(LocalDateTime.class), eq(PageRequest.of(0, 10)));
     }
 
     @Test

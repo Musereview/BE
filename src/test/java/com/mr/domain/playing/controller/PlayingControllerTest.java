@@ -44,6 +44,8 @@ class PlayingControllerTest {
 
     private static final Long USER_ID = 1L;
     private static final Long PLAYING_ID = 10L;
+    private static final String RECORDING_OBJECT_KEY =
+            "recordings/1/2026-08-02/150000_a1b2c3.mp3";
 
 
     private MockMvc mockMvc;
@@ -290,7 +292,7 @@ class PlayingControllerTest {
             }
 
             MidiEventSaveRequest request =
-                    new MidiEventSaveRequest(events);
+                    new MidiEventSaveRequest(events, RECORDING_OBJECT_KEY);
 
             // when & then
             mockMvc.perform(
@@ -338,7 +340,8 @@ class PlayingControllerTest {
                                 0,
                                 500L
                         )
-                )
+                ), RECORDING_OBJECT_KEY
+
         );
     }
 }
