@@ -160,7 +160,7 @@ public class RecordingUploadService {
     private void validateUploadedObject(
             RecordingUploadCompleteRequest request,
             HeadObjectResponse headObject
-    ){
+    ) {
         long uploadedSize = headObject.contentLength();
         String uploadedContentType = headObject.contentType();
         String objectKey = request.objectKey();
@@ -180,14 +180,14 @@ public class RecordingUploadService {
             throw new GeneralException(S3ErrorStatus.FILE_SIZE_MISMATCH);
         }
 
-        if (!s3Properties.allowedContentTypes().contains(headObject.contentType())) {
+        if (!Objects.equals(request.contentType(), uploadedContentType)) {
             deleteObject(objectKey);
-            throw new GeneralException(S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE);
+            throw new GeneralException(S3ErrorStatus.CONTENT_TYPE_MISMATCH);
         }
 
-        if (!Objects.equals(request.fileSize(), headObject.contentLength())) {
+        if (!s3Properties.allowedContentTypes().contains(uploadedContentType)) {
             deleteObject(objectKey);
-            throw new GeneralException(S3ErrorStatus.FILE_SIZE_MISMATCH);
+            throw new GeneralException(S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE);
         }
     }
 
