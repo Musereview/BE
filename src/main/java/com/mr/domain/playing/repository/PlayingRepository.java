@@ -96,4 +96,18 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
     }
 
     Optional<Playing> findByIdAndDeletedAtIsNull(Long playingId);
+
+    @Query("""
+            select coalesce(sum(p.durationSec), 0) from Playing p
+            where p.user.userId = :userId
+              and p.status = :status
+              and p.endedAt >= :since
+              and p.id != :excludePlayingId
+            """)
+    Integer sumDurationSecExcludeCurrent(
+            @Param("userId") Long userId,
+            @Param("status") PlayingStatus status,
+            @Param("since") LocalDateTime since,
+            @Param("excludePlayingId") Long excludePlayingId
+    );
 }
