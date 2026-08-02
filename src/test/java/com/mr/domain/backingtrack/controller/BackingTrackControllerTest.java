@@ -383,7 +383,7 @@ class BackingTrackControllerTest {
         void getBackingTracks_firstPage() throws Exception {
             BackingTrackListResponseDTO.TrackInfo trackInfo =
                     BackingTrackListResponseDTO.TrackInfo.of(
-                            1L, "테스트 트랙", "Jazz", "C", "MAJOR",
+                            1L, "테스트 트랙", "Jazz", "C", "MAJOR", "4/4",
                             List.of("Cmaj7", "Am7"), 120, "BASIC", 180
                     );
 
