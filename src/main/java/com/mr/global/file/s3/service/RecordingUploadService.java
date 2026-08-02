@@ -8,6 +8,7 @@ import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
 import com.mr.global.file.s3.dto.res.RecordingUploadCompleteResponse;
 import com.mr.global.file.s3.exception.S3ErrorStatus;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -15,13 +16,16 @@ import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.Objects;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RecordingUploadService {
@@ -158,25 +162,46 @@ public class RecordingUploadService {
             HeadObjectResponse headObject
     ){
         long uploadedSize = headObject.contentLength();
+        String uploadedContentType = headObject.contentType();
+        String objectKey = request.objectKey();
 
         if (uploadedSize <= 0) {
+            deleteObject(objectKey);
             throw new GeneralException(S3ErrorStatus.INVALID_FILE_SIZE);
         }
 
         if (uploadedSize > s3Properties.maxFileSize()) {
+            deleteObject(objectKey);
             throw new GeneralException(S3ErrorStatus.FILE_SIZE_EXCEEDED);
         }
 
         if (uploadedSize != request.fileSize()) {
+            deleteObject(objectKey);
             throw new GeneralException(S3ErrorStatus.FILE_SIZE_MISMATCH);
         }
 
-        if (!request.contentType().equals(headObject.contentType())) {
-            throw new GeneralException(S3ErrorStatus.CONTENT_TYPE_MISMATCH);
+        if (!s3Properties.allowedContentTypes().contains(headObject.contentType())) {
+            deleteObject(objectKey);
+            throw new GeneralException(S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE);
         }
 
-        if (!s3Properties.allowedContentTypes().contains(headObject.contentType())) {
-            throw new GeneralException(S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE);
+        if (!Objects.equals(request.fileSize(), headObject.contentLength())) {
+            deleteObject(objectKey);
+            throw new GeneralException(S3ErrorStatus.FILE_SIZE_MISMATCH);
+        }
+    }
+
+    // 업로드 검증에 실패한 객체를 S3에서 삭제
+    private void deleteObject(String objectKey) {
+        DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                .bucket(s3Properties.bucket())
+                .key(objectKey)
+                .build();
+
+        try {
+            s3Client.deleteObject(deleteRequest);
+        } catch (SdkException e) {
+            log.error("검증에 실패한 S3 객체 삭제에 실패했습니다. objectKey={}", objectKey, e);
         }
     }
 }
