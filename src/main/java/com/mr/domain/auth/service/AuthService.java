@@ -167,9 +167,9 @@ public class AuthService {
 
         userLearningProgressRepository.deleteAllByUserId(userId);
 
+        llmCallLogRepository.deleteAllByUserId(userId);
         mentorMessageRepository.deleteAllByUserId(userId);
         mentorChatSessionRepository.deleteAllByUserId(userId);
-        llmCallLogRepository.deleteAllByUserId(userId);
 
         analysisReportRepository.deleteAllByUserId(userId);
         analysisRepository.deleteAllByUserId(userId);
