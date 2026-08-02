@@ -75,7 +75,7 @@ class HomeServiceTest {
         lenient().when(studentRepository.findByUser(user)).thenReturn(Optional.empty());
         lenient().when(playingRepository.findDistinctEndedDatesByUserAndStatus(anyLong(), any())).thenReturn(List.of());
         lenient().when(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).thenReturn(List.of());
-        lenient().when(playingRepository.findPlayingsByUserAndStatus(anyLong(), any(), any(), any()))
+        lenient().when(playingRepository.findPlayingsByUserAndStatus(anyLong(), any(), any()))
                 .thenReturn(new SliceImpl<>(List.of()));
         lenient().when(learningService.getCurrentLearning(anyLong())).thenReturn(null);
     }
@@ -336,7 +336,7 @@ class HomeServiceTest {
         stubBaseline(1L);
 
         Playing playing = mockPlaying(LocalDateTime.now(), 600);
-        given(playingRepository.findPlayingsByUserAndStatus(1L, PlayingStatus.COMPLETED, null, PageRequest.of(0, 5)))
+        given(playingRepository.findPlayingsByUserAndStatus(1L, PlayingStatus.COMPLETED, PageRequest.of(0, 5)))
                 .willReturn(new SliceImpl<>(List.of(playing)));
 
         HomeResponseDTO response = homeService.getHome(1L);
