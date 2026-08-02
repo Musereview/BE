@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface UsageLimitRepository extends JpaRepository<UsageLimit, Long> {
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from UsageLimit ul where ul.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }

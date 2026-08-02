@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface WeaknessNoteRepository extends JpaRepository<WeaknessNote, Long> {
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from WeaknessNote w where w.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }

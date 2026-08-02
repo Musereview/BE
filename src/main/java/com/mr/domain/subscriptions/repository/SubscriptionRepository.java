@@ -15,7 +15,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     // → 만료일과 무관하게 가장 최근 구독 1건을 그대로 조회
     Optional<Subscription> findFirstByUserOrderByStartDateDesc(User user);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from Subscription s where s.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 

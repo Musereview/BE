@@ -171,6 +171,8 @@ public class AuthService {
         mentorMessageRepository.deleteAllByUserId(userId);
         mentorChatSessionRepository.deleteAllByUserId(userId);
 
+        weaknessNoteRepository.deleteAllByUserId(userId);
+
         analysisReportRepository.deleteAllByUserId(userId);
         analysisRepository.deleteAllByUserId(userId);
 
@@ -185,7 +187,6 @@ public class AuthService {
         userStatisticsRepository.deleteAllByUserId(userId);
 
         subscriptionRepository.deleteAllByUserId(userId);
-        weaknessNoteRepository.deleteAllByUserId(userId);
         usageLimitRepository.deleteAllByUserId(userId);
 
         // 2. SocialAuth 삭제
