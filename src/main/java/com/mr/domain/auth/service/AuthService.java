@@ -20,6 +20,25 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+import com.mr.domain.analysis.repository.AnalysisReportRepository;
+import com.mr.domain.analysis.repository.AnalysisRepository;
+import com.mr.domain.backingtrack.repository.BackingTrackRepository;
+import com.mr.domain.backingtrack.repository.ChordProgressionRepository;
+import com.mr.domain.learning.repository.UserLearningProgressRepository;
+import com.mr.domain.mentor.repository.LlmCallLogRepository;
+import com.mr.domain.mentor.repository.MentorChatSessionRepository;
+import com.mr.domain.mentor.repository.MentorMessageRepository;
+import com.mr.domain.notification.repository.NotificationRepository;
+import com.mr.domain.playing.repository.PlayingRepository;
+import com.mr.domain.statistics.repository.PracticeStatisticsRepository;
+import com.mr.domain.statistics.repository.SkillStatisticsRepository;
+import com.mr.domain.statistics.repository.UserStatisticsRepository;
+import com.mr.domain.subscriptions.repository.SubscriptionRepository;
+import com.mr.domain.user.repository.StudentInstrumentRepository;
+import com.mr.domain.user.repository.StudentRepository;
+import com.mr.domain.user.repository.UsageLimitRepository;
+import com.mr.domain.weakness.repository.WeaknessNoteRepository;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -31,6 +50,25 @@ public class AuthService {
     private final OAuthClientService oAuthClientService;
     private final AuthTransactionService authTransactionService;
     private final OAuthTempCodeStore tempCodeStore;
+
+    private final StudentInstrumentRepository studentInstrumentRepository;
+    private final StudentRepository studentRepository;
+    private final UserLearningProgressRepository userLearningProgressRepository;
+    private final LlmCallLogRepository llmCallLogRepository;
+    private final MentorMessageRepository mentorMessageRepository;
+    private final MentorChatSessionRepository mentorChatSessionRepository;
+    private final AnalysisReportRepository analysisReportRepository;
+    private final AnalysisRepository analysisRepository;
+    private final PlayingRepository playingRepository;
+    private final ChordProgressionRepository chordProgressionRepository;
+    private final BackingTrackRepository backingTrackRepository;
+    private final NotificationRepository notificationRepository;
+    private final PracticeStatisticsRepository practiceStatisticsRepository;
+    private final SkillStatisticsRepository skillStatisticsRepository;
+    private final UserStatisticsRepository userStatisticsRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final WeaknessNoteRepository weaknessNoteRepository;
+    private final UsageLimitRepository usageLimitRepository;
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String accessToken, String deviceInfo) {
@@ -123,12 +161,42 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
+        // 1. 연관된 모든 자식 엔티티 데이터 선삭제 (FK 제약조건 예방)
+        studentInstrumentRepository.deleteAllByUserId(userId);
+        studentRepository.deleteAllByUserId(userId);
+
+        userLearningProgressRepository.deleteAllByUserId(userId);
+
+        llmCallLogRepository.deleteAllByUserId(userId);
+        mentorMessageRepository.deleteAllByUserId(userId);
+        mentorChatSessionRepository.deleteAllByUserId(userId);
+
+        weaknessNoteRepository.deleteAllByUserId(userId);
+
+        analysisReportRepository.deleteAllByUserId(userId);
+        analysisRepository.deleteAllByUserId(userId);
+
+        playingRepository.deleteAllByUserId(userId);
+        chordProgressionRepository.deleteAllByUserId(userId);
+        backingTrackRepository.deleteAllByUserId(userId);
+
+        notificationRepository.deleteAllByUserId(userId);
+
+        practiceStatisticsRepository.deleteAllByUserId(userId);
+        skillStatisticsRepository.deleteAllByUserId(userId);
+        userStatisticsRepository.deleteAllByUserId(userId);
+
+        subscriptionRepository.deleteAllByUserId(userId);
+        usageLimitRepository.deleteAllByUserId(userId);
+
+        // 2. SocialAuth 삭제
         List<SocialAuth> socialAuths = socialAuthRepository.findAllByUser_UserId(userId);
         if (!socialAuths.isEmpty()) {
             socialAuths.forEach(SocialAuth::expireToken);
             socialAuthRepository.deleteAll(socialAuths);
         }
 
+        // 3. User 엔티티 최종 삭제
         userRepository.delete(user);
     }
 

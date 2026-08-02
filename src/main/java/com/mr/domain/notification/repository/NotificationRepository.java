@@ -26,4 +26,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     // 중복 알림 방지용 쿼리 메서드
     boolean existsByUser_UserIdAndTitleAndCreatedAtAfter(Long userId, String title, LocalDateTime time);
+
+    @Modifying(clearAutomatically = true)
+    @Query("delete from Notification n where n.user.userId = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 }
