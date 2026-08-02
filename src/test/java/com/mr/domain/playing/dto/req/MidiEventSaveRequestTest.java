@@ -17,6 +17,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class MidiEventSaveRequestTest {
 
+    private static final String RECORDING_OBJECT_KEY =
+            "recordings/1/2026-08-02/150000_a1b2c3.mp3";
+
     private static ValidatorFactory validatorFactory;
     private static Validator validator;
 
@@ -42,7 +45,7 @@ class MidiEventSaveRequestTest {
 
         MidiEventSaveRequest request =
                 new MidiEventSaveRequest(
-                        List.of(event)
+                        List.of(event), RECORDING_OBJECT_KEY
                 );
 
         // when
@@ -59,7 +62,8 @@ class MidiEventSaveRequestTest {
     void validateNullEventInsideList() {
         MidiEventSaveRequest request =
                 new MidiEventSaveRequest(
-                        java.util.Collections.singletonList(null)
+                        java.util.Collections.singletonList(null),
+                        RECORDING_OBJECT_KEY
                 );
 
         Set<ConstraintViolation<MidiEventSaveRequest>> violations =
@@ -84,7 +88,8 @@ class MidiEventSaveRequestTest {
 
         MidiEventSaveRequest request =
                 new MidiEventSaveRequest(
-                        List.of(invalidEvent)
+                        List.of(invalidEvent),
+                        RECORDING_OBJECT_KEY
                 );
 
         // when
@@ -118,7 +123,8 @@ class MidiEventSaveRequestTest {
                                         100,
                                         100L
                                 )
-                        )
+                        ),
+                        RECORDING_OBJECT_KEY
                 );
 
         Set<ConstraintViolation<MidiEventSaveRequest>> violations =
@@ -146,7 +152,8 @@ class MidiEventSaveRequestTest {
 
         MidiEventSaveRequest request =
                 new MidiEventSaveRequest(
-                        List.of(invalidEvent)
+                        List.of(invalidEvent),
+                        RECORDING_OBJECT_KEY
                 );
 
         // when
@@ -182,7 +189,8 @@ class MidiEventSaveRequestTest {
 
         MidiEventSaveRequest request =
                 new MidiEventSaveRequest(
-                        List.of(invalidEvent)
+                        List.of(invalidEvent),
+                        RECORDING_OBJECT_KEY
                 );
 
         // when
@@ -216,7 +224,8 @@ class MidiEventSaveRequestTest {
                                         128,
                                         100L
                                 )
-                        )
+                        ),
+                        RECORDING_OBJECT_KEY
                 );
 
         Set<ConstraintViolation<MidiEventSaveRequest>> violations =
@@ -244,7 +253,7 @@ class MidiEventSaveRequestTest {
 
         MidiEventSaveRequest request =
                 new MidiEventSaveRequest(
-                        List.of(invalidEvent)
+                        List.of(invalidEvent), RECORDING_OBJECT_KEY
                 );
 
         // when
@@ -280,7 +289,7 @@ class MidiEventSaveRequestTest {
 
         MidiEventSaveRequest request =
                 new MidiEventSaveRequest(
-                        List.of(invalidEvent)
+                        List.of(invalidEvent), RECORDING_OBJECT_KEY
                 );
 
         // when
@@ -316,7 +325,7 @@ class MidiEventSaveRequestTest {
         // given
         MidiEventSaveRequest request =
                 new MidiEventSaveRequest(
-                        List.of()
+                        List.of(), RECORDING_OBJECT_KEY
                 );
 
         // when
@@ -342,7 +351,7 @@ class MidiEventSaveRequestTest {
     void validateNullEvents() {
         // given
         MidiEventSaveRequest request =
-                new MidiEventSaveRequest(null);
+                new MidiEventSaveRequest(null, RECORDING_OBJECT_KEY);
 
         // when
         Set<ConstraintViolation<MidiEventSaveRequest>> violations =

@@ -2,6 +2,7 @@ package com.mr.global.file.s3.service;
 
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.file.s3.config.S3Properties;
+import com.mr.global.file.s3.dto.ValidatedS3Object;
 import com.mr.global.file.s3.dto.req.RecordingPresignedUrlRequest;
 import com.mr.global.file.s3.dto.req.RecordingUploadCompleteRequest;
 import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
@@ -102,7 +103,26 @@ public class RecordingUploadService {
         validateUploadedObject(request, headObject);
 
         return new RecordingUploadCompleteResponse(
-                request.objectKey(),
+                buildFileUrl(request.objectKey()),
+                headObject.contentLength(),
+                headObject.contentType()
+        );
+    }
+
+    // 연주 완료 시 Object Key에 해당하는 실제 S3 녹음 객체 검증
+    public ValidatedS3Object validateObject(
+            Long userId,
+            String objectKey
+    ) {
+        validateObjectKey(userId, objectKey);
+
+        HeadObjectResponse headObject = getHeadObject(objectKey);
+
+        validateUploadedObject(objectKey, headObject);
+
+        return new ValidatedS3Object(
+                objectKey,
+                buildFileUrl(objectKey),
                 headObject.contentLength(),
                 headObject.contentType()
         );
@@ -188,6 +208,29 @@ public class RecordingUploadService {
         }
     }
 
+    private void validateUploadedObject(
+            String objectKey,
+            HeadObjectResponse headObject
+    ) {
+        long uploadedSize = headObject.contentLength();
+        String uploadedContentType = headObject.contentType();
+
+        if (uploadedSize <= 0) {
+            deleteObject(objectKey);
+            throw new GeneralException(S3ErrorStatus.INVALID_FILE_SIZE);
+        }
+
+        if (uploadedSize > s3Properties.maxFileSize()) {
+            deleteObject(objectKey);
+            throw new GeneralException(S3ErrorStatus.FILE_SIZE_EXCEEDED);
+        }
+
+        if (!s3Properties.allowedContentTypes().contains(uploadedContentType)) {
+            deleteObject(objectKey);
+            throw new GeneralException(S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE);
+        }
+    }
+
     // 업로드 검증에 실패한 객체를 S3에서 삭제
     private void deleteObject(String objectKey) {
         DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
@@ -200,5 +243,15 @@ public class RecordingUploadService {
         } catch (SdkException e) {
             log.error("검증에 실패한 S3 객체 삭제에 실패했습니다. objectKey={}", objectKey, e);
         }
+    }
+
+    private String buildFileUrl(String objectKey) {
+        String fileUrl = s3Client.utilities()
+                .getUrl(builder -> builder
+                        .bucket(s3Properties.bucket())
+                        .key(objectKey))
+                .toString();
+
+        return fileUrl;
     }
 }

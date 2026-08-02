@@ -51,9 +51,12 @@ class RecordingUploadServiceTest {
     private static final String OBJECT_KEY =
             "recordings/1/2026-08-02/033746_e90683.mp3";
 
+    private static final String RECORDING_FILE_URL =
+            "https://" + BUCKET + ".s3." + REGION + ".amazonaws.com/" + OBJECT_KEY;
     private static final String UPLOAD_URL =
-            "https://test-bucket.s3.ap-northeast-2.amazonaws.com/"
-                    + "recordings/1/2026-08-02/033746_e90683.mp3";
+            RECORDING_FILE_URL
+                    + "?X-Amz-Algorithm=AWS4-HMAC-SHA256"
+                    + "&X-Amz-Signature=test-signature";
 
     private static final Long FILE_SIZE = 1024L;
     private static final Long MAX_FILE_SIZE = 30L * 1024 * 1024;
@@ -281,8 +284,8 @@ class RecordingUploadServiceTest {
                     );
 
             // then
-            assertThat(response.objectKey())
-                    .isEqualTo(OBJECT_KEY);
+            assertThat(response.recordingFileUrl())
+                    .isEqualTo(RECORDING_FILE_URL);
 
             assertThat(response.fileSize())
                     .isEqualTo(FILE_SIZE);
