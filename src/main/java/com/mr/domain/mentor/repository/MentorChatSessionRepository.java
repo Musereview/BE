@@ -11,7 +11,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface MentorChatSessionRepository extends JpaRepository<MentorChatSession, Long> {
 
-    Optional<MentorChatSession> findByAnalysisId(Long analysisId);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select session from MentorChatSession session where session.analysis.id = :analysisId")
+    Optional<MentorChatSession> findByAnalysisIdForUpdate(@Param("analysisId") Long analysisId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select session from MentorChatSession session where session.id = :sessionId")

@@ -52,7 +52,7 @@ public class MentorQuestionService {
             throw new GeneralException(MentorErrorStatus.MENTOR_ANALYSIS_NOT_COMPLETED);
         }
 
-        MentorChatSession session = sessionRepository.findByAnalysisId(analysisId)
+        MentorChatSession session = sessionRepository.findByAnalysisIdForUpdate(analysisId)
                 .orElseGet(() -> sessionRepository.save(
                         MentorChatSession.createActive(analysis, analysis.getUser())));
         String generationToken = session.startGenerating(STALE_GENERATION_AFTER);
