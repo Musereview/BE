@@ -88,7 +88,7 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
         Double getAverageTotalScore();
     }
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from Analysis a where a.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }

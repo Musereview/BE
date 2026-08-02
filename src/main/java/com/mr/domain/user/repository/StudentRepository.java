@@ -13,7 +13,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     Optional<Student> findByUser(User user);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from Student s where s.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }

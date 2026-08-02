@@ -12,7 +12,7 @@ public interface UserStatisticsRepository extends JpaRepository<UserStatistics, 
 
     Optional<UserStatistics> findByUser_UserId(Long userId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from UserStatistics us where us.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }

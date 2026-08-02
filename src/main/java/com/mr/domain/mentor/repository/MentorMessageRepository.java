@@ -12,7 +12,7 @@ public interface MentorMessageRepository extends JpaRepository<MentorMessage, Lo
 
     List<MentorMessage> findByMentorChatSessionAnalysisIdOrderByCreatedAtAscIdAsc(Long analysisId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from MentorMessage mm where mm.mentorChatSession.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }

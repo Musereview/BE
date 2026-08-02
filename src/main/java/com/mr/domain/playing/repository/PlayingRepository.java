@@ -98,7 +98,7 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
 
     Optional<Playing> findByIdAndDeletedAtIsNull(Long playingId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from Playing p where p.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }

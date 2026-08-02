@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface ChordProgressionRepository extends JpaRepository<ChordProgression, Long> {
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from ChordProgression cp where cp.backingTrack.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }

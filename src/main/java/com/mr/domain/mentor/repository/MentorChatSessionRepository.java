@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface MentorChatSessionRepository extends JpaRepository<MentorChatSession, Long> {
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from MentorChatSession mcs where mcs.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }

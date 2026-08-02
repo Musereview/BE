@@ -16,7 +16,7 @@ public interface SkillStatisticsRepository extends JpaRepository<SkillStatistics
     Optional<SkillStatistics> findByUser_UserIdAndPeriodTypeAndPeriodStartAndSkillType(
             Long userId, PeriodType periodType, LocalDate periodStart, SkillType skillType);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from SkillStatistics ss where ss.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }

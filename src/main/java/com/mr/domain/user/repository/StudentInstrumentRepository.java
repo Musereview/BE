@@ -13,7 +13,7 @@ public interface StudentInstrumentRepository extends JpaRepository<StudentInstru
 
     Optional<StudentInstrument> findFirstByStudentAndPrimaryTrue(Student student);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from StudentInstrument si where si.student.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }

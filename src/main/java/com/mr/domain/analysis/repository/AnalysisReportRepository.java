@@ -16,7 +16,7 @@ public interface AnalysisReportRepository extends JpaRepository<AnalysisReport, 
             LlmStatus llmStatus
     );
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from AnalysisReport ar where ar.analysis.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }

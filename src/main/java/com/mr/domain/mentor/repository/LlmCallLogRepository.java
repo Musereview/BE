@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface LlmCallLogRepository extends JpaRepository<LlmCallLog, Long> {
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from LlmCallLog l where l.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }

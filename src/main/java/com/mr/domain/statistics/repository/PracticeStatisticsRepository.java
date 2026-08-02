@@ -15,7 +15,7 @@ public interface PracticeStatisticsRepository extends JpaRepository<PracticeStat
     Optional<PracticeStatistics> findByUser_UserIdAndPeriodTypeAndPeriodStart(
             Long userId, PeriodType periodType, LocalDate periodStart);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from PracticeStatistics ps where ps.user.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 }
