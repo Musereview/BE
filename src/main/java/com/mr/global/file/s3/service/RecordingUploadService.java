@@ -69,9 +69,6 @@ public class RecordingUploadService {
             PresignedPutObjectRequest presignedRequest =
                     s3Presigner.presignPutObject(presignRequest);
 
-            System.out.println("PutObject bucket = " + putObjectRequest.bucket());
-            System.out.println("Presigned URL = " + presignedRequest.url());
-
             // 클라이언트에게 전달할 URL 만료 시각 계산 : 10분
             Instant expiresAt = Instant.now()
                     .plus(s3Properties.presignedUrlExpiration());
