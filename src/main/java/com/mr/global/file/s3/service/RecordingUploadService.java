@@ -102,7 +102,25 @@ public class RecordingUploadService {
         validateUploadedObject(request, headObject);
 
         return new RecordingUploadCompleteResponse(
-                request.objectKey(),
+                buildRecordingFileUrl(request.objectKey()),
+                headObject.contentLength(),
+                headObject.contentType()
+        );
+    }
+
+    // 연주 완료 시 Object Key에 해당하는 실제 S3 녹음 객체 검증
+    public RecordingUploadCompleteResponse validateRecordingObject(
+            Long userId,
+            String objectKey
+    ) {
+        validateObjectKey(userId, objectKey);
+
+        HeadObjectResponse headObject = getHeadObject(objectKey);
+
+        validateUploadedObject(objectKey, headObject);
+
+        return new RecordingUploadCompleteResponse(
+                buildRecordingFileUrl(objectKey),
                 headObject.contentLength(),
                 headObject.contentType()
         );
@@ -188,6 +206,29 @@ public class RecordingUploadService {
         }
     }
 
+    private void validateUploadedObject(
+            String objectKey,
+            HeadObjectResponse headObject
+    ) {
+        long uploadedSize = headObject.contentLength();
+        String uploadedContentType = headObject.contentType();
+
+        if (uploadedSize <= 0) {
+            deleteObject(objectKey);
+            throw new GeneralException(S3ErrorStatus.INVALID_FILE_SIZE);
+        }
+
+        if (uploadedSize > s3Properties.maxFileSize()) {
+            deleteObject(objectKey);
+            throw new GeneralException(S3ErrorStatus.FILE_SIZE_EXCEEDED);
+        }
+
+        if (!s3Properties.allowedContentTypes().contains(uploadedContentType)) {
+            deleteObject(objectKey);
+            throw new GeneralException(S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE);
+        }
+    }
+
     // 업로드 검증에 실패한 객체를 S3에서 삭제
     private void deleteObject(String objectKey) {
         DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
@@ -200,5 +241,13 @@ public class RecordingUploadService {
         } catch (SdkException e) {
             log.error("검증에 실패한 S3 객체 삭제에 실패했습니다. objectKey={}", objectKey, e);
         }
+    }
+
+    private String buildRecordingFileUrl(String objectKey) {
+        return "https://%s.s3.%s.amazonaws.com/%s".formatted(
+                s3Properties.bucket(),
+                s3Properties.region(),
+                objectKey
+        );
     }
 }

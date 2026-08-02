@@ -15,6 +15,10 @@ import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.dto.req.RecordingPresignedUrlRequest;
+import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
+import com.mr.global.file.s3.dto.res.RecordingUploadCompleteResponse;
+import com.mr.global.file.s3.service.RecordingUploadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +35,7 @@ public class PlayingService {
     private final PlayingRepository playingRepository;
     private final UserRepository userRepository;
     private final BackingTrackRepository backingTrackRepository;
+    private final RecordingUploadService recordingUploadService;
 
     @Transactional
     public PlayingStartResponse startPlaying(
@@ -57,6 +62,21 @@ public class PlayingService {
 
     }
 
+    @Transactional(readOnly = true)
+    public RecordingPresignedUrlResponse createRecordingUploadUrl(
+            Long userId, Long playingId, RecordingPresignedUrlRequest request
+    ) {
+        validatePlayingId(playingId);
+
+        Playing playing = playingRepository.findByIdAndDeletedAtIsNull(playingId)
+                .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
+
+        playing.validatePlayingOwner(userId);
+        playing.validateInProgress();
+
+        return recordingUploadService.createPresignedUrl(userId, request);
+    }
+
     @Transactional
     public MidiEventSaveResponse saveMidiEvents(
             Long userId, Long playingId, MidiEventSaveRequest request
@@ -67,6 +87,10 @@ public class PlayingService {
                 .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
 
         playing.validatePlayingOwner(userId);
+        playing.validateInProgress();
+
+        RecordingUploadCompleteResponse recording =
+                recordingUploadService.validateRecordingObject(userId, request.recordingObjectKey());
 
         List<MidiEventData> midiEvents = request.events()
                 .stream()
@@ -78,7 +102,10 @@ public class PlayingService {
                         event.timestampMs()
                 )).toList();
 
-        playing.completeWithMidiData(midiEvents);
+        playing.completeWithMidiData(
+                midiEvents,
+                recording.recordingFileUrl()
+        );
 
         return MidiEventSaveResponse.of(
                 playing.getId(),

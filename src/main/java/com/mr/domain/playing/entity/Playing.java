@@ -189,7 +189,8 @@ public class Playing extends BaseCreatedDeletedEntity {
 
     // 연주 완료 시 전체 MIDI 데이터를 저장하고 완료 상태로 전환
     public void completeWithMidiData(
-            List<MidiEventData> requestedMidiData
+            List<MidiEventData> requestedMidiData,
+            String recordingFileUrl
     ) {
         validateCompletableStatus();
         validateMidiData(requestedMidiData);
@@ -203,6 +204,7 @@ public class Playing extends BaseCreatedDeletedEntity {
         this.midiData = new ArrayList<>(normalizedMidiData);
         this.endedAt = calculateEndedAt(completedAt);
         this.durationSec = convertToDurationSec(savedDurationMs);
+        this.recordingFileUrl = recordingFileUrl;
         this.status = PlayingStatus.COMPLETED;
     }
 
@@ -215,6 +217,12 @@ public class Playing extends BaseCreatedDeletedEntity {
     public void validateCompleted() {
         if (this.status != PlayingStatus.COMPLETED) {
             throw new GeneralException(PlayingErrorStatus.PLAYING_NOT_COMPLETED);
+        }
+    }
+
+    public void validateInProgress() {
+        if (this.status != PlayingStatus.IN_PROGRESS) {
+            throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_STATUS);
         }
     }
 
