@@ -101,6 +101,7 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
             select coalesce(sum(p.durationSec), 0) from Playing p
             where p.user.userId = :userId
               and p.status = :status
+              and p.deletedAt is null
               and p.endedAt >= :since
               and p.id != :excludePlayingId
             """)
