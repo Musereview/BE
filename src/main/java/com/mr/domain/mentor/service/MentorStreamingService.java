@@ -2,9 +2,12 @@ package com.mr.domain.mentor.service;
 
 import com.mr.domain.mentor.dto.res.MentorStreamEventDTO;
 import com.mr.domain.mentor.exception.MentorErrorStatus;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.client.gemini.GeminiStreamingClient;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -28,6 +31,7 @@ public class MentorStreamingService {
     private final GeminiStreamingClient geminiStreamingClient;
     private final MentorQuestionService questionService;
     private final TaskExecutor taskExecutor;
+    private final Map<Long, GenerationContext> activeGenerations = new ConcurrentHashMap<>();
 
     public MentorStreamingService(
             GeminiStreamingClient geminiStreamingClient,
@@ -41,15 +45,20 @@ public class MentorStreamingService {
 
     public SseEmitter stream(MentorQuestionService.PreparedQuestion prepared) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
-        AtomicBoolean terminated = new AtomicBoolean(false);
-        emitter.onTimeout(() -> recover(prepared.sessionId(), prepared.generationToken(), terminated));
-        emitter.onError(exception -> recover(prepared.sessionId(), prepared.generationToken(), terminated));
+        GenerationContext context = new GenerationContext(prepared.generationToken(), emitter);
+        GenerationContext previous = activeGenerations.put(prepared.sessionId(), context);
+        if (previous != null) {
+            cancelSuperseded(prepared.sessionId(), previous);
+        }
+        emitter.onTimeout(() -> recover(prepared, context));
+        emitter.onError(exception -> recover(prepared, context));
+        emitter.onCompletion(() -> recover(prepared, context));
 
         try {
             send(emitter, "start", prepared.startEvent());
-            taskExecutor.execute(() -> generate(prepared, emitter, terminated));
+            taskExecutor.execute(() -> generate(prepared, context));
         } catch (RuntimeException exception) {
-            recover(prepared.sessionId(), prepared.generationToken(), terminated);
+            recover(prepared, context);
             throw exception;
         }
         return emitter;
@@ -57,56 +66,122 @@ public class MentorStreamingService {
 
     private void generate(
             MentorQuestionService.PreparedQuestion prepared,
-            SseEmitter emitter,
-            AtomicBoolean terminated
+            GenerationContext context
     ) {
         String answer;
         try {
             answer = geminiStreamingClient.stream(
                     SYSTEM_PROMPT,
                     prepared.prompt(),
-                    chunk -> send(emitter, "chunk", new MentorStreamEventDTO.Chunk(chunk))
+                    chunk -> sendChunk(context, chunk)
             );
+        } catch (GenerationCancelledException exception) {
+            log.debug("AI mentor streaming cancelled. sessionId={}", prepared.sessionId());
+            return;
+        } catch (UncheckedIOException exception) {
+            log.debug("AI mentor client disconnected. sessionId={}", prepared.sessionId());
+            recover(prepared, context);
+            return;
         } catch (Exception exception) {
+            if (context.isTerminated()) {
+                return;
+            }
             log.warn("AI mentor streaming failed. sessionId={}", prepared.sessionId(), exception);
-            terminateWithError(prepared, emitter, terminated,
+            terminateWithError(prepared, context,
                     MentorErrorStatus.MENTOR_RESPONSE_GENERATION_FAILED);
             return;
         }
 
-        if (terminated.get()) {
+        if (context.isTerminated()) {
             return;
         }
+
+        MentorStreamEventDTO.Complete complete;
         try {
-            MentorStreamEventDTO.Complete complete = questionService.complete(
-                    prepared.sessionId(), prepared.generationToken(), answer);
-            if (!terminated.compareAndSet(false, true)) {
+            synchronized (context) {
+                if (context.isTerminated()) {
+                    return;
+                }
+                complete = questionService.complete(
+                        prepared.sessionId(), prepared.generationToken(), answer);
+                context.terminate();
+            }
+        } catch (Exception exception) {
+            if (isSuperseded(exception)) {
+                log.debug("AI mentor generation superseded. sessionId={}", prepared.sessionId());
+                terminateSilently(prepared.sessionId(), context);
                 return;
             }
-            send(emitter, "complete", complete);
-            emitter.complete();
-        } catch (Exception exception) {
             log.error("AI mentor answer save failed. sessionId={}", prepared.sessionId(), exception);
-            terminateWithError(prepared, emitter, terminated, MentorErrorStatus.MENTOR_MESSAGE_SAVE_FAILED);
+            terminateWithError(prepared, context, MentorErrorStatus.MENTOR_MESSAGE_SAVE_FAILED);
+            return;
+        }
+
+        activeGenerations.remove(prepared.sessionId(), context);
+        try {
+            send(context.emitter(), "complete", complete);
+        } catch (RuntimeException exception) {
+            log.debug("AI mentor completion event could not be delivered. sessionId={}", prepared.sessionId());
+        } finally {
+            context.emitter().complete();
         }
     }
 
     private void terminateWithError(
             MentorQuestionService.PreparedQuestion prepared,
-            SseEmitter emitter,
-            AtomicBoolean terminated,
+            GenerationContext context,
             MentorErrorStatus errorStatus
     ) {
-        if (terminated.compareAndSet(false, true)) {
+        synchronized (context) {
+            if (!context.terminate()) {
+                return;
+            }
             safelyFail(prepared.sessionId(), prepared.generationToken());
-            sendError(emitter, errorStatus);
+        }
+        activeGenerations.remove(prepared.sessionId(), context);
+        sendError(context.emitter(), errorStatus);
+    }
+
+    private void recover(MentorQuestionService.PreparedQuestion prepared, GenerationContext context) {
+        synchronized (context) {
+            if (!context.terminate()) {
+                return;
+            }
+            safelyFail(prepared.sessionId(), prepared.generationToken());
+        }
+        activeGenerations.remove(prepared.sessionId(), context);
+    }
+
+    private void cancelSuperseded(Long sessionId, GenerationContext context) {
+        synchronized (context) {
+            if (!context.terminate()) {
+                return;
+            }
+        }
+        activeGenerations.remove(sessionId, context);
+        context.emitter().complete();
+    }
+
+    private void terminateSilently(Long sessionId, GenerationContext context) {
+        synchronized (context) {
+            context.terminate();
+        }
+        activeGenerations.remove(sessionId, context);
+        context.emitter().complete();
+    }
+
+    private void sendChunk(GenerationContext context, String chunk) {
+        synchronized (context) {
+            if (context.isTerminated()) {
+                throw new GenerationCancelledException();
+            }
+            send(context.emitter(), "chunk", new MentorStreamEventDTO.Chunk(chunk));
         }
     }
 
-    private void recover(Long sessionId, String generationToken, AtomicBoolean terminated) {
-        if (terminated.compareAndSet(false, true)) {
-            safelyFail(sessionId, generationToken);
-        }
+    private boolean isSuperseded(Exception exception) {
+        return exception instanceof GeneralException generalException
+                && generalException.getCode() == MentorErrorStatus.MENTOR_SESSION_NOT_ACTIVE;
     }
 
     private void safelyFail(Long sessionId, String generationToken) {
@@ -133,5 +208,26 @@ public class MentorStreamingService {
         } finally {
             emitter.complete();
         }
+    }
+
+    private record GenerationContext(
+            String generationToken,
+            SseEmitter emitter,
+            AtomicBoolean terminated
+    ) {
+        private GenerationContext(String generationToken, SseEmitter emitter) {
+            this(generationToken, emitter, new AtomicBoolean(false));
+        }
+
+        private boolean isTerminated() {
+            return terminated.get();
+        }
+
+        private boolean terminate() {
+            return terminated.compareAndSet(false, true);
+        }
+    }
+
+    private static final class GenerationCancelledException extends RuntimeException {
     }
 }

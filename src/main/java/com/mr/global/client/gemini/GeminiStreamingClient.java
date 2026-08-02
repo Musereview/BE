@@ -58,7 +58,11 @@ public class GeminiStreamingClient {
                             if (!line.startsWith("data:")) {
                                 continue;
                             }
-                            JsonNode event = objectMapper.readTree(line.substring(5).trim());
+                            String payload = line.substring(5).trim();
+                            if (payload.isEmpty() || "[DONE]".equals(payload)) {
+                                continue;
+                            }
+                            JsonNode event = objectMapper.readTree(payload);
                             String chunk = extractText(event);
                             if (!chunk.isEmpty()) {
                                 answer.append(chunk);

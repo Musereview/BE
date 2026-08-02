@@ -56,4 +56,25 @@ class GeminiStreamingClientTest {
         assertThat(answer).isEqualTo("첫 문장. 둘째 문장.");
         server.verify();
     }
+
+    @Test
+    void stream_ignoresEmptyDataAndDoneMarker() {
+        server.expect(requestTo(BASE_URL
+                        + "/v1beta/models/gemini-3-flash-preview:streamGenerateContent?alt=sse"))
+                .andRespond(withSuccess("""
+                        data:
+
+                        data: {"candidates":[{"content":{"parts":[{"text":"answer"}]}}]}
+
+                        data: [DONE]
+
+                        """, MediaType.TEXT_EVENT_STREAM));
+        List<String> chunks = new ArrayList<>();
+
+        String answer = client.stream("system", "prompt", chunks::add);
+
+        assertThat(chunks).containsExactly("answer");
+        assertThat(answer).isEqualTo("answer");
+        server.verify();
+    }
 }
