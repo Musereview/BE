@@ -13,7 +13,7 @@ public enum S3ErrorStatus implements BaseCode {
     FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "S3_400_02", "업로드 가능한 파일 크기를 초과했습니다."),
     UNSUPPORTED_CONTENT_TYPE(HttpStatus.BAD_REQUEST, "S3_400_03", "지원하지 않는 오디오 Content-Type입니다."),
     UNSUPPORTED_FILE_EXTENSION(HttpStatus.BAD_REQUEST, "S3_400_04", "지원하지 않는 파일 확장자입니다."),
-    INVALID_OBJECT_KEY(HttpStatus.BAD_REQUEST, "S3_403_01", "접근할 수 없는 S3 Object Key입니다."),
+    INVALID_OBJECT_KEY(HttpStatus.BAD_REQUEST, "S3_400_05", "접근할 수 없는 S3 Object Key입니다."),
     OBJECT_NOT_FOUND(HttpStatus.NOT_FOUND, "S3_404_01", "업로드된 파일을 찾을 수 없습니다."),
     FILE_SIZE_MISMATCH(HttpStatus.CONFLICT, "S3_409_01", "요청한 파일 크기와 업로드된 파일 크기가 일치하지 않습니다."),
     CONTENT_TYPE_MISMATCH(HttpStatus.CONFLICT, "S3_409_02", "요청한 Content-Type과 업로드된 파일의 Content-Type이 일치하지 않습니다."),
