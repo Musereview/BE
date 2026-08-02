@@ -191,7 +191,7 @@ public class HomeService {
 
     private List<RecentPlaying> buildRecentPlayings(Long userId) {
         Slice<Playing> slice = playingRepository.findPlayingsByUserAndStatus(
-                userId, PlayingStatus.COMPLETED, null, PageRequest.of(0, RECENT_PLAYINGS_LIMIT));
+                userId, PlayingStatus.COMPLETED, PageRequest.of(0, RECENT_PLAYINGS_LIMIT));
 
         return slice.getContent().stream()
                 .map(playing -> RecentPlaying.of(playing, RelativeDateFormatter.format(playing.getEndedAt())))

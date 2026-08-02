@@ -22,10 +22,24 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
             where p.user.userId = :userId
               and p.status = :status
               and p.deletedAt is null
-              and (:cutoff is null or p.endedAt >= :cutoff)
             order by p.endedAt desc, p.id desc
             """)
     Slice<Playing> findPlayingsByUserAndStatus(
+            @Param("userId") Long userId,
+            @Param("status") PlayingStatus status,
+            Pageable pageable
+    );
+
+    @Query("""
+            select p from Playing p
+            left join fetch p.backingTrack
+            where p.user.userId = :userId
+              and p.status = :status
+              and p.deletedAt is null
+              and p.endedAt >= :cutoff
+            order by p.endedAt desc, p.id desc
+            """)
+    Slice<Playing> findPlayingsByUserAndStatusSince(
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status,
             @Param("cutoff") LocalDateTime cutoff,
