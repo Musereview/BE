@@ -15,22 +15,38 @@ import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.dto.ValidatedS3Object;
+import com.mr.global.file.s3.dto.req.RecordingPresignedUrlRequest;
+import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
+import com.mr.global.file.s3.service.RecordingUploadService;
+import com.mr.global.event.NotificationEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Clock;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.mr.domain.backingtrack.entity.enums.AccessLevel.PUBLIC;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class PlayingService {
 
     private final PlayingRepository playingRepository;
     private final UserRepository userRepository;
     private final BackingTrackRepository backingTrackRepository;
+    private final RecordingUploadService recordingUploadService;
+    private final TransactionTemplate transactionTemplate;
+
+    private final ApplicationEventPublisher eventPublisher;
+
+    private final Clock clock;
 
     @Transactional
     public PlayingStartResponse startPlaying(
@@ -57,9 +73,9 @@ public class PlayingService {
 
     }
 
-    @Transactional
-    public MidiEventSaveResponse saveMidiEvents(
-            Long userId, Long playingId, MidiEventSaveRequest request
+    @Transactional(readOnly = true)
+    public RecordingPresignedUrlResponse createRecordingUploadUrl(
+            Long userId, Long playingId, RecordingPresignedUrlRequest request
     ) {
         validatePlayingId(playingId);
 
@@ -67,6 +83,19 @@ public class PlayingService {
                 .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
 
         playing.validatePlayingOwner(userId);
+        playing.validateInProgress();
+
+        return recordingUploadService.createPresignedUrl(userId, request);
+    }
+
+    public MidiEventSaveResponse saveMidiEvents(
+            Long userId, Long playingId, MidiEventSaveRequest request
+    ) {
+        validatePlayingId(playingId);
+
+        // S3 네트워크 통신은 DB 트랜잭션 밖에서 수행
+        ValidatedS3Object recording =
+                recordingUploadService.validateObject(userId, request.recordingObjectKey());
 
         List<MidiEventData> midiEvents = request.events()
                 .stream()
@@ -78,12 +107,47 @@ public class PlayingService {
                         event.timestampMs()
                 )).toList();
 
-        playing.completeWithMidiData(midiEvents);
+        // DB 조회 및 변경 작업만 트랜잭션 안에서 수행
+        return transactionTemplate.execute(status -> {
+            Playing playing = playingRepository.findByIdAndDeletedAtIsNull(playingId)
+                    .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
 
-        return MidiEventSaveResponse.of(
-                playing.getId(),
-                playing.getMidiData().size()
-        );
+            playing.validatePlayingOwner(userId);
+            playing.validateInProgress();
+
+            playing.completeWithMidiData(
+                    midiEvents,
+                    recording.fileUrl()
+            );
+
+            int intervalHours = 10; // 10시간 단위로 알림
+            int intervalSeconds = intervalHours * 3600;
+
+            LocalDateTime weekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY).atStartOfDay();
+
+            // 방금 끝낸 연주를 제외한 이전 누적 시간
+            Long previousWeeklySeconds = playingRepository.sumDurationSecExcludeCurrent(
+                    userId, playing.getStatus(), weekStart, playing.getId()
+            );
+
+            Long currentDuration = playing.getDurationSec() != null ? playing.getDurationSec() : 0L;
+            Long totalWeeklySeconds = previousWeeklySeconds + currentDuration;
+
+            Long previousMilestones = previousWeeklySeconds / intervalSeconds;
+            Long currentMilestones = totalWeeklySeconds / intervalSeconds;
+
+            if (currentMilestones > previousMilestones) {
+                int achievedHours = (int)(currentMilestones * intervalHours); // 달성한 시간: 10 시간 단위
+                eventPublisher.publishEvent(
+                        NotificationEvent.forPractice(userId, playing.getUser().getNickname(), achievedHours)
+                );
+            }
+
+            return MidiEventSaveResponse.of(
+                    playing.getId(),
+                    playing.getMidiData().size()
+            );
+        });
     }
 
     @Transactional(readOnly = true)

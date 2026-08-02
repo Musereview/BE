@@ -69,4 +69,7 @@ public interface BackingTrackRepository extends JpaRepository<BackingTrack, Long
             @Param("backingTrackId") Long backingTrackId
     );
 
+    @Modifying(clearAutomatically = true)
+    @Query("delete from BackingTrack b where b.user.userId = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 }

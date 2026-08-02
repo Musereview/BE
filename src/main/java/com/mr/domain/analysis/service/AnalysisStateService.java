@@ -23,6 +23,8 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Optional;
+
+import com.mr.global.event.NotificationEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -116,6 +118,16 @@ public class AnalysisStateService {
         saveLlmCallLog(analysis, report, generatedReport.llmCall());
         eventPublisher.publishEvent(
                 AnalysisCompletedEvent.of(analysis.getUser().getUserId())
+        );
+
+        String practiceName = "자유 연주";
+
+        if (analysis.getPlaying() != null && analysis.getPlaying().getBackingTrack() != null) {
+            practiceName = analysis.getPlaying().getBackingTrack().getTitle();
+        }
+
+        eventPublisher.publishEvent(
+                NotificationEvent.forAnalysis(analysis.getUser().getUserId(), practiceName)
         );
         return true;
     }

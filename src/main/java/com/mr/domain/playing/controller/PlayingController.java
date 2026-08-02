@@ -8,6 +8,8 @@ import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
 import com.mr.domain.playing.service.PlayingService;
 import com.mr.global.apipayload.ApiResponse;
+import com.mr.global.file.s3.dto.req.RecordingPresignedUrlRequest;
+import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
 import com.mr.global.security.principal.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -40,6 +42,19 @@ public class PlayingController {
         Long userId = userDetails.getUserId();
 
         PlayingStartResponse response = playingService.startPlaying(userId, request);
+        return ApiResponse.onSuccess(response);
+    }
+
+    @PostMapping("/{playingId}/recording-upload-url")
+    public ApiResponse<RecordingPresignedUrlResponse> createRecordingUploadUrl(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long playingId,
+            @Valid @RequestBody RecordingPresignedUrlRequest request
+    ) {
+        Long userId = userDetails.getUserId();
+
+        RecordingPresignedUrlResponse response =
+                playingService.createRecordingUploadUrl(userId, playingId, request);
         return ApiResponse.onSuccess(response);
     }
 

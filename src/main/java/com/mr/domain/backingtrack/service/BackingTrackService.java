@@ -243,6 +243,7 @@ public class BackingTrackService {
                             track.getGenre(),
                             track.getKeySignature(),
                             track.getScaleType().name(),
+                            track.getTimeSignature(),
                             chordNames,
                             track.getBpm(),
                             track.getLevel().name(),
