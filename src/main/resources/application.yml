@@ -74,8 +74,18 @@ external:
 
 aws:
   s3:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY_ID}
+      secret-key: ${AWS_SECRET_ACCESS_KEY}
     bucket: ${AWS_S3_BUCKET:}
     region: ${AWS_REGION:ap-northeast-2}
+    presigned-url-expiration: 10m
+    max-file-size: 31457280         # 30MB
+    key-prefix: recordings
+    allowed-content-types:
+      - audio/mpeg
+      - audio/wav
+      - audio/x-wav
 
 
 # 내부 AI 분석 서버 설정
