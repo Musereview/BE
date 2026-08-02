@@ -72,9 +72,6 @@ public class RecordingUploadService {
             Instant expiresAt = Instant.now()
                     .plus(s3Properties.presignedUrlExpiration());
 
-            System.out.println("S3 bucket = " + s3Properties.bucket());
-            System.out.println("S3 region = " + s3Properties.region());
-
             return new RecordingPresignedUrlResponse(
                     objectKey,
                     presignedRequest.url().toString(),
