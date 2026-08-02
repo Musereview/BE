@@ -1,9 +1,11 @@
 package com.mr.global.client.gemini;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.global.config.GeminiProperties;
@@ -13,6 +15,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -75,6 +78,47 @@ class GeminiStreamingClientTest {
 
         assertThat(chunks).containsExactly("answer");
         assertThat(answer).isEqualTo("answer");
+        server.verify();
+    }
+
+    @Test
+    void stream_nonSuccessfulResponse_throwsException() {
+        server.expect(requestTo(BASE_URL
+                        + "/v1beta/models/gemini-3-flash-preview:streamGenerateContent?alt=sse"))
+                .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+
+        assertThatThrownBy(() -> client.stream("system", "prompt", chunk -> { }))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("502 BAD_GATEWAY");
+        server.verify();
+    }
+
+    @Test
+    void stream_emptyAnswer_throwsException() {
+        server.expect(requestTo(BASE_URL
+                        + "/v1beta/models/gemini-3-flash-preview:streamGenerateContent?alt=sse"))
+                .andRespond(withSuccess("""
+                        data: {"candidates":[]}
+
+                        """, MediaType.TEXT_EVENT_STREAM));
+
+        assertThatThrownBy(() -> client.stream("system", "prompt", chunk -> { }))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Gemini returned an empty answer.");
+        server.verify();
+    }
+
+    @Test
+    void stream_malformedData_throwsException() {
+        server.expect(requestTo(BASE_URL
+                        + "/v1beta/models/gemini-3-flash-preview:streamGenerateContent?alt=sse"))
+                .andRespond(withSuccess("""
+                        data: not-json
+
+                        """, MediaType.TEXT_EVENT_STREAM));
+
+        assertThatThrownBy(() -> client.stream("system", "prompt", chunk -> { }))
+                .hasMessageContaining("Unrecognized token");
         server.verify();
     }
 }

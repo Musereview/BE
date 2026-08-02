@@ -6,6 +6,7 @@ import com.mr.global.apipayload.exception.GeneralException;
 import jakarta.validation.ConstraintViolationException;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -21,7 +22,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleGeneralException(GeneralException e) {
         var reason = e.getErrorReason();
         ApiResponse<Object> response = ApiResponse.onFailure(reason.code(), reason.message(), null);
-        return new ResponseEntity<>(response, reason.status());
+        return ResponseEntity.status(reason.status())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
     }
 
     // @Valid 검증 실패 예외
@@ -35,7 +38,9 @@ public class GlobalExceptionHandler {
                         (existing, replacement) -> existing
                 ));
         ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), errors);
-        return new ResponseEntity<>(response, status.getStatus());
+        return ResponseEntity.status(status.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
     }
 
     // JSON 파싱 에러
@@ -43,7 +48,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
         var status = CommonStatus.HTTP_MESSAGE_NOT_READABLE;
         ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), null);
-        return new ResponseEntity<>(response, status.getStatus());
+        return ResponseEntity.status(status.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
     }
 
     // 파라미터 제약 조건 위반 예외
@@ -57,7 +64,9 @@ public class GlobalExceptionHandler {
                         (existing, replacement) -> existing
                 ));
         ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), errors);
-        return new ResponseEntity<>(response, status.getStatus());
+        return ResponseEntity.status(status.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
     }
 
     // 파라미터 타입 불일치 예외
@@ -67,7 +76,9 @@ public class GlobalExceptionHandler {
         var status = CommonStatus.INVALID_INPUT_VALUE;
         var errors = Map.of(e.getName(), "요청 파라미터 형식이 올바르지 않습니다.");
         ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), errors);
-        return new ResponseEntity<>(response, status.getStatus());
+        return ResponseEntity.status(status.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
     }
 
     // 그 외  전체 서버 에러 처리
@@ -75,6 +86,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleAllException(Exception e) {
         var status = CommonStatus.INTERNAL_SERVER_ERROR;
         ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), null);
-        return new ResponseEntity<>(response, status.getStatus());
+        return ResponseEntity.status(status.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
     }
 }

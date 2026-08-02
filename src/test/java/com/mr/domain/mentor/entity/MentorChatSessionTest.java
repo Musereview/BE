@@ -69,4 +69,16 @@ class MentorChatSessionTest {
                 .isInstanceOf(GeneralException.class)
                 .hasFieldOrPropertyWithValue("code", MentorErrorStatus.MENTOR_RESPONSE_IN_PROGRESS);
     }
+
+    @Test
+    @DisplayName("stale GENERATING 세션은 새 생성 토큰으로 복구한다")
+    void startGenerating_staleGeneration_issuesNewToken() {
+        MentorChatSession session = MentorChatSession.createActive(mock(Analysis.class), mock(User.class));
+        String previousToken = session.startGenerating(Duration.ofMinutes(2));
+
+        String newToken = session.startGenerating(Duration.ZERO);
+
+        assertThat(newToken).isNotEqualTo(previousToken);
+        assertThat(session.getGenerationToken()).isEqualTo(newToken);
+    }
 }

@@ -50,15 +50,15 @@ public class MentorStreamingService {
         if (previous != null) {
             cancelSuperseded(prepared.sessionId(), previous);
         }
-        emitter.onTimeout(() -> recover(prepared, context));
-        emitter.onError(exception -> recover(prepared, context));
-        emitter.onCompletion(() -> recover(prepared, context));
+        emitter.onTimeout(() -> recover(prepared, context, true));
+        emitter.onError(exception -> recover(prepared, context, true));
+        emitter.onCompletion(() -> recover(prepared, context, false));
 
         try {
             send(emitter, "start", prepared.startEvent());
             taskExecutor.execute(() -> generate(prepared, context));
         } catch (RuntimeException exception) {
-            recover(prepared, context);
+            recover(prepared, context, false);
             throw exception;
         }
         return emitter;
@@ -80,7 +80,7 @@ public class MentorStreamingService {
             return;
         } catch (UncheckedIOException exception) {
             log.debug("AI mentor client disconnected. sessionId={}", prepared.sessionId());
-            recover(prepared, context);
+            recover(prepared, context, false);
             return;
         } catch (Exception exception) {
             if (context.isTerminated()) {
@@ -142,7 +142,11 @@ public class MentorStreamingService {
         sendError(context.emitter(), errorStatus);
     }
 
-    private void recover(MentorQuestionService.PreparedQuestion prepared, GenerationContext context) {
+    private void recover(
+            MentorQuestionService.PreparedQuestion prepared,
+            GenerationContext context,
+            boolean notifyClient
+    ) {
         synchronized (context) {
             if (!context.terminate()) {
                 return;
@@ -150,6 +154,9 @@ public class MentorStreamingService {
             safelyFail(prepared.sessionId(), prepared.generationToken());
         }
         activeGenerations.remove(prepared.sessionId(), context);
+        if (notifyClient) {
+            sendError(context.emitter(), MentorErrorStatus.MENTOR_RESPONSE_GENERATION_FAILED);
+        }
     }
 
     private void cancelSuperseded(Long sessionId, GenerationContext context) {

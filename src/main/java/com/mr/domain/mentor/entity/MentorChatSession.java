@@ -159,7 +159,7 @@ public class MentorChatSession extends BaseTimeEntity {
 
     private boolean isStale(Duration staleAfter) {
         return this.generationStartedAt == null
-                || this.generationStartedAt.isBefore(LocalDateTime.now().minus(staleAfter));
+                || !this.generationStartedAt.isAfter(LocalDateTime.now().minus(staleAfter));
     }
 
     private void clearGeneration() {

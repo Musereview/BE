@@ -2,8 +2,10 @@ package com.mr.domain.mentor.controller;
 
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -12,10 +14,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mr.domain.mentor.dto.res.MentorMessageHistoryResponseDTO;
 import com.mr.domain.mentor.entity.enums.MessageRole;
+import com.mr.domain.mentor.exception.MentorErrorStatus;
 import com.mr.domain.mentor.service.MentorService;
 import com.mr.domain.mentor.service.MentorQuestionService;
 import com.mr.domain.mentor.service.MentorStreamingService;
 import com.mr.domain.user.entity.enums.UserRole;
+import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.apipayload.handler.GlobalExceptionHandler;
 import com.mr.global.security.principal.CustomUserDetails;
 import java.time.LocalDateTime;
@@ -132,5 +136,24 @@ class MentorControllerTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(request().asyncStarted());
+    }
+
+    @Test
+    @DisplayName("POST /api/analyses/{id}/mentor/messages - 소유권 검증 실패 시 JSON 403을 반환한다")
+    void sendQuestion_accessDenied_returnsJsonForbidden() throws Exception {
+        given(mentorQuestionService.prepare(1L, 10L, "질문"))
+                .willThrow(new GeneralException(MentorErrorStatus.MENTOR_ACCESS_DENIED));
+
+        mockMvc.perform(post("/api/analyses/{analysisId}/mentor/messages", 10L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.TEXT_EVENT_STREAM)
+                        .content("""
+                                {"content":"질문"}
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code").value("MENTOR_403_01"));
+
+        verifyNoInteractions(mentorStreamingService);
     }
 }
