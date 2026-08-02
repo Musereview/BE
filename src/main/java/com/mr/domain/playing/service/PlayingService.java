@@ -22,6 +22,7 @@ import com.mr.global.file.s3.service.RecordingUploadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 
@@ -29,13 +30,13 @@ import static com.mr.domain.backingtrack.entity.enums.AccessLevel.PUBLIC;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class PlayingService {
 
     private final PlayingRepository playingRepository;
     private final UserRepository userRepository;
     private final BackingTrackRepository backingTrackRepository;
     private final RecordingUploadService recordingUploadService;
+    private final TransactionTemplate transactionTemplate;
 
     @Transactional
     public PlayingStartResponse startPlaying(
@@ -77,18 +78,12 @@ public class PlayingService {
         return recordingUploadService.createPresignedUrl(userId, request);
     }
 
-    @Transactional
     public MidiEventSaveResponse saveMidiEvents(
             Long userId, Long playingId, MidiEventSaveRequest request
     ) {
         validatePlayingId(playingId);
 
-        Playing playing = playingRepository.findByIdAndDeletedAtIsNull(playingId)
-                .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
-
-        playing.validatePlayingOwner(userId);
-        playing.validateInProgress();
-
+        // S3 네트워크 통신은 DB 트랜잭션 밖에서 수행
         ValidatedS3Object recording =
                 recordingUploadService.validateObject(userId, request.recordingObjectKey());
 
@@ -102,15 +97,24 @@ public class PlayingService {
                         event.timestampMs()
                 )).toList();
 
-        playing.completeWithMidiData(
-                midiEvents,
-                recording.fileUrl()
-        );
+        // DB 조회 및 변경 작업만 트랜잭션 안에서 수행
+        return transactionTemplate.execute(status -> {
+            Playing playing = playingRepository.findByIdAndDeletedAtIsNull(playingId)
+                    .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
 
-        return MidiEventSaveResponse.of(
-                playing.getId(),
-                playing.getMidiData().size()
-        );
+            playing.validatePlayingOwner(userId);
+            playing.validateInProgress();
+
+            playing.completeWithMidiData(
+                    midiEvents,
+                    recording.fileUrl()
+            );
+
+            return MidiEventSaveResponse.of(
+                    playing.getId(),
+                    playing.getMidiData().size()
+            );
+        });
     }
 
     @Transactional(readOnly = true)
