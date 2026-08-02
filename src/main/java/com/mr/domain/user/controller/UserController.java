@@ -15,15 +15,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/users")
-@Tag(name = "사용자", description = "인증 불필요한 사용자 관련 API")
+@Tag(name = "사용자", description = "사용자 관련 API")
 public class UserController {
 
     private final UserService userService;
 
     @Operation(
             summary = "닉네임 중복 확인",
-            description = "닉네임이 형식 규칙(한글/영문/숫자 2~10자)을 만족하는지, 이미 사용 중인지 확인합니다. "
-                    + "인증 없이 호출 가능합니다."
+            description = "회원가입 온보딩 단계 또는 프로필 수정 시, 닉네임이 형식 규칙(한글/영문/숫자 2~10자)을 만족하는지, "
+                    + "이미 다른 유저가 사용 중인지 확인합니다. 인증이 필요하며, 본인이 이미 쓰고 있는 닉네임은 중복 처리되지 않습니다."
     )
     @GetMapping("/verify-nickname")
     public ApiResponse<UserResponseDTO.NicknameCheckResponse> verifyNickname(

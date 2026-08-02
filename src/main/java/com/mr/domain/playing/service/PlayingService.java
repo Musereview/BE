@@ -19,11 +19,17 @@ import com.mr.global.file.s3.dto.ValidatedS3Object;
 import com.mr.global.file.s3.dto.req.RecordingPresignedUrlRequest;
 import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
 import com.mr.global.file.s3.service.RecordingUploadService;
+import com.mr.global.event.NotificationEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Clock;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.mr.domain.backingtrack.entity.enums.AccessLevel.PUBLIC;
@@ -37,6 +43,10 @@ public class PlayingService {
     private final BackingTrackRepository backingTrackRepository;
     private final RecordingUploadService recordingUploadService;
     private final TransactionTemplate transactionTemplate;
+
+    private final ApplicationEventPublisher eventPublisher;
+
+    private final Clock clock;
 
     @Transactional
     public PlayingStartResponse startPlaying(
@@ -109,6 +119,29 @@ public class PlayingService {
                     midiEvents,
                     recording.fileUrl()
             );
+
+            int intervalHours = 10; // 10시간 단위로 알림
+            int intervalSeconds = intervalHours * 3600;
+
+            LocalDateTime weekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY).atStartOfDay();
+
+            // 방금 끝낸 연주를 제외한 이전 누적 시간
+            Long previousWeeklySeconds = playingRepository.sumDurationSecExcludeCurrent(
+                    userId, playing.getStatus(), weekStart, playing.getId()
+            );
+
+            Long currentDuration = playing.getDurationSec() != null ? playing.getDurationSec() : 0L;
+            Long totalWeeklySeconds = previousWeeklySeconds + currentDuration;
+
+            Long previousMilestones = previousWeeklySeconds / intervalSeconds;
+            Long currentMilestones = totalWeeklySeconds / intervalSeconds;
+
+            if (currentMilestones > previousMilestones) {
+                int achievedHours = (int)(currentMilestones * intervalHours); // 달성한 시간: 10 시간 단위
+                eventPublisher.publishEvent(
+                        NotificationEvent.forPractice(userId, playing.getUser().getNickname(), achievedHours)
+                );
+            }
 
             return MidiEventSaveResponse.of(
                     playing.getId(),
