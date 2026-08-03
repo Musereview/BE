@@ -27,7 +27,7 @@ public class NotificationController {
 
     @Operation(
             summary = "알림 목록 조회",
-            description = "사용자의 알림 화면을 켤 때, 로그인한 사용자에게 온 알림 리스트를 최신 순으로 반환"
+            description = "사용자의 알림 화면을 켤 때, 로그인한 사용자에게 온 알림 리스트를 기본적으로 최신 순으로 반환합니다."
     )
     @GetMapping
     public ApiResponse<NotificationListResponseDTO> getNotifications(
@@ -41,7 +41,7 @@ public class NotificationController {
 
     @Operation(
             summary = "알림 읽음 처리",
-            description = "미확인 상태인 알림을 클릭했을 때, 해당 알림의 상태를 읽음으로 변경"
+            description = "해당 알림의 상태를 읽음으로 변경합니다."
     )
     @PatchMapping("/{notificationId}/read")
     public ApiResponse<Void> readNotification(
