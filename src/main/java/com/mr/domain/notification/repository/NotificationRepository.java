@@ -1,8 +1,8 @@
 package com.mr.domain.notification.repository;
 
 import com.mr.domain.notification.entity.Notification;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,7 +13,7 @@ import java.util.Optional;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-    Page<Notification> findAllByUser_UserIdAndDeletedAtIsNull(Long userId, Pageable pageable);
+    Slice<Notification> findAllByUser_UserIdAndDeletedAtIsNull(Long userId, Pageable pageable);
 
     Optional<Notification> findByIdAndDeletedAtIsNull(Long id);
 
