@@ -6,7 +6,7 @@ import com.mr.domain.notification.exception.NotificationErrorStatus;
 import com.mr.domain.notification.repository.NotificationRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Pageable;
@@ -19,7 +19,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
 
     public NotificationListResponseDTO getNotificationList(Long userId, Pageable pageable){
-        Page<Notification> notificationPage = notificationRepository.findAllByUser_UserIdAndDeletedAtIsNull(userId, pageable);
+        Slice<Notification> notificationPage = notificationRepository.findAllByUser_UserIdAndDeletedAtIsNull(userId, pageable);
         return  NotificationListResponseDTO.of(notificationPage);
     }
 
