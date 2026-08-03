@@ -11,10 +11,11 @@ public class LearningPracticeDataResponseDTO {
             @Schema(description = "연주 BPM", example = "90")
             Integer bpm,
 
-            @Schema(description = "연주 조성", example = "C")
+            @Schema(description = "연주 조성(톤+장단조)", example = "C major")
             String keySignature,
 
-            @Schema(description = "AI 채점용 MIDI 데이터 (실제 JSON 객체로 응답됨)", example = "{\"notes\": [60, 64, 67]}")
+            @Schema(description = "AI 채점용 + 악보 렌더링용 데이터 (실제 JSON 객체로 응답됨)",
+                    example = "{\"recording\":[{\"midi\":60,\"velocity\":100,\"start\":0,\"duration\":1}],\"options\":{\"bpm\":120,\"beatsPerBar\":4,\"beatType\":4,\"key\":\"C\",\"mode\":\"major\",\"title\":\"테스트 연주\"}}")
             @JsonRawValue String midiData
     ) {
         public static PracticeDataResultDTO from(PlayingExample playingExample) {
