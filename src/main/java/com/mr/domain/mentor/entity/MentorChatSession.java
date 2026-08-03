@@ -8,7 +8,10 @@ import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Objects;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -56,6 +59,12 @@ public class MentorChatSession extends BaseTimeEntity {
 
     @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
+
+    @Column(name = "generation_token", length = 36)
+    private String generationToken;
+
+    @Column(name = "generation_started_at")
+    private LocalDateTime generationStartedAt;
 
     @Column(name = "question_count", nullable = false)
     private Integer questionCount;
@@ -108,10 +117,54 @@ public class MentorChatSession extends BaseTimeEntity {
         this.lastMessageAt = LocalDateTime.now();
     }
 
-    // TODO: 질문 횟수 3회 제한(MENTOR_429_01) 체크는 질문 전송 API 구현 시 추가
     public void increaseQuestionCount() {
         validateActive();
         this.questionCount += 1;
+    }
+
+    public String startGenerating(Duration staleAfter) {
+        if (this.status == MentorChatStatus.GENERATING && !isStale(staleAfter)) {
+            throw new GeneralException(MentorErrorStatus.MENTOR_RESPONSE_IN_PROGRESS);
+        }
+        if (this.status != MentorChatStatus.ACTIVE && this.status != MentorChatStatus.GENERATING) {
+            throw new GeneralException(MentorErrorStatus.MENTOR_SESSION_NOT_ACTIVE);
+        }
+        if (this.questionCount >= 3) {
+            throw new GeneralException(MentorErrorStatus.MENTOR_QUESTION_LIMIT_EXCEEDED);
+        }
+        this.status = MentorChatStatus.GENERATING;
+        this.generationToken = UUID.randomUUID().toString();
+        this.generationStartedAt = LocalDateTime.now();
+        return this.generationToken;
+    }
+
+    public void completeGenerating(String expectedToken) {
+        if (this.status != MentorChatStatus.GENERATING
+                || !Objects.equals(this.generationToken, expectedToken)) {
+            throw new GeneralException(MentorErrorStatus.MENTOR_SESSION_NOT_ACTIVE);
+        }
+        this.questionCount += 1;
+        this.lastMessageAt = LocalDateTime.now();
+        this.status = MentorChatStatus.ACTIVE;
+        clearGeneration();
+    }
+
+    public void failGenerating(String expectedToken) {
+        if (this.status == MentorChatStatus.GENERATING
+                && Objects.equals(this.generationToken, expectedToken)) {
+            this.status = MentorChatStatus.ACTIVE;
+            clearGeneration();
+        }
+    }
+
+    private boolean isStale(Duration staleAfter) {
+        return this.generationStartedAt == null
+                || !this.generationStartedAt.isAfter(LocalDateTime.now().minus(staleAfter));
+    }
+
+    private void clearGeneration() {
+        this.generationToken = null;
+        this.generationStartedAt = null;
     }
 
     private void validateActive() {
