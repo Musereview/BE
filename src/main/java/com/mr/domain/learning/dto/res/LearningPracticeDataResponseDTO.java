@@ -11,7 +11,7 @@ public class LearningPracticeDataResponseDTO {
             @Schema(description = "연주 BPM", example = "90")
             Integer bpm,
 
-            @Schema(description = "연주 조성", example = "C")
+            @Schema(description = "연주 조성(톤+장단조)", example = "C major")
             String keySignature,
 
             @Schema(description = "AI 채점용 + 악보 렌더링용 데이터 (실제 JSON 객체로 응답됨)",
