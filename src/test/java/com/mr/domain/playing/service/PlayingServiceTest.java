@@ -20,6 +20,7 @@ import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.event.PlayingCompletedEvent;
 import com.mr.global.file.s3.dto.ValidatedS3Object;
 import com.mr.global.file.s3.dto.req.RecordingPresignedUrlRequest;
 import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
@@ -33,28 +34,27 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PlayingServiceTest {
@@ -80,6 +80,15 @@ class PlayingServiceTest {
 
     @Mock
     private RecordingUploadService recordingUploadService;
+
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private Clock clock;
 
     private User user;
     private BackingTrack backingTrack;
@@ -119,13 +128,16 @@ class PlayingServiceTest {
             // given
             MidiEventSaveRequest request = createRequest();
 
-            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
-                    .thenReturn(Optional.of(playing));
+            stubTransactionExecution();
+            stubCompletedPlayingForMilestoneCalculation();
 
             when(recordingUploadService.validateObject(
                     userId,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
+
+            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+                    .thenReturn(Optional.of(playing));
 
             when(playing.getId())
                     .thenReturn(playingId);
@@ -174,6 +186,19 @@ class PlayingServiceTest {
 
             verify(playing)
                     .completeWithMidiData(anyList(), eq(RECORDING_FILE_URL));
+
+            ArgumentCaptor<Object> eventCaptor =
+                    ArgumentCaptor.forClass(Object.class);
+
+            verify(eventPublisher)
+                    .publishEvent(eventCaptor.capture());
+
+            assertThat(eventCaptor.getValue())
+                    .isInstanceOfSatisfying(
+                            PlayingCompletedEvent.class,
+                            event -> assertThat(event.getUserId())
+                                    .isEqualTo(userId)
+                    );
         }
 
         @Test
@@ -181,6 +206,13 @@ class PlayingServiceTest {
         void saveMidiEvents_accessDenied() {
             MidiEventSaveRequest request =
                     createRequest();
+
+            stubTransactionExecution();
+
+            when(recordingUploadService.validateObject(
+                    userId,
+                    RECORDING_OBJECT_KEY
+            )).thenReturn(recordingResponse);
 
             when(
                     playingRepository
@@ -214,8 +246,29 @@ class PlayingServiceTest {
                                 );
                     });
 
+            verify(recordingUploadService)
+                    .validateObject(
+                            userId,
+                            RECORDING_OBJECT_KEY
+                    );
+
+            verify(playingRepository)
+                    .findByIdAndDeletedAtIsNull(playingId);
+
+            verify(playing)
+                    .validatePlayingOwner(userId);
+
             verify(playing, never())
-                    .completeWithMidiData(anyList(), anyString());
+                    .validateInProgress();
+
+            verify(playing, never())
+                    .completeWithMidiData(
+                            anyList(),
+                            anyString()
+                    );
+
+            verify(eventPublisher, never())
+                    .publishEvent(any());
         }
 
         @Test
@@ -224,13 +277,16 @@ class PlayingServiceTest {
             // given
             MidiEventSaveRequest request = createRequest();
 
-            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
-                    .thenReturn(Optional.of(playing));
+            stubTransactionExecution();
+            stubCompletedPlayingForMilestoneCalculation();
 
             when(recordingUploadService.validateObject(
                     userId,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
+
+            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+                    .thenReturn(Optional.of(playing));
 
             when(playing.getId())
                     .thenReturn(playingId);
@@ -280,10 +336,19 @@ class PlayingServiceTest {
                     );
 
             verify(playing)
+                    .validatePlayingOwner(userId);
+
+            verify(playing)
+                    .validateInProgress();
+
+            verify(playing)
                     .completeWithMidiData(
                             anyList(),
                             eq(RECORDING_FILE_URL)
                     );
+
+            verify(eventPublisher)
+                    .publishEvent(any(PlayingCompletedEvent.class));
         }
 
         @Test
@@ -291,6 +356,13 @@ class PlayingServiceTest {
         void saveMidiEvents_notInProgress() {
             MidiEventSaveRequest request =
                     createRequest();
+
+            stubTransactionExecution();
+
+            when(recordingUploadService.validateObject(
+                    userId,
+                    RECORDING_OBJECT_KEY
+            )).thenReturn(recordingResponse);
 
             when(
                     playingRepository
@@ -324,6 +396,12 @@ class PlayingServiceTest {
                                 );
                     });
 
+            verify(recordingUploadService)
+                    .validateObject(
+                            userId,
+                            RECORDING_OBJECT_KEY
+                    );
+
             verify(playingRepository)
                     .findByIdAndDeletedAtIsNull(playingId);
 
@@ -333,11 +411,11 @@ class PlayingServiceTest {
             verify(playing)
                     .validateInProgress();
 
-            verify(recordingUploadService, never())
-                    .validateObject(anyLong(), anyString());
-
             verify(playing, never())
                     .completeWithMidiData(anyList(), anyString());
+
+            verify(eventPublisher, never())
+                    .publishEvent(any());
         }
 
         @Test
@@ -366,8 +444,17 @@ class PlayingServiceTest {
                                 );
                     });
 
+            verify(recordingUploadService, never())
+                    .validateObject(
+                            anyLong(),
+                            anyString()
+                    );
+
             verify(playingRepository, never())
                     .findByIdAndDeletedAtIsNull(any());
+
+            verify(eventPublisher, never())
+                    .publishEvent(any());
         }
 
         @Test
@@ -406,6 +493,13 @@ class PlayingServiceTest {
             // given
             MidiEventSaveRequest request = createRequest();
 
+            stubTransactionExecution();
+
+            when(recordingUploadService.validateObject(
+                    userId,
+                    RECORDING_OBJECT_KEY
+            )).thenReturn(recordingResponse);
+
             when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
                     .thenReturn(Optional.empty());
 
@@ -429,11 +523,67 @@ class PlayingServiceTest {
                                 );
                     });
 
+            verify(recordingUploadService)
+                    .validateObject(
+                            userId,
+                            RECORDING_OBJECT_KEY
+                    );
+
+            verify(playingRepository)
+                    .findByIdAndDeletedAtIsNull(playingId);
+
             verify(playing, never())
                     .validatePlayingOwner(userId);
 
             verify(playing, never())
                     .completeWithMidiData(anyList(), anyString());
+
+            verify(eventPublisher, never())
+                    .publishEvent(any());
+        }
+
+        private void stubTransactionExecution() {
+            doAnswer(invocation -> {
+                TransactionCallback<?> callback =
+                        invocation.getArgument(0);
+
+                return callback.doInTransaction(
+                        mock(TransactionStatus.class)
+                );
+            })
+                    .when(transactionTemplate)
+                    .execute(any());
+        }
+
+        private void stubCompletedPlayingForMilestoneCalculation() {
+            LocalDate fixedDate = LocalDate.of(2026, 8, 4);
+            ZoneId zoneId = ZoneId.of("Asia/Seoul");
+            Instant fixedInstant = fixedDate
+                    .atStartOfDay(zoneId)
+                    .toInstant();
+
+            when(clock.instant())
+                    .thenReturn(fixedInstant);
+
+            when(clock.getZone())
+                    .thenReturn(zoneId);
+
+            when(playing.getStatus())
+                    .thenReturn(PlayingStatus.COMPLETED);
+
+            when(playing.getDurationSec())
+                    .thenReturn(300);
+
+            LocalDateTime weekStart = fixedDate
+                    .with(DayOfWeek.MONDAY)
+                    .atStartOfDay();
+
+            when(playingRepository.sumDurationSecExcludeCurrent(
+                    userId,
+                    PlayingStatus.COMPLETED,
+                    weekStart,
+                    playingId
+            )).thenReturn(0L);
         }
     }
 
