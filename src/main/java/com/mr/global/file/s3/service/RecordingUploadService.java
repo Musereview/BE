@@ -8,6 +8,7 @@ import com.mr.global.file.s3.dto.req.RecordingUploadCompleteRequest;
 import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
 import com.mr.global.file.s3.dto.res.RecordingUploadCompleteResponse;
 import com.mr.global.file.s3.exception.S3ErrorStatus;
+import com.mr.global.file.s3.util.ContentTypeUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,7 +25,6 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 import java.time.Instant;
 import java.util.Map;
-import java.util.Objects;
 
 @Slf4j
 @Service
@@ -160,7 +160,15 @@ public class RecordingUploadService {
             throw new GeneralException(S3ErrorStatus.FILE_SIZE_EXCEEDED);
         }
 
-        if (!s3Properties.allowedContentTypes().contains(contentType)) {
+        validateAllowedContentType(contentType);
+    }
+
+    private void validateAllowedContentType(String contentType) {
+        String normalizedContentType =
+                ContentTypeUtils.normalize(contentType);
+
+        if (normalizedContentType == null
+                || !s3Properties.allowedContentTypes().contains(normalizedContentType)) {
             throw new GeneralException(S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE);
         }
     }
@@ -197,15 +205,12 @@ public class RecordingUploadService {
             throw new GeneralException(S3ErrorStatus.FILE_SIZE_MISMATCH);
         }
 
-        if (!Objects.equals(request.contentType(), uploadedContentType)) {
+        if (!isSameContentType(request.contentType(), uploadedContentType)) {
             deleteObject(objectKey);
             throw new GeneralException(S3ErrorStatus.CONTENT_TYPE_MISMATCH);
         }
 
-        if (!s3Properties.allowedContentTypes().contains(uploadedContentType)) {
-            deleteObject(objectKey);
-            throw new GeneralException(S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE);
-        }
+        validateUploadedContentType(objectKey, uploadedContentType);
     }
 
     private void validateUploadedObject(
@@ -225,9 +230,18 @@ public class RecordingUploadService {
             throw new GeneralException(S3ErrorStatus.FILE_SIZE_EXCEEDED);
         }
 
-        if (!s3Properties.allowedContentTypes().contains(uploadedContentType)) {
+        validateUploadedContentType(objectKey, uploadedContentType);
+    }
+
+    private void validateUploadedContentType(
+            String objectKey,
+            String contentType
+    ) {
+        try {
+            validateAllowedContentType(contentType);
+        } catch (GeneralException exception) {
             deleteObject(objectKey);
-            throw new GeneralException(S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE);
+            throw exception;
         }
     }
 
@@ -253,5 +267,20 @@ public class RecordingUploadService {
                 .toString();
 
         return fileUrl;
+    }
+
+    private boolean isSameContentType(
+            String expectedContentType,
+            String actualContentType
+    ) {
+        String normalizedExpected =
+                ContentTypeUtils.normalize(expectedContentType);
+
+        String normalizedActual =
+                ContentTypeUtils.normalize(actualContentType);
+
+        return normalizedExpected != null
+                && normalizedActual != null
+                && normalizedExpected.equals(normalizedActual);
     }
 }

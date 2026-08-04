@@ -86,7 +86,7 @@ jobs:
             echo "===Docker Compose Deploy==="
             cd "$HOME/BE"
 
-            docker compose config
+            docker compose config --quiet
             docker compose pull backend
             docker compose build analysis
             docker compose up -d --remove-orphans
