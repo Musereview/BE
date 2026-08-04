@@ -12,6 +12,7 @@ import com.mr.global.file.s3.dto.req.RecordingPresignedUrlRequest;
 import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
 import com.mr.global.security.principal.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/playings")
+@Tag(name = "연주", description = "연주 세션 생성, 파일 업로드, MIDI 저장, 연주 기록 조회 및 삭제 API")
 public class PlayingController {
 
     private final PlayingService playingService;
@@ -45,6 +47,14 @@ public class PlayingController {
         return ApiResponse.onSuccess(response);
     }
 
+    @Operation(
+            summary = "연주 녹음 파일 업로드 URL 발급",
+            description = """
+                    연주 녹음 파일을 S3에 직접 업로드하기 위한 Presigned URL을 발급합니다.
+                    로그인한 사용자 본인의 IN_PROGRESS 상태 연주 세션에 대해서만 요청할 수 있습니다.
+                    발급받은 URL을 사용하여 클라이언트가 녹음 파일을 S3에 직접 업로드합니다.
+                    """
+    )
     @PostMapping("/{playingId}/recording-upload-url")
     public ApiResponse<RecordingPresignedUrlResponse> createRecordingUploadUrl(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -59,8 +69,13 @@ public class PlayingController {
     }
 
     @Operation(
-            summary = "MIDI 이벤트 저장",
-            description = "연주 세션에 대한 MIDI 이벤트를 저장하고 연주를 완료 상태로 변경합니다."
+            summary = "MIDI 이벤트 저장 및 연주 완료",
+            description = """
+                    연주 중 수집한 MIDI 이벤트와 업로드된 녹음 파일 정보를 저장합니다.
+                    로그인한 사용자 본인의 IN_PROGRESS 상태 연주 세션에 대해서만 요청할 수 있습니다.
+                    MIDI 이벤트와 녹음 파일 검증이 완료되면 연주 세션을 COMPLETED 상태로 변경합니다.
+                    연주 완료 트랜잭션이 정상적으로 커밋된 이후 사용자 연습 통계가 갱신됩니다.
+                    """
     )
     @PostMapping("/{playingId}/midi-events")
     public ApiResponse<MidiEventSaveResponse> saveMidiEvents(
