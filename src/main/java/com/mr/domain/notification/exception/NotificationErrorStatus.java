@@ -13,7 +13,10 @@ public enum NotificationErrorStatus implements BaseCode {
     FORBIDDEN_NOTIFICATION(HttpStatus.FORBIDDEN, "NOTIFICATION_403_01", "해당 알림에 대한 권한이 없습니다."),
 
     // [404] 리소스 없음
-    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "NOTIFICATION_404_01", "존재하지 않는 알림입니다.");
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "NOTIFICATION_404_01", "존재하지 않는 알림입니다."),
+
+    // [500] 에러 코드
+    INVALID_NOTIFICATION_FORMAT(HttpStatus.INTERNAL_SERVER_ERROR, "NOTIFICATION_500_01", "알림 데이터 형식이 올바르지 않습니다.");
 
     private final HttpStatus status;
     private final String code;
