@@ -95,13 +95,15 @@ public class RecordingObjectKeyGenerator {
         return switch (contentType.toLowerCase(Locale.ROOT)) {
             case "audio/mpeg" -> "mp3";
             case "audio/wav", "audio/x-wav" -> "wav";
+            case "audio/webm" -> "webm";
+            case "audio/ogg" -> "ogg";
             default -> throw new GeneralException(S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE);
         };
     }
 
     private String validateExtension(String extension) {
         return switch (extension) {
-            case "mp3", "wav" -> extension;
+            case "mp3", "wav", "webm", "ogg" -> extension;
             default -> throw new GeneralException(S3ErrorStatus.UNSUPPORTED_FILE_EXTENSION);
         };
     }
