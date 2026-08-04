@@ -15,6 +15,7 @@ import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.event.PlayingCompletedEvent;
 import com.mr.global.file.s3.dto.ValidatedS3Object;
 import com.mr.global.file.s3.dto.req.RecordingPresignedUrlRequest;
 import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
@@ -121,6 +122,10 @@ public class PlayingService {
             );
 
             publishPracticeMilestoneNotification(userId, playing);
+
+            eventPublisher.publishEvent(
+                    PlayingCompletedEvent.of(userId)
+            );
 
             return MidiEventSaveResponse.of(
                     playing.getId(),
