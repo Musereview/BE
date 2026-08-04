@@ -3,6 +3,7 @@ package com.mr.domain.notification.dto.res;
 import com.mr.domain.notification.entity.Notification;
 import com.mr.domain.notification.exception.NotificationErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.event.NotificationEvent;
 
 import java.time.LocalDateTime;
 
@@ -23,9 +24,9 @@ public record NotificationResponseDTO (
         String type = "DEFAULT";
         Long targetId = null;
 
-        // "::" 구분자가 있다면 파싱 로직 수행
-        if (rawContent != null && rawContent.contains("::")) {
-            String[] parts = rawContent.split("::");
+        // SEPARATOR 구분자가 있다면 파싱 로직 수행
+        if (rawContent != null && rawContent.contains(NotificationEvent.SEPARATOR)) {
+            String[] parts = rawContent.split(NotificationEvent.SEPARATOR);
             displayContent = parts[0]; // "지금 바로 분석 결과를 확인해보세요!"
 
             if (parts.length > 1) {
