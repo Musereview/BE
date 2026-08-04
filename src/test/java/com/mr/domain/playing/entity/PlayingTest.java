@@ -10,6 +10,7 @@ import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.domain.user.entity.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -716,6 +717,9 @@ class PlayingTest {
         User user = mock(User.class);
         BackingTrack backingTrack = mock(BackingTrack.class);
 
+        when(backingTrack.getPlaytimeSec())
+                .thenReturn(600);
+
         return Playing.createBackingTrack(
                 user,
                 backingTrack,
@@ -726,6 +730,12 @@ class PlayingTest {
     private Playing createInProgressPlaying() {
         Playing playing = createReadyPlaying();
         playing.start();
+
+        ReflectionTestUtils.setField(
+                playing,
+                "startedAt",
+                LocalDateTime.now().minusSeconds(1)
+        );
 
         return playing;
     }
