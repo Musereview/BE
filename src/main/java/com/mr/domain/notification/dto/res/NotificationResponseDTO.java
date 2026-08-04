@@ -1,32 +1,58 @@
 package com.mr.domain.notification.dto.res;
 
 import com.mr.domain.notification.entity.Notification;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.mr.domain.notification.exception.NotificationErrorStatus;
+import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.event.NotificationEvent;
 
 import java.time.LocalDateTime;
 
-@Getter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class NotificationResponseDTO {
 
-    private Long notificationId;
-    private String title;
-    private String content;
-    private Boolean isRead;
-    private LocalDateTime createdAt;
-
+public record NotificationResponseDTO (
+        Long notificationId,
+        String type,
+        String title,
+        String content,
+        Boolean isRead,
+        Long targetId,
+        LocalDateTime createdAt
+) {
     public static NotificationResponseDTO from(Notification notification) {
-        return NotificationResponseDTO.builder()
-                .notificationId(notification.getId())
-                .title(notification.getTitle())
-                .content(notification.getContent())
-                .isRead(notification.isRead())
-                .createdAt(notification.getCreatedAt())
-                .build();
+        String rawContent = notification.getContent();
+
+        String displayContent = rawContent;
+        String type = "DEFAULT";
+        Long targetId = null;
+
+        // SEPARATOR 구분자가 있다면 파싱 로직 수행
+        if (rawContent != null && rawContent.contains(NotificationEvent.SEPARATOR)) {
+            String[] parts = rawContent.split(NotificationEvent.SEPARATOR);
+            displayContent = parts[0]; // "지금 바로 분석 결과를 확인해보세요!"
+
+            if (parts.length > 1) {
+                type = parts[1];       // "ANALYSIS"
+            }
+            if (parts.length > 2 && !parts[2].equals("null")) {
+                try {
+                    targetId = Long.valueOf(parts[2]); // 456
+                } catch (NumberFormatException e) {
+                    targetId = null;
+                }
+            }
+        }
+        // ANALYSIS 타입인데 targetId가 유효하지 않으면 예외 발생
+        if ("ANALYSIS".equals(type) && targetId == null) {
+            throw new GeneralException(NotificationErrorStatus.INVALID_NOTIFICATION_FORMAT);
+        }
+
+        return new NotificationResponseDTO(
+                notification.getId(),
+                type,
+                notification.getTitle(),
+                displayContent,
+                notification.isRead(),
+                targetId,
+                notification.getCreatedAt()
+        );
     }
 }

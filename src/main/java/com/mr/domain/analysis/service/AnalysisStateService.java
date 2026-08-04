@@ -127,7 +127,7 @@ public class AnalysisStateService {
         }
 
         eventPublisher.publishEvent(
-                NotificationEvent.forAnalysis(analysis.getUser().getUserId(), practiceName)
+                NotificationEvent.forAnalysis(analysis.getUser().getUserId(), practiceName, analysisId)
         );
         return true;
     }
