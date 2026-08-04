@@ -86,6 +86,8 @@ aws:
       - audio/mpeg
       - audio/wav
       - audio/x-wav
+      - audio/webm
+      - audio/ogg
 
 
 # 내부 AI 분석 서버 설정
