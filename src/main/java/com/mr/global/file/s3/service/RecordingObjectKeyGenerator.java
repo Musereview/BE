@@ -3,6 +3,7 @@ package com.mr.global.file.s3.service;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.file.s3.config.S3Properties;
 import com.mr.global.file.s3.exception.S3ErrorStatus;
+import com.mr.global.file.s3.util.ContentTypeUtils;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -88,11 +89,14 @@ public class RecordingObjectKeyGenerator {
             return validateExtension(extension);
         }
 
-        if (contentType == null) {
+        String normalizedContentType =
+                ContentTypeUtils.normalize(contentType);
+
+        if (normalizedContentType == null) {
             throw new GeneralException(S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE);
         }
 
-        return switch (contentType.toLowerCase(Locale.ROOT)) {
+        return switch (normalizedContentType) {
             case "audio/mpeg" -> "mp3";
             case "audio/wav", "audio/x-wav" -> "wav";
             case "audio/webm" -> "webm";
