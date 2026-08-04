@@ -1,27 +1,21 @@
 package com.mr.domain.notification.dto.res;
 
 import com.mr.domain.notification.entity.Notification;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.mr.domain.notification.exception.NotificationErrorStatus;
+import com.mr.global.apipayload.exception.GeneralException;
 
 import java.time.LocalDateTime;
 
-@Getter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class NotificationResponseDTO {
 
-    private Long notificationId;
-    private String type;
-    private String title;
-    private String content;
-    private Boolean isRead;
-    private Long targetId;
-    private LocalDateTime createdAt;
-
+public record NotificationResponseDTO (
+        Long notificationId,
+        String type,
+        String title,
+        String content,
+        Boolean isRead,
+        Long targetId,
+        LocalDateTime createdAt
+) {
     public static NotificationResponseDTO from(Notification notification) {
         String rawContent = notification.getContent();
 
@@ -45,14 +39,19 @@ public class NotificationResponseDTO {
                 }
             }
         }
-        return NotificationResponseDTO.builder()
-                .notificationId(notification.getId())
-                .type(type)
-                .title(notification.getTitle())
-                .content(displayContent)
-                .isRead(notification.isRead())
-                .targetId(targetId)
-                .createdAt(notification.getCreatedAt())
-                .build();
+        // ANALYSIS 타입인데 targetId가 유효하지 않으면 예외 발생
+        if ("ANALYSIS".equals(type) && targetId == null) {
+            throw new GeneralException(NotificationErrorStatus.INVALID_NOTIFICATION_FORMAT);
+        }
+
+        return new NotificationResponseDTO(
+                notification.getId(),
+                type,
+                notification.getTitle(),
+                displayContent,
+                notification.isRead(),
+                targetId,
+                notification.getCreatedAt()
+        );
     }
 }
