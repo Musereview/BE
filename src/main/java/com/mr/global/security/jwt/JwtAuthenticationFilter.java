@@ -31,8 +31,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String jwt = resolveToken(request);
 
         if (StringUtils.hasText(jwt)) {
-            if (!tokenProvider.validateAccessToken(jwt)) {
-                log.warn("유효하지 않은 JWT 토큰입니다.");
+            JwtValidationResult validationResult = tokenProvider.validateAccessTokenResult(jwt);
+            if (validationResult != JwtValidationResult.VALID) {
+                log.warn("JWT validation failed: reason={}, method={}, uri={}",
+                        validationResult, request.getMethod(), request.getRequestURI());
                 SecurityContextHolder.clearContext();
                 request.setAttribute("exception", new JwtException("유효하지 않거나 만료된 토큰입니다."));
             } else {
