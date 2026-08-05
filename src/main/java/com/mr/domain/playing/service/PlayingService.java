@@ -4,10 +4,12 @@ import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.backingtrack.repository.BackingTrackRepository;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
+import com.mr.domain.playing.dto.req.RecordingUploadUrlRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
 import com.mr.domain.playing.dto.res.PlayingDeleteResponse;
 import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
+import com.mr.domain.playing.dto.res.RecordingUploadUrlResponse;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
@@ -16,10 +18,8 @@ import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.PlayingCompletedEvent;
-import com.mr.global.file.s3.dto.ValidatedS3Object;
-import com.mr.global.file.s3.dto.req.RecordingPresignedUrlRequest;
-import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
-import com.mr.global.file.s3.service.RecordingUploadService;
+import com.mr.global.file.s3.dto.ValidatedFile;
+import com.mr.global.file.s3.service.S3FileService;
 import com.mr.global.event.NotificationEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -42,7 +42,7 @@ public class PlayingService {
     private final PlayingRepository playingRepository;
     private final UserRepository userRepository;
     private final BackingTrackRepository backingTrackRepository;
-    private final RecordingUploadService recordingUploadService;
+    private final S3FileService s3FileService;
     private final TransactionTemplate transactionTemplate;
 
     private final ApplicationEventPublisher eventPublisher;
@@ -75,8 +75,8 @@ public class PlayingService {
     }
 
     @Transactional(readOnly = true)
-    public RecordingPresignedUrlResponse createRecordingUploadUrl(
-            Long userId, Long playingId, RecordingPresignedUrlRequest request
+    public RecordingUploadUrlResponse createRecordingUploadUrl(
+            Long userId, Long playingId, RecordingUploadUrlRequest request
     ) {
         validatePlayingId(playingId);
 
@@ -86,7 +86,10 @@ public class PlayingService {
         playing.validatePlayingOwner(userId);
         playing.validateInProgress();
 
-        return recordingUploadService.createPresignedUrl(userId, request);
+        return RecordingUploadUrlResponse.from(s3FileService.createPresignedUpload(
+                userId,
+                request.toCommand())
+        );
     }
 
     public MidiEventSaveResponse saveMidiEvents(
@@ -95,8 +98,8 @@ public class PlayingService {
         validatePlayingId(playingId);
 
         // S3 네트워크 통신은 DB 트랜잭션 밖에서 수행
-        ValidatedS3Object recording =
-                recordingUploadService.validateObject(userId, request.recordingObjectKey());
+        ValidatedFile recording =
+                s3FileService.validateUploadedFile(userId, request.recordingObjectKey());
 
         List<MidiEventData> midiEvents = request.events()
                 .stream()
