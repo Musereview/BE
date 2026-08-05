@@ -81,14 +81,17 @@ public class S3ObjectKeyGenerator {
             String contentType
     ) {
 
-        String fileExtension =
-                extractExtension(originalFileName);
+        // contentType 정규화 및 대표 확장자 추출
+        String extensionByContentType = resolveExtensionByContentType(contentType);
 
-        if (fileExtension != null) {
-            return validateExtension(fileExtension);
+        // originalFileName에 확장자가 있는 경우, contentType 기준 확장자와 일치하는지 검증 (선택적)
+        String fileExtension = extractExtension(originalFileName);
+        if (fileExtension != null && !fileExtension.equalsIgnoreCase(extensionByContentType)) {
+            throw new GeneralException(S3ErrorStatus.UNSUPPORTED_FILE_EXTENSION);
         }
 
-        return resolveExtensionByContentType(contentType);
+        // 최종적으로 contentType 기반의 올바른 대표 확장자 반환
+        return extensionByContentType;
     }
 
     private String extractExtension(String originalFileName) {
