@@ -5,9 +5,12 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -92,20 +95,36 @@ public class JwtTokenProvider {
     }
 
     public boolean validateAccessToken(String token) {
-        return validateTokenWithType(token, ACCESS_TYPE);
+        return validateAccessTokenResult(token) == JwtValidationResult.VALID;
     }
 
     public boolean validateRefreshToken(String token) {
+        return validateRefreshTokenResult(token) == JwtValidationResult.VALID;
+    }
+
+    public JwtValidationResult validateAccessTokenResult(String token) {
+        return validateTokenWithType(token, ACCESS_TYPE);
+    }
+
+    public JwtValidationResult validateRefreshTokenResult(String token) {
         return validateTokenWithType(token, REFRESH_TYPE);
     }
 
-    private boolean validateTokenWithType(String token, String expectedType) {
+    private JwtValidationResult validateTokenWithType(String token, String expectedType) {
         try {
             Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
             String tokenType = claims.get(TOKEN_TYPE_CLAIM, String.class);
-            return expectedType.equals(tokenType);
+            return expectedType.equals(tokenType) ? JwtValidationResult.VALID : JwtValidationResult.INVALID_TYPE;
+        } catch (ExpiredJwtException e) {
+            return JwtValidationResult.EXPIRED;
+        } catch (SignatureException e) {
+            return JwtValidationResult.INVALID_SIGNATURE;
+        } catch (MalformedJwtException e) {
+            return JwtValidationResult.MALFORMED;
+        } catch (UnsupportedJwtException e) {
+            return JwtValidationResult.UNSUPPORTED;
         } catch (JwtException | IllegalArgumentException e) {
-            return false;
+            return JwtValidationResult.INVALID;
         }
     }
 

@@ -66,4 +66,13 @@ class SecurityConfigTest {
         mockMvc.perform(get("/api/users/verify-nickname").param("nickname", "김뮤즈"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    @DisplayName("형식이 잘못된 JWT로 보호 API를 요청하면 500이 아닌 401이 발생한다")
+    void protectedApi_withMalformedToken_returnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/users/verify-nickname")
+                        .param("nickname", "김뮤즈")
+                        .header("Authorization", "Bearer forged.jwt.token"))
+                .andExpect(status().isUnauthorized());
+    }
 }
