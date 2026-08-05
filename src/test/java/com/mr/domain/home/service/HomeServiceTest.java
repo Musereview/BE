@@ -28,6 +28,7 @@ import com.mr.domain.user.repository.StudentInstrumentRepository;
 import com.mr.domain.user.repository.StudentRepository;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import java.sql.Date;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -90,6 +91,10 @@ class HomeServiceTest {
         return playing;
     }
 
+    private Date sqlDate(LocalDate date) {
+        return Date.valueOf(date);
+    }
+
     @Test
     @DisplayName("getHome - 존재하지 않는 사용자면 404")
     void getHome_userNotFound_throws404() {
@@ -140,7 +145,7 @@ class HomeServiceTest {
 
         LocalDate today = LocalDate.now();
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED)).willReturn(List.of(
-                today, today.minusDays(1), today.minusDays(2), today.minusDays(5) // 연속 끊김
+                sqlDate(today), sqlDate(today.minusDays(1)), sqlDate(today.minusDays(2)), sqlDate(today.minusDays(5))
         ));
 
         HomeResponseDTO response = homeService.getHome(1L);
@@ -154,8 +159,9 @@ class HomeServiceTest {
         stubBaseline(1L);
 
         LocalDate today = LocalDate.now();
-        List<LocalDate> endedDates = java.util.stream.IntStream.range(0, 65)
+        List<Date> endedDates = java.util.stream.IntStream.range(0, 65)
                 .mapToObj(today::minusDays)
+                .map(this::sqlDate)
                 .toList();
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED)).willReturn(endedDates);
 
@@ -171,7 +177,7 @@ class HomeServiceTest {
 
         LocalDate yesterday = LocalDate.now().minusDays(1);
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED))
-                .willReturn(List.of(yesterday));
+                .willReturn(List.of(sqlDate(yesterday)));
 
         HomeResponseDTO response = homeService.getHome(1L);
 
@@ -185,7 +191,7 @@ class HomeServiceTest {
 
         LocalDate today = LocalDate.now();
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED))
-                .willReturn(List.of(today, today, today));
+                .willReturn(List.of(sqlDate(today), sqlDate(today), sqlDate(today)));
 
         HomeResponseDTO response = homeService.getHome(1L);
 
