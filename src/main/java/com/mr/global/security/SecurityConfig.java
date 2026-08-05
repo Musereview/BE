@@ -37,6 +37,11 @@ public class SecurityConfig {
             "/api/auth/token/exchange"
     };
 
+    private static final String[] ALLOWED_ONBOARDING_URLS = {
+            "/api/users/me/profile",
+            "/api/users/verify-nickname"
+    };
+
     /**
      * AntPathRequestMatcher를 명시적으로 사용하는 이유:
      * Spring Security 6 환경에서 와일드카드 패턴 경로(/swagger-ui/**, /api/auth/** 등)에 대해
@@ -44,8 +49,13 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        org.springframework.security.web.util.matcher.AntPathRequestMatcher[] matchers =
+        org.springframework.security.web.util.matcher.AntPathRequestMatcher[] publicMatchers =
                 java.util.Arrays.stream(PUBLIC_URLS)
+                        .map(org.springframework.security.web.util.matcher.AntPathRequestMatcher::antMatcher)
+                        .toArray(org.springframework.security.web.util.matcher.AntPathRequestMatcher[]::new);
+
+        org.springframework.security.web.util.matcher.AntPathRequestMatcher[] onboardingMatchers =
+                java.util.Arrays.stream(ALLOWED_ONBOARDING_URLS)
                         .map(org.springframework.security.web.util.matcher.AntPathRequestMatcher::antMatcher)
                         .toArray(org.springframework.security.web.util.matcher.AntPathRequestMatcher[]::new);
 
@@ -58,8 +68,9 @@ public class SecurityConfig {
                         .accessDeniedHandler(jwtAccessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(matchers).permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers(publicMatchers).permitAll()
+                        .requestMatchers(onboardingMatchers).hasAnyRole("GUEST", "STUDENT", "TEACHER", "ADMIN")
+                        .anyRequest().hasAnyRole("STUDENT", "TEACHER", "ADMIN")
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 
