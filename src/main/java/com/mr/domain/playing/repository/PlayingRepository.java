@@ -3,7 +3,7 @@ package com.mr.domain.playing.repository;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import jakarta.persistence.LockModeType;
-import java.time.LocalDate;
+import java.sql.Date;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -85,7 +85,7 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
               and p.deletedAt is null
               and p.endedAt is not null
             """)
-    List<LocalDate> findDistinctEndedDatesByUserAndStatus(
+    List<Date> findDistinctEndedDatesByUserAndStatus(
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status
     );
