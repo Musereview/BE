@@ -24,6 +24,7 @@ import com.mr.domain.user.repository.StudentRepository;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.util.RelativeDateFormatter;
+import java.sql.Date;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -86,7 +87,7 @@ public class HomeService {
     // 연속 출석일수는 기간 상한이 없어야 하므로 별도로 전체 기간 날짜만 조회
     private Set<LocalDate> fetchPracticeDates(Long userId) {
         return playingRepository.findDistinctEndedDatesByUserAndStatus(userId, PlayingStatus.COMPLETED).stream()
-                .map(java.sql.Date::toLocalDate)
+                .map(Date::toLocalDate)
                 .collect(Collectors.toSet());
     }
 
