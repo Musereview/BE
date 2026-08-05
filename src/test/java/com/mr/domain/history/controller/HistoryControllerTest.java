@@ -119,14 +119,19 @@ class HistoryControllerTest {
     void getHistoryDetail_success() throws Exception {
         HistoryDetailResponseDTO response = new HistoryDetailResponseDTO(
                 1L, "제목", "장르", "C Major", 120, "4/4",
-                LocalDateTime.of(2026, 7, 24, 10, 0), 5, 300, List.of(), null, null, List.of()
+                LocalDateTime.of(2026, 7, 24, 10, 0), 5, 300,
+                "https://example.com/recording.webm", "https://example.com/backing-track.mp3",
+                List.of(), null, null, List.of()
         );
         given(historyService.getHistoryDetail(anyLong(), anyLong())).willReturn(response);
 
         mockMvc.perform(get("/api/histories/{playingId}", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.playingId").value(1L))
-                .andExpect(jsonPath("$.data.title").value("제목"));
+                .andExpect(jsonPath("$.data.title").value("제목"))
+                .andExpect(jsonPath("$.data.recordingFileUrl").value("https://example.com/recording.webm"))
+                .andExpect(jsonPath("$.data.backingTrackAudioFileUrl")
+                        .value("https://example.com/backing-track.mp3"));
     }
 
     @Test
