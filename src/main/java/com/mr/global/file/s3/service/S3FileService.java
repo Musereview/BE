@@ -218,6 +218,43 @@ public class S3FileService {
         }
     }
 
+    public String extractObjectKey(
+            String storedFileValue
+    ) {
+        if (storedFileValue == null
+                || storedFileValue.isBlank()) {
+            throw new GeneralException(
+                    S3ErrorStatus.INVALID_OBJECT_KEY
+            );
+        }
+
+        if (!storedFileValue.startsWith("http://")
+                && !storedFileValue.startsWith("https://")) {
+            return storedFileValue;
+        }
+
+        try {
+            String path =
+                    URI.create(storedFileValue)
+                            .getPath();
+
+            if (path == null || path.isBlank()) {
+                throw new GeneralException(
+                        S3ErrorStatus.INVALID_OBJECT_KEY
+                );
+            }
+
+            return path.startsWith("/")
+                    ? path.substring(1)
+                    : path;
+
+        } catch (IllegalArgumentException exception) {
+            throw new GeneralException(
+                    S3ErrorStatus.INVALID_OBJECT_KEY
+            );
+        }
+    }
+
     private HeadObjectResponse getHeadObject(String objectKey) {
         HeadObjectRequest request = HeadObjectRequest.builder()
                 .bucket(s3Properties.bucket())

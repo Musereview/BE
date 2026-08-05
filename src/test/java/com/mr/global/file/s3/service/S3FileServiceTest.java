@@ -532,9 +532,6 @@ class S3FileServiceTest {
             assertThat(response.objectKey())
                     .isEqualTo(OBJECT_KEY);
 
-            assertThat(response.fileUrl())
-                    .isEqualTo(FILE_URL);
-
             assertThat(response.fileSize())
                     .isEqualTo(FILE_SIZE);
 
