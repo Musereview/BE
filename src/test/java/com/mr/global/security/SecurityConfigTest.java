@@ -68,8 +68,8 @@ class SecurityConfigTest {
     }
 
     @Test
-    @DisplayName("위조된 JWT로 보호 API를 요청하면 500이 아닌 401이 발생한다")
-    void protectedApi_withForgedToken_returnsUnauthorized() throws Exception {
+    @DisplayName("형식이 잘못된 JWT로 보호 API를 요청하면 500이 아닌 401이 발생한다")
+    void protectedApi_withMalformedToken_returnsUnauthorized() throws Exception {
         mockMvc.perform(get("/api/users/verify-nickname")
                         .param("nickname", "김뮤즈")
                         .header("Authorization", "Bearer forged.jwt.token"))
