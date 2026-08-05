@@ -136,11 +136,4 @@ public class S3ObjectKeyGenerator {
             );
         };
     }
-
-    private String validateExtension(String extension) {
-        return switch (extension) {
-            case "mp3", "wav", "webm", "ogg" -> extension;
-            default -> throw new GeneralException(S3ErrorStatus.UNSUPPORTED_FILE_EXTENSION);
-        };
-    }
 }
