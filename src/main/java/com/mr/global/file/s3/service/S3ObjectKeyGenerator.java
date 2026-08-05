@@ -13,7 +13,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 @Component
-public class RecordingObjectKeyGenerator {
+public class S3ObjectKeyGenerator {
 
     private static final ZoneId KOREA_ZONE_ID = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter DATE_FORMATTER =
@@ -26,10 +26,12 @@ public class RecordingObjectKeyGenerator {
 
     private final S3Properties s3Properties;
 
-    public RecordingObjectKeyGenerator(S3Properties s3Properties) {
+    public S3ObjectKeyGenerator(S3Properties s3Properties) {
         this.s3Properties = s3Properties;
     }
 
+    // 사용자별 S3 Object Key를 생성
+    // 생성 예시: recordings/1/2026-08-05/152310_a1b2c3.webm
     public String generate(
             Long userId,
             String originalFileName,
@@ -41,59 +43,83 @@ public class RecordingObjectKeyGenerator {
         LocalDateTime now =
                 LocalDateTime.now(KOREA_ZONE_ID);
 
-        String dateFolder =
-                now.format(DATE_FORMATTER);
-
-        String time =
-                now.format(TIME_FORMATTER);
-
-        String shortUuid =
-                UUID.randomUUID()
-                        .toString()
-                        .replace("-", "")
-                        .substring(0, UUID_LENGTH);
 
         String generatedFileName =
                 "%s_%s.%s".formatted(
-                        time,
-                        shortUuid,
+                        now.format(TIME_FORMATTER),
+                        createShortUuid(),
                         extension
                 );
 
         return "%s/%d/%s/%s".formatted(
                 s3Properties.keyPrefix(),
                 userId,
-                dateFolder,
+                now.format(DATE_FORMATTER),
                 generatedFileName
         );
     }
 
-    public boolean belongsToUser(Long userId, String objectKey) {
-        if (userId == null || objectKey == null) {
+    public boolean belongsToOwner(Long ownerId, String objectKey) {
+        if (ownerId == null || objectKey == null) {
             return false;
         }
 
-        String expectedPrefix = s3Properties.keyPrefix() + "/" + userId + "/";
+        String expectedPrefix = s3Properties.keyPrefix() + "/" + ownerId + "/";
 
         return objectKey.startsWith(expectedPrefix);
     }
 
+    private String createShortUuid() {
+        return UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, UUID_LENGTH);
+    }
+
     private String resolveExtension(
-            String fileName,
+            String originalFileName,
             String contentType
     ) {
-        if (fileName != null && fileName.contains(".")) {
-            String extension = fileName.substring(fileName.lastIndexOf(".") + 1)
-                    .toLowerCase(Locale.ROOT);
 
-            return validateExtension(extension);
+        String fileExtension =
+                extractExtension(originalFileName);
+
+        if (fileExtension != null) {
+            return validateExtension(fileExtension);
         }
 
+        return resolveExtensionByContentType(contentType);
+    }
+
+    private String extractExtension(String originalFileName) {
+        if (originalFileName == null
+                || originalFileName.isBlank()
+                || !originalFileName.contains(".")) {
+            return null;
+        }
+
+        int lastDotIndex =
+                originalFileName.lastIndexOf('.');
+
+        if (lastDotIndex == originalFileName.length() - 1) {
+            return null;
+        }
+
+        return originalFileName
+                .substring(lastDotIndex + 1)
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private String resolveExtensionByContentType(
+            String contentType
+    ) {
         String normalizedContentType =
                 ContentTypeUtils.normalize(contentType);
 
         if (normalizedContentType == null) {
-            throw new GeneralException(S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE);
+            throw new GeneralException(
+                    S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE
+            );
         }
 
         return switch (normalizedContentType) {
@@ -101,7 +127,10 @@ public class RecordingObjectKeyGenerator {
             case "audio/wav", "audio/x-wav" -> "wav";
             case "audio/webm" -> "webm";
             case "audio/ogg" -> "ogg";
-            default -> throw new GeneralException(S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE);
+
+            default -> throw new GeneralException(
+                    S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE
+            );
         };
     }
 
