@@ -1,6 +1,7 @@
 package com.mr.domain.analysis.factory;
 
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
+import com.mr.domain.analysis.service.AnalysisBarCalculator;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.backingtrack.entity.ChordProgression;
 import com.mr.domain.playing.entity.MidiEventData;
@@ -13,21 +14,23 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class AnalysisRequestFactory {
 
     private static final int MAX_BAR_COUNT = 32;
-    private static final double MILLIS_PER_MINUTE = 60_000D;
+    private final AnalysisBarCalculator barCalculator;
 
     public AiAnalysisRequest create(Playing playing, int startBar, int endBar) {
         BackingTrack track = playing.getBackingTrack();
-        int[] timeSignature = parseTimeSignature(track.getTimeSignature());
-        double barDurationMs = MILLIS_PER_MINUTE / playing.getBpm()
-                * timeSignature[0] * 4D / timeSignature[1];
+        AnalysisBarCalculator.BarMetrics barMetrics = barCalculator.calculate(playing);
+        int[] timeSignature = barMetrics.timeSignature();
+        double barDurationMs = barMetrics.barDurationMs();
 
-        validateBarRange(track, startBar, endBar, barDurationMs);
+        validateBarRange(startBar, endBar, barMetrics.totalBars());
 
         double startOffsetMs = (startBar - 1) * barDurationMs;
         double endOffsetMs = endBar * barDurationMs;
@@ -82,35 +85,17 @@ public class AnalysisRequestFactory {
     }
 
     private void validateBarRange(
-            BackingTrack track,
             int startBar,
             int endBar,
-            double barDurationMs
+            int totalBars
     ) {
         if (startBar > endBar) {
             throw new GeneralException(AnalysisErrorStatus.INVALID_BAR_ORDER);
         }
         int barCount = endBar - startBar + 1;
-        int totalBars = (int) Math.ceil(track.getPlaytimeSec() * 1_000D / barDurationMs);
         if (barCount > MAX_BAR_COUNT || endBar > totalBars) {
             throw new GeneralException(AnalysisErrorStatus.INVALID_BAR_RANGE);
         }
     }
 
-    private int[] parseTimeSignature(String value) {
-        try {
-            String[] parts = value.split("/");
-            if (parts.length != 2) {
-                throw new NumberFormatException();
-            }
-            int numerator = Integer.parseInt(parts[0]);
-            int denominator = Integer.parseInt(parts[1]);
-            if (numerator <= 0 || denominator <= 0) {
-                throw new NumberFormatException();
-            }
-            return new int[]{numerator, denominator};
-        } catch (NumberFormatException exception) {
-            throw new GeneralException(AnalysisErrorStatus.ANALYSIS_INVALID_REQUEST);
-        }
-    }
 }
