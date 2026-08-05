@@ -3,9 +3,11 @@ package com.mr.global.apipayload.handler;
 import com.mr.global.apipayload.ApiResponse;
 import com.mr.global.apipayload.code.CommonStatus;
 import com.mr.global.apipayload.exception.GeneralException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -83,7 +86,10 @@ public class GlobalExceptionHandler {
 
     // 그 외  전체 서버 에러 처리
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Object>> handleAllException(Exception e) {
+    public ResponseEntity<ApiResponse<Object>> handleAllException(Exception e, HttpServletRequest request) {
+        log.error("처리되지 않은 서버 예외: method={}, uri={}",
+                request.getMethod(), request.getRequestURI(), e);
+
         var status = CommonStatus.INTERNAL_SERVER_ERROR;
         ApiResponse<Object> response = ApiResponse.onFailure(status.getCode(), status.getMessage(), null);
         return ResponseEntity.status(status.getStatus())
