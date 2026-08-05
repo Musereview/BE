@@ -261,12 +261,10 @@ public class S3FileService {
     }
 
     private String buildFileUrl(String objectKey) {
-        String fileUrl = s3Client.utilities()
+        return s3Client.utilities()
                 .getUrl(builder -> builder
                         .bucket(s3Properties.bucket())
                         .key(objectKey))
                 .toString();
-
-        return fileUrl;
     }
 }
