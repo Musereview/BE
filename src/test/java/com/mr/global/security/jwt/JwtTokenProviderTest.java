@@ -58,8 +58,10 @@ class JwtTokenProviderTest {
     }
 
     private String tamperSignature(String token) {
-        char lastCharacter = token.charAt(token.length() - 1);
-        char replacement = lastCharacter == 'A' ? 'B' : 'A';
-        return token.substring(0, token.length() - 1) + replacement;
+        String[] segments = token.split("[.]");
+        byte[] signature = Base64.getUrlDecoder().decode(segments[2]);
+        signature[0] ^= 0x01;
+        segments[2] = Base64.getUrlEncoder().withoutPadding().encodeToString(signature);
+        return String.join(".", segments);
     }
 }
