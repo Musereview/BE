@@ -88,10 +88,12 @@ class AnalysisServiceTest {
         lenient().when(playing.getUser()).thenReturn(user);
         lenient().when(playing.getBackingTrack()).thenReturn(backingTrack);
         lenient().when(playing.getBpm()).thenReturn(120);
+        lenient().when(playing.getRecordingFileUrl()).thenReturn("https://example.com/recording.webm");
         lenient().when(backingTrack.getTitle()).thenReturn("테스트 트랙");
         lenient().when(backingTrack.getGenre()).thenReturn("jazz");
         lenient().when(backingTrack.getKeySignature()).thenReturn("C");
         lenient().when(backingTrack.getScaleType()).thenReturn(scaleType);
+        lenient().when(backingTrack.getAudioFileUrl()).thenReturn("https://example.com/backing-track.mp3");
 
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
         LocalDateTime now = LocalDateTime.of(2026, 7, 31, 12, 0);
@@ -153,6 +155,31 @@ class AnalysisServiceTest {
         assertThat(response.report().llmStatus()).isEqualTo(LlmStatus.SUCCESS);
         assertThat(response.title()).isEqualTo("테스트 트랙");
         assertThat(response.key()).isEqualTo("C Major");
+        assertThat(response.recordingFileUrl()).isEqualTo("https://example.com/recording.webm");
+        assertThat(response.backingTrackAudioFileUrl()).isEqualTo("https://example.com/backing-track.mp3");
+    }
+
+    @Test
+    @DisplayName("getAnalysisResult - 백킹트랙이 없으면 음원 URL은 null이다")
+    void getAnalysisResult_withoutBackingTrack_returnsNullAudioUrls() {
+        User user = mock(User.class);
+        Playing playing = mock(Playing.class);
+        given(user.getUserId()).willReturn(1L);
+        given(playing.getUser()).willReturn(user);
+        given(playing.getId()).willReturn(1L);
+
+        Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
+        LocalDateTime now = LocalDateTime.of(2026, 7, 31, 12, 0);
+        analysis.startProcessing(now);
+        analysis.complete(85, AnalysisGrade.GOOD, "테스트 요약", null, null, null, null, null, now);
+        given(analysisRepository.findById(1L)).willReturn(Optional.of(analysis));
+        given(analysisReportRepository.findFirstByAnalysisIdAndLlmStatusOrderByCreatedAtDesc(anyLong(), any()))
+                .willReturn(Optional.empty());
+
+        AnalysisResultResponseDTO response = analysisService.getAnalysisResult(1L, 1L);
+
+        assertThat(response.recordingFileUrl()).isNull();
+        assertThat(response.backingTrackAudioFileUrl()).isNull();
     }
 
     @Test
