@@ -12,6 +12,7 @@ import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.service.S3FileService;
 import com.mr.global.util.RelativeDateFormatter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ public class HistoryService {
 
     private final PlayingRepository playingRepository;
     private final AnalysisRepository analysisRepository;
+    private final S3FileService s3FileService;
 
     public HistoryListResponseDTO getHistories(Long userId, int page, int size, HistoryPeriod period) {
         validatePaging(page, size);
@@ -69,7 +71,13 @@ public class HistoryService {
         List<Analysis> analyses =
                 analysisRepository.findByPlayingIdAndUserIdOrderByStartBarAscIdAsc(playingId, userId);
 
-        return HistoryDetailResponseDTO.from(playing, analyses);
+        String recordingFileUrl =
+                s3FileService.createPresignedDownload(
+                        userId,
+                        playing.getRecordingObjectKey()
+                );
+
+        return HistoryDetailResponseDTO.from(playing, analyses, recordingFileUrl);
     }
 
     private List<Item> buildItems(
