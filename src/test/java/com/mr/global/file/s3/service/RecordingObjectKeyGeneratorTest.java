@@ -25,7 +25,7 @@ class RecordingObjectKeyGeneratorTest {
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    private RecordingObjectKeyGenerator objectKeyGenerator;
+    private S3ObjectKeyGenerator objectKeyGenerator;
 
     @BeforeEach
     void setUp() {
@@ -47,7 +47,7 @@ class RecordingObjectKeyGeneratorTest {
         );
 
         objectKeyGenerator =
-                new RecordingObjectKeyGenerator(s3Properties);
+                new S3ObjectKeyGenerator(s3Properties);
     }
 
     @Nested
@@ -248,7 +248,7 @@ class RecordingObjectKeyGeneratorTest {
 
             // when
             boolean result =
-                    objectKeyGenerator.belongsToUser(
+                    objectKeyGenerator.belongsToOwner(
                             userId,
                             objectKey
                     );
@@ -269,7 +269,7 @@ class RecordingObjectKeyGeneratorTest {
 
             // when
             boolean result =
-                    objectKeyGenerator.belongsToUser(
+                    objectKeyGenerator.belongsToOwner(
                             userId,
                             objectKey
                     );
@@ -283,7 +283,7 @@ class RecordingObjectKeyGeneratorTest {
         @DisplayName("사용자 ID가 null이면 false를 반환한다")
         void nullUserId() {
             assertThat(
-                    objectKeyGenerator.belongsToUser(
+                    objectKeyGenerator.belongsToOwner(
                             null,
                             "recordings/1/2026-08-02/test.mp3"
                     )
@@ -295,7 +295,7 @@ class RecordingObjectKeyGeneratorTest {
         @DisplayName("Object Key가 null이면 false를 반환한다")
         void nullObjectKey() {
             assertThat(
-                    objectKeyGenerator.belongsToUser(
+                    objectKeyGenerator.belongsToOwner(
                             1L,
                             null
                     )
@@ -307,7 +307,7 @@ class RecordingObjectKeyGeneratorTest {
         @DisplayName("Object Key가 빈 문자열이면 false를 반환한다")
         void blankObjectKey() {
             assertThat(
-                    objectKeyGenerator.belongsToUser(
+                    objectKeyGenerator.belongsToOwner(
                             1L,
                             " "
                     )

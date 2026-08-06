@@ -23,6 +23,8 @@ public record AnalysisResultResponseDTO(
         String key,
         Integer bpm,
         LocalDateTime playedAt,
+        String recordingFileUrl,
+        String backingTrackAudioFileUrl,
         AnalysisStatus status,
         Integer startBar,
         Integer endBar,
@@ -46,11 +48,13 @@ public record AnalysisResultResponseDTO(
         return new AnalysisResultResponseDTO(
                 analysis.getId(),
                 playing.getId(),
-                backingTrack.getTitle(),
-                backingTrack.getGenre(),
+                backingTrack != null ? backingTrack.getTitle() : null,
+                backingTrack != null ? backingTrack.getGenre() : null,
                 formatKey(backingTrack),
                 playing.getBpm(),
                 playing.getEndedAt(),
+                playing.getRecordingFileUrl(),
+                backingTrack != null ? backingTrack.getAudioFileUrl() : null,
                 analysis.getStatus(),
                 analysis.getStartBar(),
                 analysis.getEndBar(),
@@ -66,6 +70,9 @@ public record AnalysisResultResponseDTO(
     }
 
     private static String formatKey(BackingTrack backingTrack) {
+        if (backingTrack == null || backingTrack.getKeySignature() == null || backingTrack.getScaleType() == null) {
+            return null;
+        }
         String scale = backingTrack.getScaleType().name().toLowerCase(Locale.ROOT);
         return backingTrack.getKeySignature()
                 + " "

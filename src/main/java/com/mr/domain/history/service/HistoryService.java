@@ -50,9 +50,11 @@ public class HistoryService {
                         userId, PlayingStatus.COMPLETED, cutoff, pageRequest);
 
         List<Playing> playings = slice.getContent();
-        Map<Long, Analysis> latestByPlayingId = fetchLatestCompletedAnalyses(playings);
+        Long nextPlayingId = findNextPlayingId(userId, cutoff, slice);
+        Map<Long, Analysis> latestByPlayingId = fetchLatestCompletedAnalyses(playings, nextPlayingId);
 
-        return HistoryListResponseDTO.of(page, size, slice.hasNext(), buildItems(playings, latestByPlayingId));
+        return HistoryListResponseDTO.of(
+                page, size, slice.hasNext(), buildItems(playings, nextPlayingId, latestByPlayingId));
     }
 
     public HistoryDetailResponseDTO getHistoryDetail(Long userId, Long playingId) {
@@ -70,18 +72,19 @@ public class HistoryService {
         return HistoryDetailResponseDTO.from(playing, analyses);
     }
 
-    private List<Item> buildItems(List<Playing> playings, Map<Long, Analysis> latestByPlayingId) {
+    private List<Item> buildItems(
+            List<Playing> playings, Long nextPlayingId, Map<Long, Analysis> latestByPlayingId) {
         List<Item> items = new ArrayList<>();
 
         for (int i = 0; i < playings.size(); i++) {
             Playing current = playings.get(i);
             Analysis currentAnalysis = latestByPlayingId.get(current.getId());
 
-            Integer scoreChange = null;
-            if (i + 1 < playings.size()) {
-                Analysis previousAnalysis = latestByPlayingId.get(playings.get(i + 1).getId());
-                scoreChange = computeScoreChange(currentAnalysis, previousAnalysis);
-            }
+            Long previousPlayingId = i + 1 < playings.size()
+                    ? playings.get(i + 1).getId()
+                    : nextPlayingId;
+            Analysis previousAnalysis = latestByPlayingId.get(previousPlayingId);
+            Integer scoreChange = computeScoreChange(currentAnalysis, previousAnalysis);
 
             items.add(Item.of(current, currentAnalysis, scoreChange, RelativeDateFormatter.format(current.getEndedAt())));
         }
@@ -89,8 +92,32 @@ public class HistoryService {
         return items;
     }
 
-    private Map<Long, Analysis> fetchLatestCompletedAnalyses(List<Playing> playings) {
-        List<Long> playingIds = playings.stream().map(Playing::getId).toList();
+    private Long findNextPlayingId(Long userId, LocalDateTime cutoff, Slice<Playing> slice) {
+        if (!slice.hasNext() || slice.getContent().isEmpty()) {
+            return null;
+        }
+
+        Playing lastPlaying = slice.getContent().get(slice.getContent().size() - 1);
+        PageRequest pageRequest = PageRequest.of(0, 1);
+        List<Long> nextPlayingIds = cutoff == null
+                ? playingRepository.findNextPlayingId(
+                        userId, PlayingStatus.COMPLETED,
+                        lastPlaying.getEndedAt(), lastPlaying.getId(), pageRequest)
+                : playingRepository.findNextPlayingIdSince(
+                        userId, PlayingStatus.COMPLETED, cutoff,
+                        lastPlaying.getEndedAt(), lastPlaying.getId(), pageRequest);
+
+        return nextPlayingIds
+                .stream()
+                .findFirst()
+                .orElse(null);
+    }
+
+    private Map<Long, Analysis> fetchLatestCompletedAnalyses(List<Playing> playings, Long nextPlayingId) {
+        List<Long> playingIds = new ArrayList<>(playings.stream().map(Playing::getId).toList());
+        if (nextPlayingId != null) {
+            playingIds.add(nextPlayingId);
+        }
 
         if (playingIds.isEmpty()) {
             return Map.of();
