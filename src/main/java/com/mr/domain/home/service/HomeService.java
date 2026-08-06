@@ -24,13 +24,14 @@ import com.mr.domain.user.repository.StudentRepository;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.util.RelativeDateFormatter;
+import java.sql.Date;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
@@ -85,8 +86,9 @@ public class HomeService {
 
     // 연속 출석일수는 기간 상한이 없어야 하므로 별도로 전체 기간 날짜만 조회
     private Set<LocalDate> fetchPracticeDates(Long userId) {
-        return new HashSet<>(
-                playingRepository.findDistinctEndedDatesByUserAndStatus(userId, PlayingStatus.COMPLETED));
+        return playingRepository.findDistinctEndedDatesByUserAndStatus(userId, PlayingStatus.COMPLETED).stream()
+                .map(Date::toLocalDate)
+                .collect(Collectors.toSet());
     }
 
     private UserSummary buildUserSummary(User user) {
@@ -191,7 +193,7 @@ public class HomeService {
 
     private List<RecentPlaying> buildRecentPlayings(Long userId) {
         Slice<Playing> slice = playingRepository.findPlayingsByUserAndStatus(
-                userId, PlayingStatus.COMPLETED, null, PageRequest.of(0, RECENT_PLAYINGS_LIMIT));
+                userId, PlayingStatus.COMPLETED, PageRequest.of(0, RECENT_PLAYINGS_LIMIT));
 
         return slice.getContent().stream()
                 .map(playing -> RecentPlaying.of(playing, RelativeDateFormatter.format(playing.getEndedAt())))

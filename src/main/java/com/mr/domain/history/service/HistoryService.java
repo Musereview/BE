@@ -42,8 +42,12 @@ public class HistoryService {
         validatePaging(page, size);
 
         LocalDateTime cutoff = resolveCutoff(period);
-        Slice<Playing> slice = playingRepository.findPlayingsByUserAndStatus(
-                userId, PlayingStatus.COMPLETED, cutoff, PageRequest.of(page, size));
+        PageRequest pageRequest = PageRequest.of(page, size);
+        Slice<Playing> slice = cutoff == null
+                ? playingRepository.findPlayingsByUserAndStatus(
+                        userId, PlayingStatus.COMPLETED, pageRequest)
+                : playingRepository.findPlayingsByUserAndStatusSince(
+                        userId, PlayingStatus.COMPLETED, cutoff, pageRequest);
 
         List<Playing> playings = slice.getContent();
         Long nextPlayingId = findNextPlayingId(userId, cutoff, slice);

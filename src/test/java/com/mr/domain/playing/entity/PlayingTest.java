@@ -10,6 +10,7 @@ import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.domain.user.entity.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -25,6 +26,17 @@ import static org.mockito.Mockito.when;
 class PlayingTest {
 
     private static final int BPM = 120;
+    private static final String RECORDING_OBJECT_KEY =
+            "recordings/1/2026-08-02/150000_a1b2c3.mp3";
+
+    private static final String BUCKET = "test-bucket";
+    private static final String REGION = "ap-northeast-2";
+
+    private static final String OBJECT_KEY =
+            "recordings/1/2026-08-02/033746_e90683.mp3";
+
+    private static final String RECORDING_FILE_URL =
+            "https://" + BUCKET + ".s3." + REGION + ".amazonaws.com/" + OBJECT_KEY;
 
     @Test
     @DisplayName("READY 상태의 연주를 시작하면 IN_PROGRESS 상태로 변경된다")
@@ -56,7 +68,7 @@ class PlayingTest {
         );
 
         // when
-        playing.completeWithMidiData(midiData);
+        playing.completeWithMidiData(midiData, RECORDING_OBJECT_KEY);
 
         // then
         assertThat(playing.getMidiData())
@@ -88,7 +100,7 @@ class PlayingTest {
         );
 
         // when
-        playing.completeWithMidiData(midiData);
+        playing.completeWithMidiData(midiData, RECORDING_OBJECT_KEY);
 
         // then
         assertThat(playing.getMidiData())
@@ -110,7 +122,7 @@ class PlayingTest {
         Playing playing = createInProgressPlaying();
 
         assertThatThrownBy(() ->
-                playing.completeWithMidiData(List.of())
+                playing.completeWithMidiData(List.of(), RECORDING_OBJECT_KEY)
         )
                 .isInstanceOf(GeneralException.class)
                 .satisfies(exception -> {
@@ -132,7 +144,7 @@ class PlayingTest {
 
         // when & then
         assertThatThrownBy(() ->
-                playing.completeWithMidiData(null)
+                playing.completeWithMidiData(null, RECORDING_OBJECT_KEY)
         )
                 .isInstanceOf(GeneralException.class)
                 .satisfies(exception -> {
@@ -158,7 +170,7 @@ class PlayingTest {
 
         // when & then
         assertThatThrownBy(() ->
-                playing.completeWithMidiData(midiData)
+                playing.completeWithMidiData(midiData, RECORDING_OBJECT_KEY)
         )
                 .isInstanceOf(GeneralException.class)
                 .satisfies(exception -> {
@@ -185,7 +197,7 @@ class PlayingTest {
 
         // when & then
         assertThatThrownBy(() ->
-                playing.completeWithMidiData(midiData)
+                playing.completeWithMidiData(midiData, RECORDING_OBJECT_KEY)
         )
                 .isInstanceOf(GeneralException.class)
                 .satisfies(exception -> {
@@ -211,7 +223,7 @@ class PlayingTest {
         );
 
         // when
-        playing.completeWithMidiData(midiData);
+        playing.completeWithMidiData(midiData, RECORDING_OBJECT_KEY);
 
         // then
         assertThat(playing.getMidiData())
@@ -237,7 +249,7 @@ class PlayingTest {
         }
 
         // when
-        playing.completeWithMidiData(midiData);
+        playing.completeWithMidiData(midiData, RECORDING_OBJECT_KEY);
 
         // then
         assertThat(playing.getMidiData())
@@ -267,7 +279,7 @@ class PlayingTest {
 
         // when & then
         assertThatThrownBy(() ->
-                playing.completeWithMidiData(midiData)
+                playing.completeWithMidiData(midiData, RECORDING_OBJECT_KEY)
         )
                 .isInstanceOf(GeneralException.class)
                 .satisfies(exception -> {
@@ -288,13 +300,15 @@ class PlayingTest {
         Playing playing = createInProgressPlaying();
 
         playing.completeWithMidiData(
-                List.of(createMidiEvent(0, 0L))
+                List.of(createMidiEvent(0, 0L)),
+                RECORDING_OBJECT_KEY
         );
 
         // when & then
         assertThatThrownBy(() ->
                 playing.completeWithMidiData(
-                        List.of(createMidiEvent(1, 100L))
+                        List.of(createMidiEvent(1, 100L)),
+                        RECORDING_OBJECT_KEY
                 )
         )
                 .isInstanceOf(GeneralException.class)
@@ -325,7 +339,7 @@ class PlayingTest {
 
         // when & then
         assertThatThrownBy(() ->
-                playing.completeWithMidiData(midiData)
+                playing.completeWithMidiData(midiData, RECORDING_OBJECT_KEY)
         )
                 .isInstanceOf(GeneralException.class)
                 .satisfies(exception -> {
@@ -360,7 +374,8 @@ class PlayingTest {
         // when & then
         assertThatThrownBy(() ->
                 playing.completeWithMidiData(
-                        List.of(createMidiEvent(0, 0L))
+                        List.of(createMidiEvent(0, 0L)),
+                        RECORDING_OBJECT_KEY
                 )
         )
                 .isInstanceOf(GeneralException.class)
@@ -432,7 +447,7 @@ class PlayingTest {
         midiData.add(createMidiEvent(1, 100L));
 
         // when
-        playing.completeWithMidiData(midiData);
+        playing.completeWithMidiData(midiData, RECORDING_OBJECT_KEY);
         midiData.clear();
 
         // then
@@ -447,7 +462,8 @@ class PlayingTest {
         Playing playing = createInProgressPlaying();
 
         playing.completeWithMidiData(
-                List.of(createMidiEvent(0, 0L))
+                List.of(createMidiEvent(0, 0L)),
+                RECORDING_OBJECT_KEY
         );
 
         List<MidiEventData> savedMidiData =
@@ -660,9 +676,49 @@ class PlayingTest {
                 .isNull();
     }
 
+    @Test
+    @DisplayName("진행 중인 연주에 MIDI 데이터와 녹음 파일 URL을 저장하면 완료 상태로 변경된다")
+    void completeWithMidiDataAndRecordingFileUrl() {
+        // given
+        Playing playing = createInProgressPlaying();
+
+        List<MidiEventData> midiData = List.of(
+                createMidiEvent(0, 100L),
+                createMidiEvent(1, 200L),
+                createMidiEvent(2, 300L)
+        );
+
+        // when
+        playing.completeWithMidiData(
+                midiData,
+                RECORDING_FILE_URL
+        );
+
+        // then
+        assertThat(playing.getMidiData())
+                .hasSize(3);
+
+        assertThat(playing.getRecordingFileUrl())
+                .isEqualTo(RECORDING_FILE_URL);
+
+        assertThat(playing.getEndedAt())
+                .isNotNull();
+
+        assertThat(playing.getDurationSec())
+                .isNotNull()
+                .isGreaterThanOrEqualTo(0)
+                .isLessThanOrEqualTo(600);
+
+        assertThat(playing.getStatus())
+                .isEqualTo(PlayingStatus.COMPLETED);
+    }
+
     private Playing createReadyPlaying() {
         User user = mock(User.class);
         BackingTrack backingTrack = mock(BackingTrack.class);
+
+        when(backingTrack.getPlaytimeSec())
+                .thenReturn(600);
 
         return Playing.createBackingTrack(
                 user,
@@ -674,6 +730,12 @@ class PlayingTest {
     private Playing createInProgressPlaying() {
         Playing playing = createReadyPlaying();
         playing.start();
+
+        ReflectionTestUtils.setField(
+                playing,
+                "startedAt",
+                LocalDateTime.now().minusSeconds(1)
+        );
 
         return playing;
     }

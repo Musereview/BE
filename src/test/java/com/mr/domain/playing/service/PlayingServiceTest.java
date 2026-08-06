@@ -1,14 +1,18 @@
 package com.mr.domain.playing.service;
 
 import com.mr.domain.backingtrack.entity.BackingTrack;
+import com.mr.domain.analysis.service.AnalysisBarCalculator;
 import com.mr.domain.backingtrack.entity.enums.AccessLevel;
 import com.mr.domain.backingtrack.repository.BackingTrackRepository;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
+import com.mr.domain.playing.dto.req.RecordingUploadUrlRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
+import com.mr.domain.playing.dto.res.AnalysisContextResponse;
 import com.mr.domain.playing.dto.res.PlayingDeleteResponse;
 import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
+import com.mr.domain.playing.dto.res.RecordingUploadUrlResponse;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.MidiType;
@@ -20,6 +24,11 @@ import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.event.PlayingCompletedEvent;
+import com.mr.global.file.s3.dto.FileUploadCommand;
+import com.mr.global.file.s3.dto.ValidatedFile;
+import com.mr.global.file.s3.dto.PresignedUrlUpload;
+import com.mr.global.file.s3.service.S3FileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -29,31 +38,52 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Clock;
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PlayingServiceTest {
 
     private static final Integer BPM = 120;
+    private static final String RECORDING_OBJECT_KEY =
+            "recordings/1/2026-08-02/150000_a1b2c3.mp3";
+    private static final String RECORDING_FILE_URL =
+            "https://test-bucket.s3.ap-northeast-2.amazonaws.com/"
+                    + RECORDING_OBJECT_KEY;
 
     @Mock
     private PlayingRepository playingRepository;
+
+    @Mock
+    private AnalysisBarCalculator analysisBarCalculator;
 
     @Mock
     private UserRepository userRepository;
@@ -64,6 +94,18 @@ class PlayingServiceTest {
     @Mock
     private Playing playing;
 
+    @Mock
+    private S3FileService s3FileService;
+
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private Clock clock;
+
     private User user;
     private BackingTrack backingTrack;
 
@@ -73,6 +115,14 @@ class PlayingServiceTest {
     private Long userId;
     private Long playingId;
     private Long backingTrackId;
+
+    ValidatedFile recordingResponse =
+            new ValidatedFile(
+                    RECORDING_OBJECT_KEY,
+                    RECORDING_FILE_URL,
+                    1_157_632L,
+                    "audio/mpeg"
+            );
 
     @BeforeEach
     void setUp() {
@@ -94,6 +144,14 @@ class PlayingServiceTest {
             // given
             MidiEventSaveRequest request = createRequest();
 
+            stubTransactionExecution();
+            stubCompletedPlayingForMilestoneCalculation();
+
+            when(s3FileService.validateUploadedFile(
+                    userId,
+                    RECORDING_OBJECT_KEY
+            )).thenReturn(recordingResponse);
+
             when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
                     .thenReturn(Optional.of(playing));
 
@@ -113,7 +171,7 @@ class PlayingServiceTest {
                         .thenReturn(midiEvents);
 
                 return null;
-            }).when(playing).completeWithMidiData(anyList());
+            }).when(playing).completeWithMidiData(anyList(), eq(RECORDING_FILE_URL));
 
             // when
             MidiEventSaveResponse response =
@@ -136,8 +194,27 @@ class PlayingServiceTest {
             verify(playing)
                     .validatePlayingOwner(userId);
 
+            verify(s3FileService)
+                    .validateUploadedFile(
+                            userId,
+                            RECORDING_OBJECT_KEY
+                    );
+
             verify(playing)
-                    .completeWithMidiData(anyList());
+                    .completeWithMidiData(anyList(), eq(RECORDING_FILE_URL));
+
+            ArgumentCaptor<Object> eventCaptor =
+                    ArgumentCaptor.forClass(Object.class);
+
+            verify(eventPublisher)
+                    .publishEvent(eventCaptor.capture());
+
+            assertThat(eventCaptor.getValue())
+                    .isInstanceOfSatisfying(
+                            PlayingCompletedEvent.class,
+                            event -> assertThat(event.getUserId())
+                                    .isEqualTo(userId)
+                    );
         }
 
         @Test
@@ -145,6 +222,13 @@ class PlayingServiceTest {
         void saveMidiEvents_accessDenied() {
             MidiEventSaveRequest request =
                     createRequest();
+
+            stubTransactionExecution();
+
+            when(s3FileService.validateUploadedFile(
+                    userId,
+                    RECORDING_OBJECT_KEY
+            )).thenReturn(recordingResponse);
 
             when(
                     playingRepository
@@ -178,8 +262,29 @@ class PlayingServiceTest {
                                 );
                     });
 
+            verify(s3FileService)
+                    .validateUploadedFile(
+                            userId,
+                            RECORDING_OBJECT_KEY
+                    );
+
+            verify(playingRepository)
+                    .findByIdAndDeletedAtIsNull(playingId);
+
+            verify(playing)
+                    .validatePlayingOwner(userId);
+
             verify(playing, never())
-                    .completeWithMidiData(anyList());
+                    .validateInProgress();
+
+            verify(playing, never())
+                    .completeWithMidiData(
+                            anyList(),
+                            anyString()
+                    );
+
+            verify(eventPublisher, never())
+                    .publishEvent(any());
         }
 
         @Test
@@ -187,6 +292,14 @@ class PlayingServiceTest {
         void saveMidiEvents_convertsRequestToEntity() {
             // given
             MidiEventSaveRequest request = createRequest();
+
+            stubTransactionExecution();
+            stubCompletedPlayingForMilestoneCalculation();
+
+            when(s3FileService.validateUploadedFile(
+                    userId,
+                    RECORDING_OBJECT_KEY
+            )).thenReturn(recordingResponse);
 
             when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
                     .thenReturn(Optional.of(playing));
@@ -222,7 +335,7 @@ class PlayingServiceTest {
                         .thenReturn(midiEvents);
 
                 return null;
-            }).when(playing).completeWithMidiData(anyList());
+            }).when(playing).completeWithMidiData(anyList(), anyString());
 
             // when
             playingService.saveMidiEvents(
@@ -232,8 +345,26 @@ class PlayingServiceTest {
             );
 
             // then
+            verify(s3FileService)
+                    .validateUploadedFile(
+                            userId,
+                            RECORDING_OBJECT_KEY
+                    );
+
             verify(playing)
-                    .completeWithMidiData(anyList());
+                    .validatePlayingOwner(userId);
+
+            verify(playing)
+                    .validateInProgress();
+
+            verify(playing)
+                    .completeWithMidiData(
+                            anyList(),
+                            eq(RECORDING_FILE_URL)
+                    );
+
+            verify(eventPublisher)
+                    .publishEvent(any(PlayingCompletedEvent.class));
         }
 
         @Test
@@ -241,6 +372,13 @@ class PlayingServiceTest {
         void saveMidiEvents_notInProgress() {
             MidiEventSaveRequest request =
                     createRequest();
+
+            stubTransactionExecution();
+
+            when(s3FileService.validateUploadedFile(
+                    userId,
+                    RECORDING_OBJECT_KEY
+            )).thenReturn(recordingResponse);
 
             when(
                     playingRepository
@@ -254,7 +392,7 @@ class PlayingServiceTest {
                     )
             )
                     .when(playing)
-                    .completeWithMidiData(anyList());
+                    .validateInProgress();
 
             assertThatThrownBy(() ->
                     playingService.saveMidiEvents(
@@ -273,6 +411,27 @@ class PlayingServiceTest {
                                         MidiEventErrorStatus.PLAYING_NOT_IN_PROGRESS
                                 );
                     });
+
+            verify(s3FileService)
+                    .validateUploadedFile(
+                            userId,
+                            RECORDING_OBJECT_KEY
+                    );
+
+            verify(playingRepository)
+                    .findByIdAndDeletedAtIsNull(playingId);
+
+            verify(playing)
+                    .validatePlayingOwner(userId);
+
+            verify(playing)
+                    .validateInProgress();
+
+            verify(playing, never())
+                    .completeWithMidiData(anyList(), anyString());
+
+            verify(eventPublisher, never())
+                    .publishEvent(any());
         }
 
         @Test
@@ -301,8 +460,17 @@ class PlayingServiceTest {
                                 );
                     });
 
+            verify(s3FileService, never())
+                    .validateUploadedFile(
+                            anyLong(),
+                            anyString()
+                    );
+
             verify(playingRepository, never())
                     .findByIdAndDeletedAtIsNull(any());
+
+            verify(eventPublisher, never())
+                    .publishEvent(any());
         }
 
         @Test
@@ -341,6 +509,13 @@ class PlayingServiceTest {
             // given
             MidiEventSaveRequest request = createRequest();
 
+            stubTransactionExecution();
+
+            when(s3FileService.validateUploadedFile(
+                    userId,
+                    RECORDING_OBJECT_KEY
+            )).thenReturn(recordingResponse);
+
             when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
                     .thenReturn(Optional.empty());
 
@@ -364,11 +539,67 @@ class PlayingServiceTest {
                                 );
                     });
 
+            verify(s3FileService)
+                    .validateUploadedFile(
+                            userId,
+                            RECORDING_OBJECT_KEY
+                    );
+
+            verify(playingRepository)
+                    .findByIdAndDeletedAtIsNull(playingId);
+
             verify(playing, never())
                     .validatePlayingOwner(userId);
 
             verify(playing, never())
-                    .completeWithMidiData(anyList());
+                    .completeWithMidiData(anyList(), anyString());
+
+            verify(eventPublisher, never())
+                    .publishEvent(any());
+        }
+
+        private void stubTransactionExecution() {
+            doAnswer(invocation -> {
+                TransactionCallback<?> callback =
+                        invocation.getArgument(0);
+
+                return callback.doInTransaction(
+                        mock(TransactionStatus.class)
+                );
+            })
+                    .when(transactionTemplate)
+                    .execute(any());
+        }
+
+        private void stubCompletedPlayingForMilestoneCalculation() {
+            LocalDate fixedDate = LocalDate.of(2026, 8, 4);
+            ZoneId zoneId = ZoneId.of("Asia/Seoul");
+            Instant fixedInstant = fixedDate
+                    .atStartOfDay(zoneId)
+                    .toInstant();
+
+            when(clock.instant())
+                    .thenReturn(fixedInstant);
+
+            when(clock.getZone())
+                    .thenReturn(zoneId);
+
+            when(playing.getStatus())
+                    .thenReturn(PlayingStatus.COMPLETED);
+
+            when(playing.getDurationSec())
+                    .thenReturn(300);
+
+            LocalDateTime weekStart = fixedDate
+                    .with(DayOfWeek.MONDAY)
+                    .atStartOfDay();
+
+            when(playingRepository.sumDurationSecExcludeCurrent(
+                    userId,
+                    PlayingStatus.COMPLETED,
+                    weekStart,
+                    playingId
+            )).thenReturn(0L);
         }
     }
 
@@ -623,7 +854,7 @@ class PlayingServiceTest {
                         )
                 );
 
-        return new MidiEventSaveRequest(events);
+        return new MidiEventSaveRequest(events, RECORDING_OBJECT_KEY);
     }
 
     @Nested
@@ -716,6 +947,73 @@ class PlayingServiceTest {
             assertThatThrownBy(() ->
                     playingService.getPlayingDetail(userId, playingId))
                     .isInstanceOf(GeneralException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("분석 마디 선택 정보 조회")
+    class GetAnalysisContext {
+
+        @Test
+        @DisplayName("본인의 완료된 연주와 전체 마디 수를 조회한다")
+        void getAnalysisContextSuccess() {
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+            when(playing.getBackingTrack()).thenReturn(backingTrack);
+            when(playing.getId()).thenReturn(playingId);
+            when(playing.getBpm()).thenReturn(BPM);
+            when(playing.getMidiData()).thenReturn(List.of());
+            when(backingTrack.getTimeSignature()).thenReturn("4/4");
+            when(analysisBarCalculator.calculate(playing))
+                    .thenReturn(new AnalysisBarCalculator.BarMetrics(
+                            new int[]{4, 4},
+                            2_000D,
+                            60
+                    ));
+
+            AnalysisContextResponse response =
+                    playingService.getAnalysisContext(userId, playingId);
+
+            assertThat(response.playingId()).isEqualTo(playingId);
+            assertThat(response.totalBars()).isEqualTo(60);
+            verify(playing).validatePlayingOwner(userId);
+            verify(playing).validateCompleted();
+        }
+
+        @Test
+        @DisplayName("백킹트랙이 연결되지 않으면 예외가 발생한다")
+        void backingTrackNotFound() {
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+            when(playing.getBackingTrack()).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    playingService.getAnalysisContext(userId, playingId)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .hasFieldOrPropertyWithValue(
+                            "code",
+                            PlayingErrorStatus.BACKING_TRACK_NOT_FOUND
+                    );
+
+            verify(analysisBarCalculator, never()).calculate(any());
+        }
+
+        @Test
+        @DisplayName("다른 사용자의 연주는 조회할 수 없다")
+        void playingAccessDenied() {
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+            doThrow(new GeneralException(PlayingErrorStatus.PLAYING_ACCESS_DENIED))
+                    .when(playing)
+                    .validatePlayingOwner(userId);
+
+            assertThatThrownBy(() ->
+                    playingService.getAnalysisContext(userId, playingId)
+            ).isInstanceOf(GeneralException.class);
+
+            verify(playing, never()).validateCompleted();
+            verify(analysisBarCalculator, never()).calculate(any());
         }
     }
 
@@ -849,6 +1147,129 @@ class PlayingServiceTest {
 
             verify(playingRepository, never())
                     .findByIdAndDeletedAtIsNull(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("녹음 파일 업로드 URL 발급")
+    class CreateRecordingUploadUrl {
+
+        @Test
+        @DisplayName("진행 중인 본인의 연주이면 녹음 파일 업로드 URL을 발급한다")
+        void createRecordingUploadUrl_success() {
+            // given
+            RecordingUploadUrlRequest request =
+                    new RecordingUploadUrlRequest(
+                            "recording.mp3",
+                            "audio/mpeg",
+                            1_024L
+                    );
+
+            FileUploadCommand command =
+                    request.toCommand();
+
+            PresignedUrlUpload presignedUpload =
+                    new PresignedUrlUpload(
+                            RECORDING_OBJECT_KEY,
+                            "https://example.com/presigned-upload-url",
+                            Instant.now().plusSeconds(600),
+                            Map.of("Content-Type", "audio/mpeg")
+                    );
+
+            RecordingUploadUrlResponse expectedResponse =
+                    RecordingUploadUrlResponse.from(
+                            presignedUpload
+                    );
+
+            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+                    .thenReturn(Optional.of(playing));
+
+            when(s3FileService.createPresignedUpload(
+                    userId,
+                    command
+            )).thenReturn(presignedUpload);
+
+            // when
+            RecordingUploadUrlResponse response =
+                    playingService.createRecordingUploadUrl(
+                            userId,
+                            playingId,
+                            request
+                    );
+
+            // then
+            assertThat(response)
+                    .isEqualTo(expectedResponse);
+
+            verify(playingRepository)
+                    .findByIdAndDeletedAtIsNull(playingId);
+
+            verify(playing)
+                    .validatePlayingOwner(userId);
+
+            verify(playing)
+                    .validateInProgress();
+
+            verify(s3FileService)
+                    .createPresignedUpload(userId, command);
+        }
+
+        @Test
+        @DisplayName("진행 중이 아닌 연주에는 녹음 파일 업로드 URL을 발급하지 않는다")
+        void createRecordingUploadUrl_notInProgress() {
+            // given
+            RecordingUploadUrlRequest request =
+                    new RecordingUploadUrlRequest(
+                            "recording.mp3",
+                            "audio/mpeg",
+                            1_024L
+                    );
+
+            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
+                    .thenReturn(Optional.of(playing));
+
+            doThrow(
+                    new GeneralException(
+                            PlayingErrorStatus.INVALID_PLAYING_STATUS
+                    )
+            )
+                    .when(playing)
+                    .validateInProgress();
+
+            // when & then
+            assertThatThrownBy(() ->
+                    playingService.createRecordingUploadUrl(
+                            userId,
+                            playingId,
+                            request
+
+                    )
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .satisfies(exception -> {
+                        GeneralException generalException =
+                                (GeneralException) exception;
+
+                        assertThat(generalException.getCode())
+                                .isEqualTo(
+                                        PlayingErrorStatus.INVALID_PLAYING_STATUS
+                                );
+                    });
+
+            verify(playingRepository)
+                    .findByIdAndDeletedAtIsNull(playingId);
+
+            verify(playing)
+                    .validatePlayingOwner(userId);
+
+            verify(playing)
+                    .validateInProgress();
+
+            verify(s3FileService, never())
+                    .createPresignedUpload(
+                            anyLong(),
+                            any(FileUploadCommand.class)
+                    );
         }
     }
 }

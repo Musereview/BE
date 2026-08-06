@@ -8,6 +8,8 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.Modifying;
+
 public interface UserLearningProgressRepository extends JpaRepository<UserLearningProgress, Long> {
 
     Optional<UserLearningProgress> findByUser_UserIdAndLearningStep_Id(Long userId, Long learningStepId);
@@ -42,4 +44,8 @@ public interface UserLearningProgressRepository extends JpaRepository<UserLearni
     @Query("SELECT COUNT(DISTINCT ulp.learning.id) FROM UserLearningProgress ulp " +
             "WHERE ulp.user.userId = :userId AND ulp.score >= 90")
     long countDistinctCompletedLearningsByUserId(@Param("userId") Long userId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("delete from UserLearningProgress ulp where ulp.user.userId = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 }

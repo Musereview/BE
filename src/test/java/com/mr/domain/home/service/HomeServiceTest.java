@@ -28,6 +28,7 @@ import com.mr.domain.user.repository.StudentInstrumentRepository;
 import com.mr.domain.user.repository.StudentRepository;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import java.sql.Date;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -75,7 +76,7 @@ class HomeServiceTest {
         lenient().when(studentRepository.findByUser(user)).thenReturn(Optional.empty());
         lenient().when(playingRepository.findDistinctEndedDatesByUserAndStatus(anyLong(), any())).thenReturn(List.of());
         lenient().when(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).thenReturn(List.of());
-        lenient().when(playingRepository.findPlayingsByUserAndStatus(anyLong(), any(), any(), any()))
+        lenient().when(playingRepository.findPlayingsByUserAndStatus(anyLong(), any(), any()))
                 .thenReturn(new SliceImpl<>(List.of()));
         lenient().when(learningService.getCurrentLearning(anyLong())).thenReturn(null);
     }
@@ -88,6 +89,10 @@ class HomeServiceTest {
         lenient().when(playing.getBpm()).thenReturn(120);
         lenient().when(playing.getBackingTrack()).thenReturn(null);
         return playing;
+    }
+
+    private Date sqlDate(LocalDate date) {
+        return Date.valueOf(date);
     }
 
     @Test
@@ -140,7 +145,7 @@ class HomeServiceTest {
 
         LocalDate today = LocalDate.now();
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED)).willReturn(List.of(
-                today, today.minusDays(1), today.minusDays(2), today.minusDays(5) // 연속 끊김
+                sqlDate(today), sqlDate(today.minusDays(1)), sqlDate(today.minusDays(2)), sqlDate(today.minusDays(5))
         ));
 
         HomeResponseDTO response = homeService.getHome(1L);
@@ -154,8 +159,9 @@ class HomeServiceTest {
         stubBaseline(1L);
 
         LocalDate today = LocalDate.now();
-        List<LocalDate> endedDates = java.util.stream.IntStream.range(0, 65)
+        List<Date> endedDates = java.util.stream.IntStream.range(0, 65)
                 .mapToObj(today::minusDays)
+                .map(this::sqlDate)
                 .toList();
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED)).willReturn(endedDates);
 
@@ -171,7 +177,7 @@ class HomeServiceTest {
 
         LocalDate yesterday = LocalDate.now().minusDays(1);
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED))
-                .willReturn(List.of(yesterday));
+                .willReturn(List.of(sqlDate(yesterday)));
 
         HomeResponseDTO response = homeService.getHome(1L);
 
@@ -185,7 +191,7 @@ class HomeServiceTest {
 
         LocalDate today = LocalDate.now();
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED))
-                .willReturn(List.of(today, today, today));
+                .willReturn(List.of(sqlDate(today), sqlDate(today), sqlDate(today)));
 
         HomeResponseDTO response = homeService.getHome(1L);
 
@@ -336,7 +342,7 @@ class HomeServiceTest {
         stubBaseline(1L);
 
         Playing playing = mockPlaying(LocalDateTime.now(), 600);
-        given(playingRepository.findPlayingsByUserAndStatus(1L, PlayingStatus.COMPLETED, null, PageRequest.of(0, 5)))
+        given(playingRepository.findPlayingsByUserAndStatus(1L, PlayingStatus.COMPLETED, PageRequest.of(0, 5)))
                 .willReturn(new SliceImpl<>(List.of(playing)));
 
         HomeResponseDTO response = homeService.getHome(1L);

@@ -2,14 +2,18 @@ package com.mr.domain.playing.controller;
 
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
+import com.mr.domain.playing.dto.req.RecordingUploadUrlRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
+import com.mr.domain.playing.dto.res.AnalysisContextResponse;
 import com.mr.domain.playing.dto.res.PlayingDeleteResponse;
 import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
+import com.mr.domain.playing.dto.res.RecordingUploadUrlResponse;
 import com.mr.domain.playing.service.PlayingService;
 import com.mr.global.apipayload.ApiResponse;
 import com.mr.global.security.principal.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/playings")
+@Tag(name = "연주", description = "연주 세션 생성, 파일 업로드, MIDI 저장, 연주 기록 조회 및 삭제 API")
 public class PlayingController {
 
     private final PlayingService playingService;
@@ -44,8 +49,34 @@ public class PlayingController {
     }
 
     @Operation(
-            summary = "MIDI 이벤트 저장",
-            description = "연주 세션에 대한 MIDI 이벤트를 저장하고 연주를 완료 상태로 변경합니다."
+            summary = "연주 녹음 파일 업로드 URL 발급",
+            description = """
+                    연주 녹음 파일을 S3에 직접 업로드하기 위한 Presigned URL을 발급합니다.
+                    로그인한 사용자 본인의 IN_PROGRESS 상태 연주 세션에 대해서만 요청할 수 있습니다.
+                    발급받은 URL을 사용하여 클라이언트가 녹음 파일을 S3에 직접 업로드합니다.
+                    """
+    )
+    @PostMapping("/{playingId}/recording-upload-url")
+    public ApiResponse<RecordingUploadUrlResponse> createRecordingUploadUrl(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long playingId,
+            @Valid @RequestBody RecordingUploadUrlRequest request
+    ) {
+        Long userId = userDetails.getUserId();
+
+        RecordingUploadUrlResponse response =
+                playingService.createRecordingUploadUrl(userId, playingId, request);
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(
+            summary = "MIDI 이벤트 저장 및 연주 완료",
+            description = """
+                    연주 중 수집한 MIDI 이벤트와 업로드된 녹음 파일 정보를 저장합니다.
+                    로그인한 사용자 본인의 IN_PROGRESS 상태 연주 세션에 대해서만 요청할 수 있습니다.
+                    MIDI 이벤트와 녹음 파일 검증이 완료되면 연주 세션을 COMPLETED 상태로 변경합니다.
+                    연주 완료 트랜잭션이 정상적으로 커밋된 이후 사용자 연습 통계가 갱신됩니다.
+                    """
     )
     @PostMapping("/{playingId}/midi-events")
     public ApiResponse<MidiEventSaveResponse> saveMidiEvents(
@@ -80,6 +111,23 @@ public class PlayingController {
         Long userId = userDetails.getUserId();
 
         PlayingDetailResponse response = playingService.getPlayingDetail(userId, playingId);
+
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(
+            summary = "분석 마디 선택 정보 조회",
+            description = "완료된 본인 연주의 분석 마디 선택 정보를 조회합니다."
+    )
+    @GetMapping("/{playingId}/analysis-context")
+    public ApiResponse<AnalysisContextResponse> getAnalysisContext(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long playingId
+    ) {
+        AnalysisContextResponse response = playingService.getAnalysisContext(
+                userDetails.getUserId(),
+                playingId
+        );
 
         return ApiResponse.onSuccess(response);
     }
