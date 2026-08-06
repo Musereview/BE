@@ -43,6 +43,9 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
             Pageable pageable
     );
 
+    @Query("select a.user.userId from Analysis a where a.id = :analysisId")
+    Optional<Long> findUserIdById(@Param("analysisId") Long analysisId);
+
     @Query("""
             select a from Analysis a
             where a.playing.id in :playingIds and a.status = :status
