@@ -1000,6 +1000,27 @@ class PlayingServiceTest {
         }
 
         @Test
+        @DisplayName("완료되지 않은 연주는 분석 정보를 조회할 수 없다")
+        void playingNotCompleted() {
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+            doThrow(new GeneralException(PlayingErrorStatus.PLAYING_NOT_COMPLETED))
+                    .when(playing)
+                    .validateCompleted();
+
+            assertThatThrownBy(() ->
+                    playingService.getAnalysisContext(userId, playingId)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .hasFieldOrPropertyWithValue(
+                            "code",
+                            PlayingErrorStatus.PLAYING_NOT_COMPLETED
+                    );
+
+            verify(analysisBarCalculator, never()).calculate(any());
+        }
+
+        @Test
         @DisplayName("다른 사용자의 연주는 조회할 수 없다")
         void playingAccessDenied() {
             when(playingRepository.findByIdWithBackingTrack(playingId))

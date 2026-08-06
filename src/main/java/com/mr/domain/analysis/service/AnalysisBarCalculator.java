@@ -36,7 +36,7 @@ public class AnalysisBarCalculator {
             if (value == null) {
                 throw new NumberFormatException();
             }
-            String[] parts = value.split("/");
+            String[] parts = value.split("/", -1);
             if (parts.length != 2) {
                 throw new NumberFormatException();
             }
