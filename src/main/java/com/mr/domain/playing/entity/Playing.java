@@ -94,9 +94,8 @@ public class Playing extends BaseCreatedDeletedEntity {
     @Column(name = "ended_at")
     private LocalDateTime endedAt;
 
-    // 사용자가 연주한 녹음 파일 URL
-    @Column(name = "recording_file_url", length = 255)
-    private String recordingFileUrl;
+    @Column(name = "recording_object_key", length = 255)
+    private String recordingObjectKey;
 
     @Column(name = "duration_sec")
     private Integer durationSec;
@@ -190,7 +189,7 @@ public class Playing extends BaseCreatedDeletedEntity {
     // 연주 완료 시 전체 MIDI 데이터를 저장하고 완료 상태로 전환
     public void completeWithMidiData(
             List<MidiEventData> requestedMidiData,
-            String recordingFileUrl
+            String recordingObjectKey
     ) {
         validateCompletableStatus();
         validateMidiData(requestedMidiData);
@@ -205,7 +204,7 @@ public class Playing extends BaseCreatedDeletedEntity {
         this.endedAt = this.startedAt.plusNanos(savedDurationMs * 1_000_000L);
         this.durationSec = Math.toIntExact(
                 Duration.ofMillis(savedDurationMs).toSeconds());
-        this.recordingFileUrl = recordingFileUrl;
+        this.recordingObjectKey = recordingObjectKey;
         this.status = PlayingStatus.COMPLETED;
     }
 
