@@ -132,7 +132,8 @@ class HistoryServiceTest {
 
         assertThat(response.items().get(0).scoreChange()).isEqualTo(10);
         assertThat(response.items().get(1).scoreChange()).isNull();
-        verify(playingRepository, never()).findNextPlayingId(any(), any(), any(), any(), any(), any());
+        verify(playingRepository, never()).findNextPlayingId(any(), any(), any(), any(), any());
+        verify(playingRepository, never()).findNextPlayingIdSince(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -146,7 +147,7 @@ class HistoryServiceTest {
                 eq(1L), eq(PlayingStatus.COMPLETED), eq(PageRequest.of(0, 2))))
                 .willReturn(new SliceImpl<>(List.of(playing1, playing2), PageRequest.of(0, 2), true));
         given(playingRepository.findNextPlayingId(
-                eq(1L), eq(PlayingStatus.COMPLETED), any(), eq(secondEndedAt), eq(2L),
+                eq(1L), eq(PlayingStatus.COMPLETED), eq(secondEndedAt), eq(2L),
                 eq(PageRequest.of(0, 1))))
                 .willReturn(List.of(3L));
 
@@ -163,6 +164,29 @@ class HistoryServiceTest {
         assertThat(response.items().get(0).scoreChange()).isEqualTo(10);
         assertThat(response.items().get(1).scoreChange()).isEqualTo(10);
         assertThat(response.hasNext()).isTrue();
+        verify(playingRepository, never()).findNextPlayingIdSince(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("기간 필터가 있으면 cutoff 전용 쿼리로 다음 연주를 조회한다")
+    void getHistories_scoreChange_usesSinceQueryWithPeriod() {
+        LocalDateTime endedAt = LocalDateTime.of(2026, 7, 31, 12, 0);
+        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, endedAt);
+        given(playingRepository.findPlayingsByUserAndStatusSince(
+                eq(1L), eq(PlayingStatus.COMPLETED), any(LocalDateTime.class),
+                eq(PageRequest.of(0, 1))))
+                .willReturn(new SliceImpl<>(List.of(playing), PageRequest.of(0, 1), true));
+        given(playingRepository.findNextPlayingIdSince(
+                eq(1L), eq(PlayingStatus.COMPLETED), any(LocalDateTime.class),
+                eq(endedAt), eq(1L), eq(PageRequest.of(0, 1))))
+                .willReturn(List.of());
+        given(analysisRepository.findByPlayingIdInAndStatusOrderByCreatedAtDescIdDesc(
+                eq(List.of(1L)), eq(AnalysisStatus.COMPLETED)))
+                .willReturn(List.of());
+
+        historyService.getHistories(1L, 0, 1, HistoryPeriod.WEEKLY);
+
+        verify(playingRepository, never()).findNextPlayingId(any(), any(), any(), any(), any());
     }
 
     @Test

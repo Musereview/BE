@@ -98,13 +98,16 @@ public class HistoryService {
         }
 
         Playing lastPlaying = slice.getContent().get(slice.getContent().size() - 1);
-        return playingRepository.findNextPlayingId(
-                        userId,
-                        PlayingStatus.COMPLETED,
-                        cutoff,
-                        lastPlaying.getEndedAt(),
-                        lastPlaying.getId(),
-                        PageRequest.of(0, 1))
+        PageRequest pageRequest = PageRequest.of(0, 1);
+        List<Long> nextPlayingIds = cutoff == null
+                ? playingRepository.findNextPlayingId(
+                        userId, PlayingStatus.COMPLETED,
+                        lastPlaying.getEndedAt(), lastPlaying.getId(), pageRequest)
+                : playingRepository.findNextPlayingIdSince(
+                        userId, PlayingStatus.COMPLETED, cutoff,
+                        lastPlaying.getEndedAt(), lastPlaying.getId(), pageRequest);
+
+        return nextPlayingIds
                 .stream()
                 .findFirst()
                 .orElse(null);
