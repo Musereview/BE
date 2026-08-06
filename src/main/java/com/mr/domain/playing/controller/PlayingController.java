@@ -4,6 +4,7 @@ import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
 import com.mr.domain.playing.dto.req.RecordingUploadUrlRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
+import com.mr.domain.playing.dto.res.AnalysisContextResponse;
 import com.mr.domain.playing.dto.res.PlayingDeleteResponse;
 import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
@@ -110,6 +111,23 @@ public class PlayingController {
         Long userId = userDetails.getUserId();
 
         PlayingDetailResponse response = playingService.getPlayingDetail(userId, playingId);
+
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Operation(
+            summary = "분석 마디 선택 정보 조회",
+            description = "완료된 본인 연주의 분석 마디 선택 정보를 조회합니다."
+    )
+    @GetMapping("/{playingId}/analysis-context")
+    public ApiResponse<AnalysisContextResponse> getAnalysisContext(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long playingId
+    ) {
+        AnalysisContextResponse response = playingService.getAnalysisContext(
+                userDetails.getUserId(),
+                playingId
+        );
 
         return ApiResponse.onSuccess(response);
     }

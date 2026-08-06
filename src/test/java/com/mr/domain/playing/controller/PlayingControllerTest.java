@@ -3,6 +3,7 @@ package com.mr.domain.playing.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
+import com.mr.domain.playing.dto.res.AnalysisContextResponse;
 import com.mr.domain.playing.entity.enums.MidiType;
 import com.mr.domain.playing.service.PlayingService;
 import com.mr.domain.user.entity.enums.UserRole;
@@ -36,6 +37,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -144,6 +146,50 @@ class PlayingControllerTest {
                             PLAYING_ID,
                             request
                     );
+        }
+    }
+
+    @Nested
+    @DisplayName("분석 마디 선택 정보 조회")
+    class GetAnalysisContext {
+
+        @Test
+        @DisplayName("GET /api/playings/{playingId}/analysis-context - 조회 성공")
+        void getAnalysisContextSuccess() throws Exception {
+            AnalysisContextResponse response = new AnalysisContextResponse(
+                    PLAYING_ID,
+                    "Jazz Standard",
+                    "JAZZ",
+                    "C",
+                    120,
+                    "4/4",
+                    null,
+                    2,
+                    120,
+                    "https://example.com/recording.webm",
+                    "https://example.com/backing.mp3",
+                    List.of(),
+                    null,
+                    60
+            );
+            given(playingService.getAnalysisContext(USER_ID, PLAYING_ID))
+                    .willReturn(response);
+
+            mockMvc.perform(get(
+                            "/api/playings/{playingId}/analysis-context",
+                            PLAYING_ID
+                    ))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.isSuccess").value(true))
+                    .andExpect(jsonPath("$.data.playingId").value(PLAYING_ID))
+                    .andExpect(jsonPath("$.data.recordingFileUrl")
+                            .value("https://example.com/recording.webm"))
+                    .andExpect(jsonPath("$.data.backingTrackAudioFileUrl")
+                            .value("https://example.com/backing.mp3"))
+                    .andExpect(jsonPath("$.data.totalBars").value(60));
+
+            then(playingService).should()
+                    .getAnalysisContext(USER_ID, PLAYING_ID);
         }
     }
 

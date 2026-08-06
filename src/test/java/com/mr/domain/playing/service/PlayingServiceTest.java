@@ -1,12 +1,14 @@
 package com.mr.domain.playing.service;
 
 import com.mr.domain.backingtrack.entity.BackingTrack;
+import com.mr.domain.analysis.service.AnalysisBarCalculator;
 import com.mr.domain.backingtrack.entity.enums.AccessLevel;
 import com.mr.domain.backingtrack.repository.BackingTrackRepository;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
 import com.mr.domain.playing.dto.req.RecordingUploadUrlRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
+import com.mr.domain.playing.dto.res.AnalysisContextResponse;
 import com.mr.domain.playing.dto.res.PlayingDeleteResponse;
 import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
@@ -79,6 +81,9 @@ class PlayingServiceTest {
 
     @Mock
     private PlayingRepository playingRepository;
+
+    @Mock
+    private AnalysisBarCalculator analysisBarCalculator;
 
     @Mock
     private UserRepository userRepository;
@@ -942,6 +947,73 @@ class PlayingServiceTest {
             assertThatThrownBy(() ->
                     playingService.getPlayingDetail(userId, playingId))
                     .isInstanceOf(GeneralException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("분석 마디 선택 정보 조회")
+    class GetAnalysisContext {
+
+        @Test
+        @DisplayName("본인의 완료된 연주와 전체 마디 수를 조회한다")
+        void getAnalysisContextSuccess() {
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+            when(playing.getBackingTrack()).thenReturn(backingTrack);
+            when(playing.getId()).thenReturn(playingId);
+            when(playing.getBpm()).thenReturn(BPM);
+            when(playing.getMidiData()).thenReturn(List.of());
+            when(backingTrack.getTimeSignature()).thenReturn("4/4");
+            when(analysisBarCalculator.calculate(playing))
+                    .thenReturn(new AnalysisBarCalculator.BarMetrics(
+                            new int[]{4, 4},
+                            2_000D,
+                            60
+                    ));
+
+            AnalysisContextResponse response =
+                    playingService.getAnalysisContext(userId, playingId);
+
+            assertThat(response.playingId()).isEqualTo(playingId);
+            assertThat(response.totalBars()).isEqualTo(60);
+            verify(playing).validatePlayingOwner(userId);
+            verify(playing).validateCompleted();
+        }
+
+        @Test
+        @DisplayName("백킹트랙이 연결되지 않으면 예외가 발생한다")
+        void backingTrackNotFound() {
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+            when(playing.getBackingTrack()).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    playingService.getAnalysisContext(userId, playingId)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .hasFieldOrPropertyWithValue(
+                            "code",
+                            PlayingErrorStatus.BACKING_TRACK_NOT_FOUND
+                    );
+
+            verify(analysisBarCalculator, never()).calculate(any());
+        }
+
+        @Test
+        @DisplayName("다른 사용자의 연주는 조회할 수 없다")
+        void playingAccessDenied() {
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+            doThrow(new GeneralException(PlayingErrorStatus.PLAYING_ACCESS_DENIED))
+                    .when(playing)
+                    .validatePlayingOwner(userId);
+
+            assertThatThrownBy(() ->
+                    playingService.getAnalysisContext(userId, playingId)
+            ).isInstanceOf(GeneralException.class);
+
+            verify(playing, never()).validateCompleted();
+            verify(analysisBarCalculator, never()).calculate(any());
         }
     }
 
