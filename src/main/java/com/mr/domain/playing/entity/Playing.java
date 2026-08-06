@@ -199,6 +199,7 @@ public class Playing extends BaseCreatedDeletedEntity {
 
         List<MidiEventData> normalizedMidiData = normalizeMidiData(requestedMidiData, savedDurationMs);
         validateNormalizedMidiData(normalizedMidiData);
+        validateRecordingObjectKey(recordingObjectKey);
 
         this.midiData = new ArrayList<>(normalizedMidiData);
         this.endedAt = this.startedAt.plusNanos(savedDurationMs * 1_000_000L);
@@ -211,6 +212,14 @@ public class Playing extends BaseCreatedDeletedEntity {
     public void validatePlayingOwner(Long userId) {
         if (userId == null || this.user == null || !Objects.equals(this.user.getUserId(), userId)) {
             throw new GeneralException(PlayingErrorStatus.PLAYING_ACCESS_DENIED);
+        }
+    }
+
+    private void validateRecordingObjectKey(String recordingObjectKey) {
+        if (recordingObjectKey == null || recordingObjectKey.isBlank()) {
+            throw new GeneralException(
+                    PlayingErrorStatus.INVALID_RECORDING_OBJECT_KEY
+            );
         }
     }
 
