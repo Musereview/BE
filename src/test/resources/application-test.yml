@@ -1,0 +1,83 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${SPRING_DATASOURCE_URL:${TEST_DB_URL:jdbc:postgresql://localhost:5432/mr_db}}
+    username: ${SPRING_DATASOURCE_USERNAME:${TEST_DB_USERNAME:postgres}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${TEST_DB_PASSWORD:postgres}}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      connect-timeout: 2s
+      timeout: 2s
+
+  flyway:
+    enabled: true
+
+jwt:
+  secret: ${JWT_SECRET:dGVzdC1qd3Qtc2VjcmV0LWtleS0zMi1ieXRlcyEhISE=}
+  access-token-validity-in-seconds: ${JWT_ACCESS_TOKEN_EXPIRE_TIME:1800}
+  refresh-token-validity-in-seconds: ${JWT_REFRESH_TOKEN_EXPIRE_TIME:604800}
+
+oauth:
+  frontend-redirect-uris:
+    - http://localhost:5173/oauth/callback
+
+  temp-code-ttl: 2m
+
+  cookie:
+    secure: false
+
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID:test-kakao-client-id}
+    client-secret: ${KAKAO_CLIENT_SECRET:test-kakao-client-secret}
+
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:test-google-client-id}
+    client-secret: ${GOOGLE_CLIENT_SECRET:test-google-client-secret}
+
+external:
+  ai:
+    base-url: https://generativelanguage.googleapis.com
+    api-key: ${GEMINI_API_KEY:test-api-key}
+    model: test-model
+    connect-timeout: 5s
+    read-timeout: 120s
+
+aws:
+  s3:
+    credentials:
+      access-key: test-access-key
+      secret-key: test-secret-key
+    bucket: test-bucket
+    region: ap-northeast-2
+    presigned-url-expiration: 10m
+    max-file-size: 31457280
+    key-prefix: recordings
+    allowed-content-types:
+      - audio/mpeg
+      - audio/wav
+      - audio/x-wav
+      - audio/webm
+      - audio/ogg
+
+ai:
+  internal:
+    base-url: ${AI_INTERNAL_BASE_URL:http://localhost:8001}
+    connect-timeout: 5s
+    read-timeout: 60s
+    endpoints:
+      analyze: /analyze
+
+app:
+  profile:
+    default-image-url: https://example.com/default-profile.png
