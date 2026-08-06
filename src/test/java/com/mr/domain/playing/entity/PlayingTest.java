@@ -677,8 +677,8 @@ class PlayingTest {
     }
 
     @Test
-    @DisplayName("진행 중인 연주에 MIDI 데이터와 녹음 파일 URL을 저장하면 완료 상태로 변경된다")
-    void completeWithMidiDataAndRecordingFileUrl() {
+    @DisplayName("진행 중인 연주에 MIDI 데이터와 녹음 파일 Object Key를 저장하면 완료 상태로 변경된다")
+    void completeWithMidiDataAndRecordingObjectKey() {
         // given
         Playing playing = createInProgressPlaying();
 
@@ -691,15 +691,15 @@ class PlayingTest {
         // when
         playing.completeWithMidiData(
                 midiData,
-                RECORDING_FILE_URL
+                RECORDING_OBJECT_KEY
         );
 
         // then
         assertThat(playing.getMidiData())
                 .hasSize(3);
 
-        assertThat(playing.getRecordingFileUrl())
-                .isEqualTo(RECORDING_FILE_URL);
+        assertThat(playing.getRecordingObjectKey())
+                .isEqualTo(RECORDING_OBJECT_KEY);
 
         assertThat(playing.getEndedAt())
                 .isNotNull();
