@@ -50,11 +50,11 @@ oauth:
   frontend-redirect-uris:
     - http://localhost:5173/oauth/callback
     - https://musereview-sigma.vercel.app/oauth/callback
-  
+
   temp-code-ttl: ${OAUTH_TEMP_CODE_TTL:2m}
   cookie:
     secure: ${OAUTH_COOKIE_SECURE:false}
-    
+
   kakao:
     client-id: ${KAKAO_CLIENT_ID:}
     client-secret: ${KAKAO_CLIENT_SECRET:}

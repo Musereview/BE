@@ -27,7 +27,7 @@ class AnalysisRequestFactoryTest {
 
     @BeforeEach
     void setUp() {
-        factory = new AnalysisRequestFactory();
+        factory = new AnalysisRequestFactory(new AnalysisBarCalculator());
         playing = mock(Playing.class);
         track = mock(BackingTrack.class);
         given(playing.getBackingTrack()).willReturn(track);

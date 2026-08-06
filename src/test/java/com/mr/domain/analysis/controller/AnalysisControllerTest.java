@@ -122,6 +122,8 @@ class AnalysisControllerTest {
                 "C Major",
                 120,
                 LocalDateTime.of(2026, 7, 24, 9, 0),
+                "https://example.com/recording.webm",
+                "https://example.com/backing-track.mp3",
                 AnalysisStatus.COMPLETED,
                 1,
                 8,
@@ -156,6 +158,9 @@ class AnalysisControllerTest {
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.data.analysisId").value(1L))
                 .andExpect(jsonPath("$.data.title").value("Jazz Standard Practice"))
+                .andExpect(jsonPath("$.data.recordingFileUrl").value("https://example.com/recording.webm"))
+                .andExpect(jsonPath("$.data.backingTrackAudioFileUrl")
+                        .value("https://example.com/backing-track.mp3"))
                 .andExpect(jsonPath("$.data.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.data.totalScore").value(85))
                 .andExpect(jsonPath("$.data.grade").value("GOOD"))

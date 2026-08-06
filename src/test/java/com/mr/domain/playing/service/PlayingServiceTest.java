@@ -1,14 +1,18 @@
 package com.mr.domain.playing.service;
 
 import com.mr.domain.backingtrack.entity.BackingTrack;
+import com.mr.domain.analysis.service.AnalysisBarCalculator;
 import com.mr.domain.backingtrack.entity.enums.AccessLevel;
 import com.mr.domain.backingtrack.repository.BackingTrackRepository;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
+import com.mr.domain.playing.dto.req.RecordingUploadUrlRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
+import com.mr.domain.playing.dto.res.AnalysisContextResponse;
 import com.mr.domain.playing.dto.res.PlayingDeleteResponse;
 import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
+import com.mr.domain.playing.dto.res.RecordingUploadUrlResponse;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.MidiType;
@@ -21,10 +25,10 @@ import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.PlayingCompletedEvent;
-import com.mr.global.file.s3.dto.ValidatedS3Object;
-import com.mr.global.file.s3.dto.req.RecordingPresignedUrlRequest;
-import com.mr.global.file.s3.dto.res.RecordingPresignedUrlResponse;
-import com.mr.global.file.s3.service.RecordingUploadService;
+import com.mr.global.file.s3.dto.FileUploadCommand;
+import com.mr.global.file.s3.dto.ValidatedFile;
+import com.mr.global.file.s3.dto.PresignedUrlUpload;
+import com.mr.global.file.s3.service.S3FileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -79,6 +83,9 @@ class PlayingServiceTest {
     private PlayingRepository playingRepository;
 
     @Mock
+    private AnalysisBarCalculator analysisBarCalculator;
+
+    @Mock
     private UserRepository userRepository;
 
     @Mock
@@ -88,7 +95,7 @@ class PlayingServiceTest {
     private Playing playing;
 
     @Mock
-    private RecordingUploadService recordingUploadService;
+    private S3FileService s3FileService;
 
     @Mock
     private TransactionTemplate transactionTemplate;
@@ -109,8 +116,8 @@ class PlayingServiceTest {
     private Long playingId;
     private Long backingTrackId;
 
-    ValidatedS3Object recordingResponse =
-            new ValidatedS3Object(
+    ValidatedFile recordingResponse =
+            new ValidatedFile(
                     RECORDING_OBJECT_KEY,
                     RECORDING_FILE_URL,
                     1_157_632L,
@@ -140,7 +147,7 @@ class PlayingServiceTest {
             stubTransactionExecution();
             stubCompletedPlayingForMilestoneCalculation();
 
-            when(recordingUploadService.validateObject(
+            when(s3FileService.validateUploadedFile(
                     userId,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
@@ -187,8 +194,8 @@ class PlayingServiceTest {
             verify(playing)
                     .validatePlayingOwner(userId);
 
-            verify(recordingUploadService)
-                    .validateObject(
+            verify(s3FileService)
+                    .validateUploadedFile(
                             userId,
                             RECORDING_OBJECT_KEY
                     );
@@ -218,7 +225,7 @@ class PlayingServiceTest {
 
             stubTransactionExecution();
 
-            when(recordingUploadService.validateObject(
+            when(s3FileService.validateUploadedFile(
                     userId,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
@@ -255,8 +262,8 @@ class PlayingServiceTest {
                                 );
                     });
 
-            verify(recordingUploadService)
-                    .validateObject(
+            verify(s3FileService)
+                    .validateUploadedFile(
                             userId,
                             RECORDING_OBJECT_KEY
                     );
@@ -289,7 +296,7 @@ class PlayingServiceTest {
             stubTransactionExecution();
             stubCompletedPlayingForMilestoneCalculation();
 
-            when(recordingUploadService.validateObject(
+            when(s3FileService.validateUploadedFile(
                     userId,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
@@ -338,8 +345,8 @@ class PlayingServiceTest {
             );
 
             // then
-            verify(recordingUploadService)
-                    .validateObject(
+            verify(s3FileService)
+                    .validateUploadedFile(
                             userId,
                             RECORDING_OBJECT_KEY
                     );
@@ -368,7 +375,7 @@ class PlayingServiceTest {
 
             stubTransactionExecution();
 
-            when(recordingUploadService.validateObject(
+            when(s3FileService.validateUploadedFile(
                     userId,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
@@ -405,8 +412,8 @@ class PlayingServiceTest {
                                 );
                     });
 
-            verify(recordingUploadService)
-                    .validateObject(
+            verify(s3FileService)
+                    .validateUploadedFile(
                             userId,
                             RECORDING_OBJECT_KEY
                     );
@@ -453,8 +460,8 @@ class PlayingServiceTest {
                                 );
                     });
 
-            verify(recordingUploadService, never())
-                    .validateObject(
+            verify(s3FileService, never())
+                    .validateUploadedFile(
                             anyLong(),
                             anyString()
                     );
@@ -504,7 +511,7 @@ class PlayingServiceTest {
 
             stubTransactionExecution();
 
-            when(recordingUploadService.validateObject(
+            when(s3FileService.validateUploadedFile(
                     userId,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
@@ -532,8 +539,8 @@ class PlayingServiceTest {
                                 );
                     });
 
-            verify(recordingUploadService)
-                    .validateObject(
+            verify(s3FileService)
+                    .validateUploadedFile(
                             userId,
                             RECORDING_OBJECT_KEY
                     );
@@ -944,6 +951,94 @@ class PlayingServiceTest {
     }
 
     @Nested
+    @DisplayName("분석 마디 선택 정보 조회")
+    class GetAnalysisContext {
+
+        @Test
+        @DisplayName("본인의 완료된 연주와 전체 마디 수를 조회한다")
+        void getAnalysisContextSuccess() {
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+            when(playing.getBackingTrack()).thenReturn(backingTrack);
+            when(playing.getId()).thenReturn(playingId);
+            when(playing.getBpm()).thenReturn(BPM);
+            when(playing.getMidiData()).thenReturn(List.of());
+            when(backingTrack.getTimeSignature()).thenReturn("4/4");
+            when(analysisBarCalculator.calculate(playing))
+                    .thenReturn(new AnalysisBarCalculator.BarMetrics(
+                            new int[]{4, 4},
+                            2_000D,
+                            60
+                    ));
+
+            AnalysisContextResponse response =
+                    playingService.getAnalysisContext(userId, playingId);
+
+            assertThat(response.playingId()).isEqualTo(playingId);
+            assertThat(response.totalBars()).isEqualTo(60);
+            verify(playing).validatePlayingOwner(userId);
+            verify(playing).validateCompleted();
+        }
+
+        @Test
+        @DisplayName("백킹트랙이 연결되지 않으면 예외가 발생한다")
+        void backingTrackNotFound() {
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+            when(playing.getBackingTrack()).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    playingService.getAnalysisContext(userId, playingId)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .hasFieldOrPropertyWithValue(
+                            "code",
+                            PlayingErrorStatus.BACKING_TRACK_NOT_FOUND
+                    );
+
+            verify(analysisBarCalculator, never()).calculate(any());
+        }
+
+        @Test
+        @DisplayName("완료되지 않은 연주는 분석 정보를 조회할 수 없다")
+        void playingNotCompleted() {
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+            doThrow(new GeneralException(PlayingErrorStatus.PLAYING_NOT_COMPLETED))
+                    .when(playing)
+                    .validateCompleted();
+
+            assertThatThrownBy(() ->
+                    playingService.getAnalysisContext(userId, playingId)
+            )
+                    .isInstanceOf(GeneralException.class)
+                    .hasFieldOrPropertyWithValue(
+                            "code",
+                            PlayingErrorStatus.PLAYING_NOT_COMPLETED
+                    );
+
+            verify(analysisBarCalculator, never()).calculate(any());
+        }
+
+        @Test
+        @DisplayName("다른 사용자의 연주는 조회할 수 없다")
+        void playingAccessDenied() {
+            when(playingRepository.findByIdWithBackingTrack(playingId))
+                    .thenReturn(Optional.of(playing));
+            doThrow(new GeneralException(PlayingErrorStatus.PLAYING_ACCESS_DENIED))
+                    .when(playing)
+                    .validatePlayingOwner(userId);
+
+            assertThatThrownBy(() ->
+                    playingService.getAnalysisContext(userId, playingId)
+            ).isInstanceOf(GeneralException.class);
+
+            verify(playing, never()).validateCompleted();
+            verify(analysisBarCalculator, never()).calculate(any());
+        }
+    }
+
+    @Nested
     @DisplayName("연주 기록 삭제")
     class DeletePlaying {
 
@@ -1084,31 +1179,39 @@ class PlayingServiceTest {
         @DisplayName("진행 중인 본인의 연주이면 녹음 파일 업로드 URL을 발급한다")
         void createRecordingUploadUrl_success() {
             // given
-            RecordingPresignedUrlRequest request =
-                    new RecordingPresignedUrlRequest(
+            RecordingUploadUrlRequest request =
+                    new RecordingUploadUrlRequest(
                             "recording.mp3",
                             "audio/mpeg",
                             1_024L
                     );
 
-            RecordingPresignedUrlResponse expectedResponse =
-                    new RecordingPresignedUrlResponse(
+            FileUploadCommand command =
+                    request.toCommand();
+
+            PresignedUrlUpload presignedUpload =
+                    new PresignedUrlUpload(
                             RECORDING_OBJECT_KEY,
                             "https://example.com/presigned-upload-url",
                             Instant.now().plusSeconds(600),
                             Map.of("Content-Type", "audio/mpeg")
                     );
 
+            RecordingUploadUrlResponse expectedResponse =
+                    RecordingUploadUrlResponse.from(
+                            presignedUpload
+                    );
+
             when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
                     .thenReturn(Optional.of(playing));
 
-            when(recordingUploadService.createPresignedUrl(
+            when(s3FileService.createPresignedUpload(
                     userId,
-                    request
-            )).thenReturn(expectedResponse);
+                    command
+            )).thenReturn(presignedUpload);
 
             // when
-            RecordingPresignedUrlResponse response =
+            RecordingUploadUrlResponse response =
                     playingService.createRecordingUploadUrl(
                             userId,
                             playingId,
@@ -1128,16 +1231,16 @@ class PlayingServiceTest {
             verify(playing)
                     .validateInProgress();
 
-            verify(recordingUploadService)
-                    .createPresignedUrl(userId, request);
+            verify(s3FileService)
+                    .createPresignedUpload(userId, command);
         }
 
         @Test
         @DisplayName("진행 중이 아닌 연주에는 녹음 파일 업로드 URL을 발급하지 않는다")
         void createRecordingUploadUrl_notInProgress() {
             // given
-            RecordingPresignedUrlRequest request =
-                    new RecordingPresignedUrlRequest(
+            RecordingUploadUrlRequest request =
+                    new RecordingUploadUrlRequest(
                             "recording.mp3",
                             "audio/mpeg",
                             1_024L
@@ -1160,6 +1263,7 @@ class PlayingServiceTest {
                             userId,
                             playingId,
                             request
+
                     )
             )
                     .isInstanceOf(GeneralException.class)
@@ -1182,10 +1286,10 @@ class PlayingServiceTest {
             verify(playing)
                     .validateInProgress();
 
-            verify(recordingUploadService, never())
-                    .createPresignedUrl(
+            verify(s3FileService, never())
+                    .createPresignedUpload(
                             anyLong(),
-                            any(RecordingPresignedUrlRequest.class)
+                            any(FileUploadCommand.class)
                     );
         }
     }

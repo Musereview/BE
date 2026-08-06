@@ -15,6 +15,7 @@ import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
+import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.history.dto.req.HistoryPeriod;
 import com.mr.domain.history.dto.res.HistoryDetailResponseDTO;
 import com.mr.domain.history.dto.res.HistoryListResponseDTO;
@@ -213,6 +214,12 @@ class HistoryServiceTest {
     @DisplayName("getHistoryDetail - 정상 조회 시 상태 무관하게 모든 분석을 반환한다")
     void getHistoryDetail_success_returnsAllAnalysesRegardlessOfStatus() {
         Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
+        BackingTrack backingTrack = mock(BackingTrack.class);
+        String recordingFileUrl = playing.toString();
+        String backingTrackAudioFileUrl = backingTrack.toString();
+        given(playing.getRecordingFileUrl()).willReturn(recordingFileUrl);
+        given(playing.getBackingTrack()).willReturn(backingTrack);
+        given(backingTrack.getAudioFileUrl()).willReturn(backingTrackAudioFileUrl);
         given(playingRepository.findByIdWithBackingTrack(1L)).willReturn(Optional.of(playing));
 
         Analysis completed = completedAnalysis(1L, 90);
@@ -225,6 +232,8 @@ class HistoryServiceTest {
 
         HistoryDetailResponseDTO response = historyService.getHistoryDetail(1L, 1L);
 
+        assertThat(response.recordingFileUrl()).isEqualTo(recordingFileUrl);
+        assertThat(response.backingTrackAudioFileUrl()).isEqualTo(backingTrackAudioFileUrl);
         assertThat(response.analyses()).hasSize(2);
         assertThat(response.analyses().get(1).status()).isEqualTo(AnalysisStatus.PENDING);
     }
