@@ -51,4 +51,18 @@ class AnalysisBarCalculatorTest {
                         AnalysisErrorStatus.ANALYSIS_INVALID_REQUEST
                 );
     }
+
+    @Test
+    void calculate_rejectsTimeSignatureWithTrailingDelimiter() {
+        given(playing.getBpm()).willReturn(120);
+        given(track.getTimeSignature()).willReturn("4/4/");
+        given(track.getPlaytimeSec()).willReturn(120);
+
+        assertThatThrownBy(() -> calculator.calculate(playing))
+                .isInstanceOf(GeneralException.class)
+                .hasFieldOrPropertyWithValue(
+                        "code",
+                        AnalysisErrorStatus.ANALYSIS_INVALID_REQUEST
+                );
+    }
 }
