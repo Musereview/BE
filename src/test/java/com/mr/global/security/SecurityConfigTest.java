@@ -115,13 +115,17 @@ class SecurityConfigTest {
     }
 
     @Test
-    @DisplayName("ROLE_GUEST 토큰으로 온보딩 등록(POST /api/users/me/profile)은 통과한다")
+    @DisplayName("ROLE_GUEST 토큰으로 온보딩 등록(POST /api/users/me/profile)은 인가 계층을 통과한다")
     void onboardingApi_withGuestRole_isAllowed() throws Exception {
+        // 이 클래스는 UserRepository만 목킹하고 있어 온보딩 트랜잭션이 의존하는 나머지
+        // 리포지토리(Student/Subscription 등)는 실빈 그대로다. 그래서 여기서는 시큐리티
+        // 인가 계층(401/403)만 통과하는지 검증하고, 실제 등록 성공(2xx)은 UserProfileServiceTest/
+        // UserProfileControllerTest에서 이미 별도로 검증하고 있다.
         mockMvc.perform(post("/api/users/me/profile")
                         .header("Authorization", "Bearer " + guestToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"nickname\":\"김뮤즈\",\"skillLevel\":\"INTERMEDIATE\"}"))
-                .andExpect(result -> assertThat(result.getResponse().getStatus()).isNotEqualTo(403));
+                .andExpect(result -> assertThat(result.getResponse().getStatus()).isNotIn(401, 403));
     }
 
     @Test
@@ -143,8 +147,11 @@ class SecurityConfigTest {
     }
 
     @Test
-    @DisplayName("ROLE_STUDENT 토큰으로 비즈니스 API는 403/401 없이 정상 접근된다")
+    @DisplayName("ROLE_STUDENT 토큰으로 비즈니스 API는 인가 계층을 통과한다")
     void protectedApi_withStudentRole_isAllowed() throws Exception {
+        // 마찬가지로 UserRepository만 목킹돼 있어 LearningService가 의존하는 실데이터가
+        // 없다. 여기서는 인가 계층(401/403)만 통과하는지 검증한다 — 학습 홈 조회 자체의
+        // 성공 응답 검증은 LearningServiceTest/LearningControllerTest 담당.
         mockMvc.perform(get("/api/learnings/home")
                         .header("Authorization", "Bearer " + studentToken()))
                 .andExpect(result -> assertThat(result.getResponse().getStatus()).isNotIn(401, 403));
