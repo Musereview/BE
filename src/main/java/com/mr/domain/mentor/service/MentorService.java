@@ -3,7 +3,6 @@ package com.mr.domain.mentor.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.mentor.dto.res.MentorMessageHistoryResponseDTO;
@@ -28,9 +27,9 @@ public class MentorService {
     private final ObjectMapper objectMapper;
 
     public MentorMessageHistoryResponseDTO getMessageHistory(Long userId, Long analysisId) {
-        Analysis analysis = analysisRepository.findById(analysisId)
+        Long ownerId = analysisRepository.findUserIdById(analysisId)
                 .orElseThrow(() -> new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_FOUND));
-        validateOwner(analysis, userId);
+        validateOwner(ownerId, userId);
 
         List<MentorMessageHistoryResponseDTO.Message> messages = mentorMessageRepository
                 .findByMentorChatSessionAnalysisIdOrderByCreatedAtAscIdAsc(analysisId)
@@ -44,8 +43,8 @@ public class MentorService {
         return new MentorMessageHistoryResponseDTO(analysisId, messages);
     }
 
-    private void validateOwner(Analysis analysis, Long userId) {
-        if (!Objects.equals(analysis.getUser().getUserId(), userId)) {
+    private void validateOwner(Long ownerId, Long userId) {
+        if (!Objects.equals(ownerId, userId)) {
             throw new GeneralException(MentorErrorStatus.MENTOR_ACCESS_DENIED);
         }
     }
