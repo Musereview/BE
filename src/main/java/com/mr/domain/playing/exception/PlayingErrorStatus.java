@@ -18,6 +18,7 @@ public enum PlayingErrorStatus implements BaseCode {
     MISSING_PLAYING_STATUS(HttpStatus.BAD_REQUEST, "PLAYING_400_12", "연주 상태는 필수 입력값입니다."),
     UNSUPPORTED_PLAYING_MODE(HttpStatus.BAD_REQUEST, "PLAYING_400_13", "현재 지원하지 않는 연주 모드입니다."),
     INVALID_PLAYING_ID(HttpStatus.BAD_REQUEST, "PLAYING_400_14", "연주 ID가 올바르지 않습니다."),
+    INVALID_RECORDING_OBJECT_KEY(HttpStatus.BAD_REQUEST," PLAYING_400_15", "유효하지 않은 녹음 파일 Object Key입니다."),
     PLAYING_ACCESS_DENIED(HttpStatus.FORBIDDEN, "PLAYING_403_01", "해당 연주에 대한 접근 권한이 없습니다."),
     BACKING_TRACK_ACCESS_FORBIDDEN(HttpStatus.FORBIDDEN, "PLAYING_403_02", "해당 백킹트랙으로 연주를 시작할 수 없습니다."),
     PLAYING_NOT_FOUND(HttpStatus.NOT_FOUND, "PLAYING_404_01", "연주 세션을 찾을 수 없습니다."),

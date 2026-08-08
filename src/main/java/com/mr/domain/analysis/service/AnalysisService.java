@@ -21,6 +21,7 @@ import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.service.S3FileService;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,7 @@ public class AnalysisService {
     private final AnalysisRequestFactory analysisRequestFactory;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final S3FileService s3FileService;
 
     @Transactional
     public AnalysisCreateResponseDTO createAnalysis(
@@ -115,10 +117,17 @@ public class AnalysisService {
                 analysis.getRawResultJson()
         );
 
+        String recordingFileUrl =
+                s3FileService.createPresignedDownload(
+                        userId,
+                        analysis.getPlaying().getRecordingObjectKey()
+                );
+
         return AnalysisResultResponseDTO.from(
                 analysis,
                 analysisReport,
-                rawResult
+                rawResult,
+                recordingFileUrl
         );
     }
 
