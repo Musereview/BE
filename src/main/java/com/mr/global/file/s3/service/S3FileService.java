@@ -24,7 +24,6 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
-import java.net.URI;
 import java.time.Instant;
 import java.util.Map;
 
@@ -141,7 +140,6 @@ public class S3FileService {
 
         return new ValidatedFile(
                 objectKey,
-                buildFileUrl(objectKey),
                 headObject.contentLength(),
                 normalizedContentType
         );
@@ -215,43 +213,6 @@ public class S3FileService {
             s3Client.deleteObject(deleteRequest);
         } catch (SdkException e) {
             log.error("검증에 실패한 S3 객체 삭제에 실패했습니다. objectKey={}", objectKey, e);
-        }
-    }
-
-    public String extractObjectKey(
-            String storedFileValue
-    ) {
-        if (storedFileValue == null
-                || storedFileValue.isBlank()) {
-            throw new GeneralException(
-                    S3ErrorStatus.INVALID_OBJECT_KEY
-            );
-        }
-
-        if (!storedFileValue.startsWith("http://")
-                && !storedFileValue.startsWith("https://")) {
-            return storedFileValue;
-        }
-
-        try {
-            String path =
-                    URI.create(storedFileValue)
-                            .getPath();
-
-            if (path == null || path.isBlank()) {
-                throw new GeneralException(
-                        S3ErrorStatus.INVALID_OBJECT_KEY
-                );
-            }
-
-            return path.startsWith("/")
-                    ? path.substring(1)
-                    : path;
-
-        } catch (IllegalArgumentException exception) {
-            throw new GeneralException(
-                    S3ErrorStatus.INVALID_OBJECT_KEY
-            );
         }
     }
 
@@ -345,13 +306,5 @@ public class S3FileService {
         if (!objectKeyGenerator.belongsToOwner(ownerId, objectKey)) {
             throw new GeneralException(S3ErrorStatus.INVALID_OBJECT_KEY);
         }
-    }
-
-    private String buildFileUrl(String objectKey) {
-        return s3Client.utilities()
-                .getUrl(builder -> builder
-                        .bucket(s3Properties.bucket())
-                        .key(objectKey))
-                .toString();
     }
 }

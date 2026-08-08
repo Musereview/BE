@@ -30,7 +30,8 @@ public record HistoryDetailResponseDTO(
         List<AnalysisSummary> analyses
 ) {
 
-    public static HistoryDetailResponseDTO from(Playing playing, List<Analysis> analyses, BarMetrics barMetrics) {
+    public static HistoryDetailResponseDTO from(
+            Playing playing, List<Analysis> analyses, String recordingFileUrl, BarMetrics barMetrics) {
         BackingTrack backingTrack = playing.getBackingTrack();
 
         return new HistoryDetailResponseDTO(
@@ -43,7 +44,7 @@ public record HistoryDetailResponseDTO(
                 playing.getEndedAt(),
                 toDurationMinutes(playing.getDurationSec()),
                 playing.getDurationSec(),
-                playing.getRecordingFileUrl(),
+                recordingFileUrl,
                 backingTrack != null ? backingTrack.getAudioFileUrl() : null,
                 playing.getMidiData().stream().map(MidiEvent::from).toList(),
                 backingTrack != null ? backingTrack.getMidiData() : null,

@@ -124,7 +124,7 @@ public class PlayingService {
 
             playing.completeWithMidiData(
                     midiEvents,
-                    recording.fileUrl()
+                    recording.objectKey()
             );
 
             publishPracticeMilestoneNotification(userId, playing);
@@ -150,7 +150,13 @@ public class PlayingService {
         playing.validatePlayingOwner(userId);
         playing.validateCompleted();
 
-        return PlayingDetailResponse.from(playing);
+        String recordingFileUrl =
+                s3FileService.createPresignedDownload(
+                        userId,
+                        playing.getRecordingObjectKey()
+                );
+
+        return PlayingDetailResponse.from(playing, recordingFileUrl);
     }
 
     @Transactional(readOnly = true)
@@ -166,8 +172,14 @@ public class PlayingService {
             throw new GeneralException(PlayingErrorStatus.BACKING_TRACK_NOT_FOUND);
         }
 
+        String recordingFileUrl =
+                s3FileService.createPresignedDownload(
+                        userId,
+                        playing.getRecordingObjectKey()
+                );
+
         int totalBars = analysisBarCalculator.calculate(playing).totalBars();
-        return AnalysisContextResponse.from(playing, totalBars);
+        return AnalysisContextResponse.from(playing, totalBars, recordingFileUrl);
     }
 
     @Transactional

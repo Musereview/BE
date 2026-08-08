@@ -14,6 +14,7 @@ import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.service.S3FileService;
 import com.mr.global.util.RelativeDateFormatter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ public class HistoryService {
 
     private final PlayingRepository playingRepository;
     private final AnalysisRepository analysisRepository;
+    private final S3FileService s3FileService;
     private final AnalysisBarCalculator analysisBarCalculator;
 
     public HistoryListResponseDTO getHistories(Long userId, int page, int size, HistoryPeriod period) {
@@ -72,7 +74,14 @@ public class HistoryService {
         List<Analysis> analyses =
                 analysisRepository.findByPlayingIdAndUserIdOrderByStartBarAscIdAsc(playingId, userId);
 
-        return HistoryDetailResponseDTO.from(playing, analyses, resolveBarMetrics(playing));
+        String recordingFileUrl =
+                s3FileService.createPresignedDownload(
+                        userId,
+                        playing.getRecordingObjectKey()
+                );
+
+        return HistoryDetailResponseDTO.from(
+                playing, analyses, recordingFileUrl, resolveBarMetrics(playing));
     }
 
     // 백킹트랙 정보 불완전 시 조회 실패 대신 마디 관련 필드만 null 처리
