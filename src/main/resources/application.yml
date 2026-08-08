@@ -47,7 +47,10 @@ jwt:
 
 # 소셜 로그인 API 연동
 oauth:
-  frontend-redirect-uri: ${OAUTH_FRONTEND_REDIRECT_URI:http://localhost:5173/oauth/callback}
+  frontend-redirect-uris:
+    - http://localhost:5173/oauth/callback
+    - https://musereview-sigma.vercel.app/oauth/callback
+
   temp-code-ttl: ${OAUTH_TEMP_CODE_TTL:2m}
   cookie:
     secure: ${OAUTH_COOKIE_SECURE:false}
@@ -71,8 +74,20 @@ external:
 
 aws:
   s3:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY_ID}
+      secret-key: ${AWS_SECRET_ACCESS_KEY}
     bucket: ${AWS_S3_BUCKET:}
     region: ${AWS_REGION:ap-northeast-2}
+    presigned-url-expiration: 10m
+    max-file-size: 31457280         # 30MB
+    key-prefix: recordings
+    allowed-content-types:
+      - audio/mpeg
+      - audio/wav
+      - audio/x-wav
+      - audio/webm
+      - audio/ogg
 
 
 # 내부 AI 분석 서버 설정
