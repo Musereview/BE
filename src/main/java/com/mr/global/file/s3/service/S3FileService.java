@@ -12,12 +12,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
@@ -137,10 +140,55 @@ public class S3FileService {
 
         return new ValidatedFile(
                 objectKey,
-                buildFileUrl(objectKey),
                 headObject.contentLength(),
                 normalizedContentType
         );
+    }
+
+    // 파일 조회용 Presigned GET URL을 발급
+    public String createPresignedDownload(
+            Long ownerId,
+            String objectKey
+    ) {
+        validateOwnerId(ownerId);
+        validateObjectKey(ownerId, objectKey);
+
+        GetObjectRequest getObjectRequest =
+                GetObjectRequest.builder()
+                        .bucket(s3Properties.bucket())
+                        .key(objectKey)
+                        .build();
+
+        GetObjectPresignRequest presignRequest =
+                GetObjectPresignRequest.builder()
+                        .signatureDuration(
+                                s3Properties.presignedUrlExpiration()
+                        )
+                        .getObjectRequest(getObjectRequest)
+                        .build();
+
+        try {
+            PresignedGetObjectRequest presignedRequest =
+                    s3Presigner.presignGetObject(
+                            presignRequest
+                    );
+
+            return presignedRequest
+                    .url()
+                    .toString();
+
+        } catch (SdkException exception) {
+            log.error(
+                    "S3 Presigned GET URL 발급에 실패했습니다. ownerId={}, objectKey={}",
+                    ownerId,
+                    objectKey,
+                    exception
+            );
+
+            throw new GeneralException(
+                    S3ErrorStatus.PRESIGNED_URL_CREATE_FAILED
+            );
+        }
     }
 
     /**
@@ -258,13 +306,5 @@ public class S3FileService {
         if (!objectKeyGenerator.belongsToOwner(ownerId, objectKey)) {
             throw new GeneralException(S3ErrorStatus.INVALID_OBJECT_KEY);
         }
-    }
-
-    private String buildFileUrl(String objectKey) {
-        return s3Client.utilities()
-                .getUrl(builder -> builder
-                        .bucket(s3Properties.bucket())
-                        .key(objectKey))
-                .toString();
     }
 }

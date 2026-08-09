@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -15,6 +16,7 @@ import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
+import com.mr.domain.analysis.service.AnalysisBarCalculator;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.history.dto.req.HistoryPeriod;
 import com.mr.domain.history.dto.res.HistoryDetailResponseDTO;
@@ -25,6 +27,7 @@ import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.service.S3FileService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -48,11 +51,15 @@ class HistoryServiceTest {
     @Mock
     private AnalysisRepository analysisRepository;
 
+    @Mock
+    private S3FileService s3FileService;
+
     private HistoryService historyService;
 
     @BeforeEach
     void setUp() {
-        historyService = new HistoryService(playingRepository, analysisRepository);
+        historyService = new HistoryService(
+                playingRepository, analysisRepository, s3FileService, new AnalysisBarCalculator());
     }
 
     private Playing mockPlaying(Long playingId, Long userId, PlayingStatus status, LocalDateTime endedAt) {
@@ -114,8 +121,8 @@ class HistoryServiceTest {
     }
 
     @Test
-    @DisplayName("getHistories - 인접 항목과 점수 차이로 scoreChange를 계산하고, 페이지 마지막 항목은 null이다")
-    void getHistories_scoreChange_adjacentComparisonOnly() {
+    @DisplayName("getHistories - 마지막 페이지에서는 인접 항목과 점수 차이를 계산하고 마지막 항목은 null이다")
+    void getHistories_scoreChange_comparesAdjacentItemsOnLastPage() {
         Playing playing1 = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
         Playing playing2 = mockPlaying(2L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now().minusDays(1));
         given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any()))
@@ -131,6 +138,61 @@ class HistoryServiceTest {
 
         assertThat(response.items().get(0).scoreChange()).isEqualTo(10);
         assertThat(response.items().get(1).scoreChange()).isNull();
+        verify(playingRepository, never()).findNextPlayingId(any(), any(), any(), any(), any());
+        verify(playingRepository, never()).findNextPlayingIdSince(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("getHistories - 다음 페이지가 있으면 현재 페이지 마지막 항목도 다음 연주와 점수 차이를 계산한다")
+    void getHistories_scoreChange_comparesLastItemWithNextPage() {
+        LocalDateTime firstEndedAt = LocalDateTime.of(2026, 7, 31, 12, 0);
+        LocalDateTime secondEndedAt = firstEndedAt.minusDays(1);
+        Playing playing1 = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, firstEndedAt);
+        Playing playing2 = mockPlaying(2L, 1L, PlayingStatus.COMPLETED, secondEndedAt);
+        given(playingRepository.findPlayingsByUserAndStatus(
+                eq(1L), eq(PlayingStatus.COMPLETED), eq(PageRequest.of(0, 2))))
+                .willReturn(new SliceImpl<>(List.of(playing1, playing2), PageRequest.of(0, 2), true));
+        given(playingRepository.findNextPlayingId(
+                eq(1L), eq(PlayingStatus.COMPLETED), eq(secondEndedAt), eq(2L),
+                eq(PageRequest.of(0, 1))))
+                .willReturn(List.of(3L));
+
+        Analysis analysis1 = completedAnalysis(1L, 90);
+        Analysis analysis2 = completedAnalysis(2L, 80);
+        Analysis analysis3 = completedAnalysis(3L, 70);
+        given(analysisRepository.findByPlayingIdInAndStatusOrderByCreatedAtDescIdDesc(
+                eq(List.of(1L, 2L, 3L)), eq(AnalysisStatus.COMPLETED)))
+                .willReturn(List.of(analysis1, analysis2, analysis3));
+
+        HistoryListResponseDTO response = historyService.getHistories(1L, 0, 2, null);
+
+        assertThat(response.items()).hasSize(2);
+        assertThat(response.items().get(0).scoreChange()).isEqualTo(10);
+        assertThat(response.items().get(1).scoreChange()).isEqualTo(10);
+        assertThat(response.hasNext()).isTrue();
+        verify(playingRepository, never()).findNextPlayingIdSince(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("기간 필터가 있으면 cutoff 전용 쿼리로 다음 연주를 조회한다")
+    void getHistories_scoreChange_usesSinceQueryWithPeriod() {
+        LocalDateTime endedAt = LocalDateTime.of(2026, 7, 31, 12, 0);
+        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, endedAt);
+        given(playingRepository.findPlayingsByUserAndStatusSince(
+                eq(1L), eq(PlayingStatus.COMPLETED), any(LocalDateTime.class),
+                eq(PageRequest.of(0, 1))))
+                .willReturn(new SliceImpl<>(List.of(playing), PageRequest.of(0, 1), true));
+        given(playingRepository.findNextPlayingIdSince(
+                eq(1L), eq(PlayingStatus.COMPLETED), any(LocalDateTime.class),
+                eq(endedAt), eq(1L), eq(PageRequest.of(0, 1))))
+                .willReturn(List.of());
+        given(analysisRepository.findByPlayingIdInAndStatusOrderByCreatedAtDescIdDesc(
+                eq(List.of(1L)), eq(AnalysisStatus.COMPLETED)))
+                .willReturn(List.of());
+
+        historyService.getHistories(1L, 0, 1, HistoryPeriod.WEEKLY);
+
+        verify(playingRepository, never()).findNextPlayingId(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -215,11 +277,15 @@ class HistoryServiceTest {
     void getHistoryDetail_success_returnsAllAnalysesRegardlessOfStatus() {
         Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
         BackingTrack backingTrack = mock(BackingTrack.class);
-        String recordingFileUrl = playing.toString();
+        String recordingObjectKey = "recordings/1/2026-08-06/test.webm";
+        String recordingFileUrl = "https://example.com/presigned-recording.webm";
         String backingTrackAudioFileUrl = backingTrack.toString();
-        given(playing.getRecordingFileUrl()).willReturn(recordingFileUrl);
+        given(playing.getRecordingObjectKey()).willReturn(recordingObjectKey);
+        given(s3FileService.createPresignedDownload(1L, recordingObjectKey)).willReturn(recordingFileUrl);
         given(playing.getBackingTrack()).willReturn(backingTrack);
         given(backingTrack.getAudioFileUrl()).willReturn(backingTrackAudioFileUrl);
+        given(backingTrack.getTimeSignature()).willReturn("4/4");
+        given(backingTrack.getPlaytimeSec()).willReturn(120);
         given(playingRepository.findByIdWithBackingTrack(1L)).willReturn(Optional.of(playing));
 
         Analysis completed = completedAnalysis(1L, 90);
@@ -232,9 +298,51 @@ class HistoryServiceTest {
 
         HistoryDetailResponseDTO response = historyService.getHistoryDetail(1L, 1L);
 
+        verify(s3FileService).createPresignedDownload(1L, recordingObjectKey);
+
         assertThat(response.recordingFileUrl()).isEqualTo(recordingFileUrl);
         assertThat(response.backingTrackAudioFileUrl()).isEqualTo(backingTrackAudioFileUrl);
         assertThat(response.analyses()).hasSize(2);
         assertThat(response.analyses().get(1).status()).isEqualTo(AnalysisStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("getHistoryDetail - BPM/박자/재생시간이 있으면 totalBars와 구간별 estimatedSeconds를 계산한다")
+    void getHistoryDetail_success_calculatesBarMetrics() {
+        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
+        BackingTrack backingTrack = mock(BackingTrack.class);
+        given(playing.getBackingTrack()).willReturn(backingTrack);
+        given(backingTrack.getTimeSignature()).willReturn("4/4");
+        given(backingTrack.getPlaytimeSec()).willReturn(120);
+        given(playingRepository.findByIdWithBackingTrack(1L)).willReturn(Optional.of(playing));
+
+        Analysis completed = completedAnalysis(1L, 90);
+        given(analysisRepository.findByPlayingIdAndUserIdOrderByStartBarAscIdAsc(1L, 1L))
+                .willReturn(List.of(completed));
+
+        HistoryDetailResponseDTO response = historyService.getHistoryDetail(1L, 1L);
+
+        // BPM 120, 4/4 -> 마디당 2초, 재생 120초 -> 60마디 / 1~8마디 분석 -> 16초
+        assertThat(response.totalBars()).isEqualTo(60);
+        assertThat(response.analyses().get(0).estimatedSeconds()).isEqualTo(16);
+    }
+
+    @Test
+    @DisplayName("getHistoryDetail - 마디 계산 정보가 없으면 조회는 성공하고 마디 관련 필드만 null이다")
+    void getHistoryDetail_missingBarMetrics_returnsNullBarFields() {
+        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
+        BackingTrack backingTrack = mock(BackingTrack.class);
+        given(playing.getBackingTrack()).willReturn(backingTrack);
+        given(backingTrack.getPlaytimeSec()).willReturn(null);
+        given(playingRepository.findByIdWithBackingTrack(1L)).willReturn(Optional.of(playing));
+
+        Analysis completed = completedAnalysis(1L, 90);
+        given(analysisRepository.findByPlayingIdAndUserIdOrderByStartBarAscIdAsc(1L, 1L))
+                .willReturn(List.of(completed));
+
+        HistoryDetailResponseDTO response = historyService.getHistoryDetail(1L, 1L);
+
+        assertThat(response.totalBars()).isNull();
+        assertThat(response.analyses().get(0).estimatedSeconds()).isNull();
     }
 }

@@ -38,6 +38,8 @@ import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
@@ -88,6 +90,9 @@ class S3FileServiceTest {
 
     @Mock
     private PresignedPutObjectRequest presignedPutObjectRequest;
+
+    @Mock
+    private PresignedGetObjectRequest presignedGetObjectRequest;
 
     private S3FileService s3FileService;
 
@@ -514,8 +519,6 @@ class S3FileServiceTest {
                     any(HeadObjectRequest.class)
             )).thenReturn(headObjectResponse);
 
-            mockFileUrl();
-
             // when
             ValidatedFile response =
                     s3FileService.validateUploadedFile(
@@ -526,9 +529,6 @@ class S3FileServiceTest {
             // then
             assertThat(response.objectKey())
                     .isEqualTo(OBJECT_KEY);
-
-            assertThat(response.fileUrl())
-                    .isEqualTo(FILE_URL);
 
             assertThat(response.fileSize())
                     .isEqualTo(FILE_SIZE);
@@ -581,8 +581,6 @@ class S3FileServiceTest {
             when(s3Client.headObject(
                     any(HeadObjectRequest.class)
             )).thenReturn(headObjectResponse);
-
-            mockFileUrl();
 
             // when
             ValidatedFile response =
@@ -945,19 +943,126 @@ class S3FileServiceTest {
         }
     }
 
-    private void mockFileUrl() throws Exception {
-        S3Utilities s3Utilities =
-                mock(S3Utilities.class);
+    @Nested
+    @DisplayName("Presigned GET URL 발급")
+    class CreatePresignedDownload {
 
-        when(s3Client.utilities())
-                .thenReturn(s3Utilities);
+        @Test
+        @DisplayName("소유자의 Object Key이면 Presigned GET URL을 발급한다")
+        void createPresignedDownloadUrl_success()
+                throws Exception {
+            // given
+            String downloadUrl =
+                    "https://example.com/presigned-download-url";
 
-        when(s3Utilities.getUrl(
-                org.mockito.ArgumentMatchers
-                        .<Consumer<GetUrlRequest.Builder>>any()
-        )).thenReturn(
-                URI.create(FILE_URL).toURL()
-        );
+            when(objectKeyGenerator.belongsToOwner(
+                    OWNER_ID,
+                    OBJECT_KEY
+            )).thenReturn(true);
+
+            when(s3Presigner.presignGetObject(
+                    any(GetObjectPresignRequest.class)
+            )).thenReturn(presignedGetObjectRequest);
+
+            when(presignedGetObjectRequest.url())
+                    .thenReturn(
+                            URI.create(downloadUrl).toURL()
+                    );
+
+            // when
+            String response =
+                    s3FileService.createPresignedDownload(
+                            OWNER_ID,
+                            OBJECT_KEY
+                    );
+
+            // then
+            assertThat(response)
+                    .isEqualTo(downloadUrl);
+
+            ArgumentCaptor<GetObjectPresignRequest> captor =
+                    ArgumentCaptor.forClass(
+                            GetObjectPresignRequest.class
+                    );
+
+            verify(s3Presigner)
+                    .presignGetObject(captor.capture());
+
+            GetObjectPresignRequest capturedRequest =
+                    captor.getValue();
+
+            assertThat(capturedRequest.signatureDuration())
+                    .isEqualTo(Duration.ofMinutes(10));
+
+            assertThat(
+                    capturedRequest
+                            .getObjectRequest()
+                            .bucket()
+            ).isEqualTo(BUCKET);
+
+            assertThat(
+                    capturedRequest
+                            .getObjectRequest()
+                            .key()
+            ).isEqualTo(OBJECT_KEY);
+
+            verify(objectKeyGenerator)
+                    .belongsToOwner(
+                            OWNER_ID,
+                            OBJECT_KEY
+                    );
+        }
+
+        @Test
+        @DisplayName("다른 소유자의 Object Key이면 Presigned GET URL을 발급하지 않는다")
+        void createPresignedDownload_invalidObjectKey() {
+            // given
+            when(objectKeyGenerator.belongsToOwner(
+                    OWNER_ID,
+                    OTHER_OWNER_OBJECT_KEY
+            )).thenReturn(false);
+
+            // when & then
+            assertGeneralException(
+                    () -> s3FileService.createPresignedDownload(
+                            OWNER_ID,
+                            OTHER_OWNER_OBJECT_KEY
+                    ),
+                    S3ErrorStatus.INVALID_OBJECT_KEY
+            );
+
+            verify(s3Presigner, never())
+                    .presignGetObject(
+                            any(GetObjectPresignRequest.class)
+                    );
+        }
+
+        @Test
+        @DisplayName("Presigned GET URL 발급 중 SDK 오류가 발생하면 예외가 발생한다")
+        void createPresignedDownload_sdkException() {
+            // given
+            when(objectKeyGenerator.belongsToOwner(
+                    OWNER_ID,
+                    OBJECT_KEY
+            )).thenReturn(true);
+
+            when(s3Presigner.presignGetObject(
+                    any(GetObjectPresignRequest.class)
+            )).thenThrow(
+                    SdkClientException.create(
+                            "Presigned GET URL creation failed"
+                    )
+            );
+
+            // when & then
+            assertGeneralException(
+                    () -> s3FileService.createPresignedDownload(
+                            OWNER_ID,
+                            OBJECT_KEY
+                    ),
+                    S3ErrorStatus.PRESIGNED_URL_CREATE_FAILED
+            );
+        }
     }
 
     private void verifyDeleteObject() {

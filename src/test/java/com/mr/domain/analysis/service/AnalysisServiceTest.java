@@ -32,6 +32,7 @@ import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.service.S3FileService;
 import com.mr.global.client.ai.AiAnalysisRequest;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -51,6 +52,9 @@ import org.springframework.context.ApplicationEventPublisher;
 @ExtendWith(MockitoExtension.class)
 class AnalysisServiceTest {
 
+    private static final String RECORDING_OBJECT_KEY = "recordings/1/2026-08-06/120000_abcdef.webm";
+    private static final String RECORDING_FILE_URL = "https://example.com/presigned-recording.webm";
+
     @Mock
     private AnalysisRepository analysisRepository;
 
@@ -66,12 +70,15 @@ class AnalysisServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private S3FileService s3FileService;
+
     private AnalysisService analysisService;
 
     @BeforeEach
     void setUp() {
         analysisService = new AnalysisService(analysisRepository, analysisReportRepository, playingRepository,
-                analysisRequestFactory, eventPublisher, new ObjectMapper());
+                analysisRequestFactory, eventPublisher, new ObjectMapper(), s3FileService);
     }
 
     private Analysis completedAnalysis(Long userId) {
@@ -88,7 +95,7 @@ class AnalysisServiceTest {
         lenient().when(playing.getUser()).thenReturn(user);
         lenient().when(playing.getBackingTrack()).thenReturn(backingTrack);
         lenient().when(playing.getBpm()).thenReturn(120);
-        lenient().when(playing.getRecordingFileUrl()).thenReturn("https://example.com/recording.webm");
+        lenient().when(playing.getRecordingObjectKey()).thenReturn(RECORDING_OBJECT_KEY);
         lenient().when(backingTrack.getTitle()).thenReturn("테스트 트랙");
         lenient().when(backingTrack.getGenre()).thenReturn("jazz");
         lenient().when(backingTrack.getKeySignature()).thenReturn("C");
@@ -142,12 +149,14 @@ class AnalysisServiceTest {
         given(analysisRepository.findById(analysisId)).willReturn(Optional.of(analysis));
         given(analysisReportRepository.findFirstByAnalysisIdAndLlmStatusOrderByCreatedAtDesc(anyLong(), any()))
                 .willReturn(Optional.of(report));
+        given(s3FileService.createPresignedDownload(userId, RECORDING_OBJECT_KEY)).willReturn(RECORDING_FILE_URL);
 
         AnalysisResultResponseDTO response = analysisService.getAnalysisResult(userId, analysisId);
 
         ArgumentCaptor<LlmStatus> llmStatusCaptor = ArgumentCaptor.forClass(LlmStatus.class);
         verify(analysisReportRepository)
                 .findFirstByAnalysisIdAndLlmStatusOrderByCreatedAtDesc(eq(analysisId), llmStatusCaptor.capture());
+        verify(s3FileService).createPresignedDownload(userId, RECORDING_OBJECT_KEY);
         assertThat(llmStatusCaptor.getValue()).isEqualTo(LlmStatus.SUCCESS);
 
         assertThat(response.report()).isNotNull();
@@ -155,7 +164,7 @@ class AnalysisServiceTest {
         assertThat(response.report().llmStatus()).isEqualTo(LlmStatus.SUCCESS);
         assertThat(response.title()).isEqualTo("테스트 트랙");
         assertThat(response.key()).isEqualTo("C Major");
-        assertThat(response.recordingFileUrl()).isEqualTo("https://example.com/recording.webm");
+        assertThat(response.recordingFileUrl()).isEqualTo(RECORDING_FILE_URL);
         assertThat(response.backingTrackAudioFileUrl()).isEqualTo("https://example.com/backing-track.mp3");
     }
 

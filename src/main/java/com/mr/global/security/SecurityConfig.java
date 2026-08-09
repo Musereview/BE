@@ -7,6 +7,7 @@ import com.mr.global.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -18,6 +19,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.util.Map;
 
 @Configuration
 @EnableWebSecurity
@@ -37,6 +39,15 @@ public class SecurityConfig {
             "/api/auth/token/exchange"
     };
 
+    // 온보딩 미완료(ROLE_GUEST) 사용자에게도 허용할 (HTTP Method, URL) 조합.
+    // /api/users/me/profile은 최초 등록(POST)만 허용 — GET/PATCH는 온보딩을 이미 마친
+    // 사용자를 전제로 하는 동작이라 GUEST에게 열어두면 서비스 레이어에서 STUDENT_NOT_FOUND 등
+    // 엉뚱한 오류로 이어진다.
+    private static final Map<HttpMethod, String[]> ALLOWED_ONBOARDING_URLS = Map.of(
+            HttpMethod.POST, new String[]{"/api/users/me/profile"},
+            HttpMethod.GET, new String[]{"/api/users/verify-nickname"}
+    );
+
     /**
      * AntPathRequestMatcher를 명시적으로 사용하는 이유:
      * Spring Security 6 환경에서 와일드카드 패턴 경로(/swagger-ui/**, /api/auth/** 등)에 대해
@@ -44,7 +55,7 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        org.springframework.security.web.util.matcher.AntPathRequestMatcher[] matchers =
+        org.springframework.security.web.util.matcher.AntPathRequestMatcher[] publicMatchers =
                 java.util.Arrays.stream(PUBLIC_URLS)
                         .map(org.springframework.security.web.util.matcher.AntPathRequestMatcher::antMatcher)
                         .toArray(org.springframework.security.web.util.matcher.AntPathRequestMatcher[]::new);
@@ -57,16 +68,18 @@ public class SecurityConfig {
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                         .accessDeniedHandler(jwtAccessDeniedHandler)
                 )
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(matchers).permitAll()
-                        .anyRequest().authenticated()
-                )
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(publicMatchers).permitAll();
+                    ALLOWED_ONBOARDING_URLS.forEach((method, urls) ->
+                            auth.requestMatchers(method, urls).hasAnyRole("GUEST", "STUDENT", "TEACHER", "ADMIN"));
+                    auth.anyRequest().hasAnyRole("STUDENT", "TEACHER", "ADMIN");
+                })
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins:http://localhost:3000,http://localhost:5173,https://musereview-sigma.vercel.app}")
+    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins:http://localhost:5173,https://www.musereview.site}")
     private String allowedOrigins;
 
     // CORS 설정

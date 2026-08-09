@@ -21,7 +21,7 @@ public record PlayingDetailResponse(
         BackingTrackInfo backingTrack,
         LocalDateTime createdAt
 ) {
-    public static PlayingDetailResponse from(Playing playing) {
+    public static PlayingDetailResponse from(Playing playing, String recordingFileUrl) {
         return new PlayingDetailResponse(
                 playing.getId(),
                 playing.getStatus(),
@@ -30,7 +30,7 @@ public record PlayingDetailResponse(
                 playing.getEndedAt(),
                 playing.getDurationSec(),
                 playing.getBpm(),
-                playing.getRecordingFileUrl(),
+                recordingFileUrl,
                 playing.isPublic(),
                 BackingTrackInfo.from(playing.getBackingTrack()),
                 playing.getCreatedAt()
