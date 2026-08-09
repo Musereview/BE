@@ -18,6 +18,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @Entity
@@ -46,6 +48,7 @@ public class MentorMessage extends BaseCreatedEntity {
     @Column(name = "role", nullable = false, length = 20)
     private MessageRole role;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "references_json", columnDefinition = "json")
     private String referencesJson;
 
