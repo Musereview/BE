@@ -45,11 +45,16 @@ jwt:
   access-token-validity-in-seconds: 1800     # Access Token 만료 시간 (30분)
   refresh-token-validity-in-seconds: 604800  # Refresh Token 만료 시간 (7일)
 
+# CORS 설정
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,https://www.musereview.site}
+
 # 소셜 로그인 API 연동
 oauth:
+  frontend-redirect-uri: ${OAUTH_FRONTEND_REDIRECT_URI:https://www.musereview.site/oauth/callback}
   frontend-redirect-uris:
     - http://localhost:5173/oauth/callback
-    - https://musereview-sigma.vercel.app/oauth/callback
+    - https://www.musereview.site/oauth/callback
 
   temp-code-ttl: ${OAUTH_TEMP_CODE_TTL:2m}
   cookie:
