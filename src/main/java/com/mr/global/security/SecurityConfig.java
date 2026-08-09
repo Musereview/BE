@@ -79,7 +79,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins:http://localhost:3000,http://localhost:5173,https://musereview-sigma.vercel.app}")
+    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins:http://localhost:5173,https://www.musereview.site}")
     private String allowedOrigins;
 
     // CORS 설정

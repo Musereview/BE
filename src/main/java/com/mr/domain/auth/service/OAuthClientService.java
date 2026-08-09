@@ -318,16 +318,25 @@ public class OAuthClientService {
         return builder.build().toUriString();
     }
 
+    private String resolveFrontendRedirectBaseUrl(String customFrontendRedirectUri) {
+        if (customFrontendRedirectUri != null && isFrontendAllowedRedirectUri(customFrontendRedirectUri)) {
+            return customFrontendRedirectUri.trim();
+        }
+        if (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank()) {
+            return oAuthProperties.frontendRedirectUri().trim();
+        }
+        if (oAuthProperties != null && !oAuthProperties.getAllowedFrontendRedirectUris().isEmpty()) {
+            return oAuthProperties.getAllowedFrontendRedirectUris().get(0);
+        }
+        return "http://localhost:5173/oauth/callback";
+    }
+
     public String buildFrontendRedirectUrl(String code) {
         return buildFrontendRedirectUrl(code, (String) null);
     }
 
     public String buildFrontendRedirectUrl(String code, String customFrontendRedirectUri) {
-        String baseUrl = (customFrontendRedirectUri != null && isFrontendAllowedRedirectUri(customFrontendRedirectUri))
-                ? customFrontendRedirectUri.trim()
-                : (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
-                ? oAuthProperties.frontendRedirectUri()
-                : "http://localhost:5173/oauth/callback";
+        String baseUrl = resolveFrontendRedirectBaseUrl(customFrontendRedirectUri);
 
         return org.springframework.web.util.UriComponentsBuilder.fromUriString(baseUrl)
                 .queryParam("code", code)
@@ -335,18 +344,12 @@ public class OAuthClientService {
                 .toUriString();
     }
 
-
-
     public String buildFrontendErrorRedirectUrl(String error) {
         return buildFrontendErrorRedirectUrl(error, (String) null);
     }
 
     public String buildFrontendErrorRedirectUrl(String error, String customFrontendRedirectUri) {
-        String baseUrl = (customFrontendRedirectUri != null && isFrontendAllowedRedirectUri(customFrontendRedirectUri))
-                ? customFrontendRedirectUri.trim()
-                : (oAuthProperties != null && oAuthProperties.frontendRedirectUri() != null && !oAuthProperties.frontendRedirectUri().isBlank())
-                ? oAuthProperties.frontendRedirectUri()
-                : "http://localhost:5173/oauth/callback";
+        String baseUrl = resolveFrontendRedirectBaseUrl(customFrontendRedirectUri);
 
         return org.springframework.web.util.UriComponentsBuilder.fromUriString(baseUrl)
                 .queryParam("error", (error != null && !error.isBlank()) ? error : "authentication_failed")
