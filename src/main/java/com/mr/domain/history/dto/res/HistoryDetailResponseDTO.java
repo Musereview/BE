@@ -3,6 +3,7 @@ package com.mr.domain.history.dto.res;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
+import com.mr.domain.analysis.service.AnalysisBarCalculator.BarMetrics;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
@@ -29,7 +30,8 @@ public record HistoryDetailResponseDTO(
         List<AnalysisSummary> analyses
 ) {
 
-    public static HistoryDetailResponseDTO from(Playing playing, List<Analysis> analyses, String recordingFileUrl) {
+    public static HistoryDetailResponseDTO from(
+            Playing playing, List<Analysis> analyses, String recordingFileUrl, BarMetrics barMetrics) {
         BackingTrack backingTrack = playing.getBackingTrack();
 
         return new HistoryDetailResponseDTO(
@@ -46,8 +48,8 @@ public record HistoryDetailResponseDTO(
                 backingTrack != null ? backingTrack.getAudioFileUrl() : null,
                 playing.getMidiData().stream().map(MidiEvent::from).toList(),
                 backingTrack != null ? backingTrack.getMidiData() : null,
-                null, // TODO: totalBars - playtimeSec/bpm 기반 추정 가능, 정확도 논의 후 추가
-                analyses.stream().map(AnalysisSummary::from).toList()
+                barMetrics != null ? barMetrics.totalBars() : null,
+                analyses.stream().map(analysis -> AnalysisSummary.from(analysis, barMetrics)).toList()
         );
     }
 
@@ -85,7 +87,7 @@ public record HistoryDetailResponseDTO(
             LocalDateTime createdAt
     ) {
 
-        public static AnalysisSummary from(Analysis analysis) {
+        public static AnalysisSummary from(Analysis analysis, BarMetrics barMetrics) {
             return new AnalysisSummary(
                     analysis.getId(),
                     analysis.getStartBar(),
@@ -93,9 +95,19 @@ public record HistoryDetailResponseDTO(
                     analysis.getStartBar() + "마디-" + analysis.getEndBar() + "마디 분석 리포트",
                     analysis.getSummary(),
                     analysis.getStatus(),
-                    null, // TODO: estimatedSeconds 소스 없음
+                    toEstimatedSeconds(analysis, barMetrics),
                     analysis.getCreatedAt()
             );
+        }
+
+        // 분석 구간(startBar~endBar)의 재생 길이 산정
+        private static Integer toEstimatedSeconds(Analysis analysis, BarMetrics barMetrics) {
+            if (barMetrics == null) {
+                return null;
+            }
+
+            int barCount = analysis.getEndBar() - analysis.getStartBar() + 1;
+            return (int) Math.round(barCount * barMetrics.barDurationMs() / 1_000D);
         }
     }
 }
