@@ -6,7 +6,6 @@ import com.mr.domain.auth.entity.enums.SocialType;
 import com.mr.domain.auth.service.AuthService;
 import com.mr.domain.auth.service.OAuthClientService;
 import com.mr.global.apipayload.ApiResponse;
-import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,7 +35,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 @Slf4j
-@Tag(name = "인증", description = "인증 API")
+@Tag(name = "인증", description = "소셜 로그인, JWT 토큰 발급/재발급, 계정 연동/로그아웃/회원탈퇴 API")
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -58,7 +57,7 @@ public class AuthController {
 
     @SecurityRequirements
     @Operation(
-            summary = "로그인 API (웹 브라우저)",
+            summary = "소셜 로그인 시작 (웹 브라우저)",
             description = "웹 브라우저 환경에서 소셜 로그인(카카오/구글) 인증 페이지로 302 리다이렉트합니다.<br/>"
                     + "<b>입력값:</b><br/>"
                     + "- <code>socialType</code> (Path, 필수): 소셜 로그인 제공자 (KAKAO, GOOGLE)<br/>"
@@ -129,7 +128,7 @@ public class AuthController {
 
     @SecurityRequirements
     @Operation(
-            summary = "OAuth 콜백 수신 API",
+            summary = "OAuth 소셜 로그인 콜백 수신",
             description = "소셜 로그인 제공자(카카오/구글)에서 인증 완료 후 인가 코드를 전달받는 백엔드 콜백 엔드포인트입니다.<br/>"
                     + "<b>입력값:</b><br/>"
                     + "- <code>socialType</code> (Path, 필수): 소셜 로그인 제공자 (KAKAO, GOOGLE)<br/>"
@@ -238,7 +237,7 @@ public class AuthController {
 
     @SecurityRequirements
     @Operation(
-            summary = "JWT 토큰 발급 API",
+            summary = "임시 교환 코드로 JWT 토큰 발급",
             description = "소셜 로그인 콜백에서 수신한 1회성 임시 교환 코드(code)를 전달하여 서비스 전용 JWT 토큰(Access Token, Refresh Token) 및 유저 기본 정보를 발급받습니다.<br/>"
                     + "<b>입력값:</b><br/>"
                     + "- <code>code</code> (Body, 필수): 콜백 URL 쿼리 파라미터로 수신한 1회성 임시 교환 코드<br/>"
@@ -301,25 +300,6 @@ public class AuthController {
                                     )
                             }
                     )
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "401",
-                    description = "인증 실패 (소셜 토큰 오류)",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(
-                                    name = "AUTH_401_04",
-                                    summary = "소셜 인증 실패",
-                                    value = """
-                                    {
-                                      "isSuccess": false,
-                                      "code": "AUTH_401_04",
-                                      "message": "소셜 로그인 인증에 실패했거나 유효하지 않은 소셜 액세스 토큰입니다.",
-                                      "data": null
-                                    }
-                                    """
-                            )
-                    )
             )
     })
     @PostMapping("/token/exchange")
@@ -332,7 +312,7 @@ public class AuthController {
 
     @SecurityRequirements
     @Operation(
-            summary = "로그인 / 회원가입 API (REST / 모바일 SDK용)",
+            summary = "소셜 Access Token 로그인 / 회원가입 (REST / 모바일 SDK용)",
             description = "모바일 앱 또는 프론트엔드 SDK에서 직접 발급받은 소셜 Access Token을 전달받아 회원가입 및 로그인을 처리하고 JWT 토큰을 발급합니다.<br/>"
                     + "<b>입력값:</b><br/>"
                     + "- <code>socialType</code> (Path, 필수): 소셜 로그인 제공자 (KAKAO, GOOGLE)<br/>"
@@ -421,7 +401,7 @@ public class AuthController {
 
     @SecurityRequirements
     @Operation(
-            summary = "JWT 토큰 재발급 API",
+            summary = "JWT 토큰 재발급",
             description = "Access Token 만료 시, 유효한 Refresh Token을 검증하여 새로운 Access Token 및 Refresh Token 세션을 재발급합니다.<br/>"
                     + "<b>입력값:</b><br/>"
                     + "- <code>refreshToken</code> (Body, 필수): 클라이언트에 저장된 유효한 Refresh Token<br/>"
@@ -524,7 +504,7 @@ public class AuthController {
     }
 
     @Operation(
-            summary = "소셜 계정 추가 연동 API",
+            summary = "소셜 계정 추가 연동",
             description = "현재 로그인된 사용자 계정에 새로운 소셜 계정(카카오/구글)을 추가로 연동합니다.<br/>"
                     + "<b>입력값:</b><br/>"
                     + "- <code>Authorization</code> (Header, 필수): Bearer 형태의 현재 로그인 유저 JWT Access Token<br/>"
@@ -646,7 +626,7 @@ public class AuthController {
     }
 
     @Operation(
-            summary = "로그아웃 API",
+            summary = "로그아웃",
             description = "현재 로그인된 사용자의 접속 세션을 종료하고, DB에 저장된 해당 기기의 Refresh Token을 만료/삭제 처리합니다.<br/>"
                     + "<b>입력값:</b><br/>"
                     + "- <code>Authorization</code> (Header, 필수): Bearer 형태의 현재 로그인 유저 JWT Access Token<br/>"
@@ -721,7 +701,7 @@ public class AuthController {
     }
 
     @Operation(
-            summary = "회원 탈퇴 API",
+            summary = "회원 탈퇴",
             description = "현재 로그인된 사용자의 회원 탈퇴를 처리하고, 연결된 모든 소셜 인증 정보(SocialAuth) 및 활성화된 Refresh Token 세션을 완전히 삭제합니다.<br/>"
                     + "<b>입력값:</b><br/>"
                     + "- <code>Authorization</code> (Header, 필수): Bearer 형태의 현재 로그인 유저 JWT Access Token<br/>"
