@@ -16,6 +16,7 @@ import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
+import com.mr.domain.analysis.service.AnalysisBarCalculator;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.history.dto.req.HistoryPeriod;
 import com.mr.domain.history.dto.res.HistoryDetailResponseDTO;
@@ -26,6 +27,7 @@ import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.service.S3FileService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -49,11 +51,15 @@ class HistoryServiceTest {
     @Mock
     private AnalysisRepository analysisRepository;
 
+    @Mock
+    private S3FileService s3FileService;
+
     private HistoryService historyService;
 
     @BeforeEach
     void setUp() {
-        historyService = new HistoryService(playingRepository, analysisRepository);
+        historyService = new HistoryService(
+                playingRepository, analysisRepository, s3FileService, new AnalysisBarCalculator());
     }
 
     private Playing mockPlaying(Long playingId, Long userId, PlayingStatus status, LocalDateTime endedAt) {
@@ -271,11 +277,15 @@ class HistoryServiceTest {
     void getHistoryDetail_success_returnsAllAnalysesRegardlessOfStatus() {
         Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
         BackingTrack backingTrack = mock(BackingTrack.class);
-        String recordingFileUrl = playing.toString();
+        String recordingObjectKey = "recordings/1/2026-08-06/test.webm";
+        String recordingFileUrl = "https://example.com/presigned-recording.webm";
         String backingTrackAudioFileUrl = backingTrack.toString();
-        given(playing.getRecordingFileUrl()).willReturn(recordingFileUrl);
+        given(playing.getRecordingObjectKey()).willReturn(recordingObjectKey);
+        given(s3FileService.createPresignedDownload(1L, recordingObjectKey)).willReturn(recordingFileUrl);
         given(playing.getBackingTrack()).willReturn(backingTrack);
         given(backingTrack.getAudioFileUrl()).willReturn(backingTrackAudioFileUrl);
+        given(backingTrack.getTimeSignature()).willReturn("4/4");
+        given(backingTrack.getPlaytimeSec()).willReturn(120);
         given(playingRepository.findByIdWithBackingTrack(1L)).willReturn(Optional.of(playing));
 
         Analysis completed = completedAnalysis(1L, 90);
@@ -288,9 +298,51 @@ class HistoryServiceTest {
 
         HistoryDetailResponseDTO response = historyService.getHistoryDetail(1L, 1L);
 
+        verify(s3FileService).createPresignedDownload(1L, recordingObjectKey);
+
         assertThat(response.recordingFileUrl()).isEqualTo(recordingFileUrl);
         assertThat(response.backingTrackAudioFileUrl()).isEqualTo(backingTrackAudioFileUrl);
         assertThat(response.analyses()).hasSize(2);
         assertThat(response.analyses().get(1).status()).isEqualTo(AnalysisStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("getHistoryDetail - BPM/박자/재생시간이 있으면 totalBars와 구간별 estimatedSeconds를 계산한다")
+    void getHistoryDetail_success_calculatesBarMetrics() {
+        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
+        BackingTrack backingTrack = mock(BackingTrack.class);
+        given(playing.getBackingTrack()).willReturn(backingTrack);
+        given(backingTrack.getTimeSignature()).willReturn("4/4");
+        given(backingTrack.getPlaytimeSec()).willReturn(120);
+        given(playingRepository.findByIdWithBackingTrack(1L)).willReturn(Optional.of(playing));
+
+        Analysis completed = completedAnalysis(1L, 90);
+        given(analysisRepository.findByPlayingIdAndUserIdOrderByStartBarAscIdAsc(1L, 1L))
+                .willReturn(List.of(completed));
+
+        HistoryDetailResponseDTO response = historyService.getHistoryDetail(1L, 1L);
+
+        // BPM 120, 4/4 -> 마디당 2초, 재생 120초 -> 60마디 / 1~8마디 분석 -> 16초
+        assertThat(response.totalBars()).isEqualTo(60);
+        assertThat(response.analyses().get(0).estimatedSeconds()).isEqualTo(16);
+    }
+
+    @Test
+    @DisplayName("getHistoryDetail - 마디 계산 정보가 없으면 조회는 성공하고 마디 관련 필드만 null이다")
+    void getHistoryDetail_missingBarMetrics_returnsNullBarFields() {
+        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
+        BackingTrack backingTrack = mock(BackingTrack.class);
+        given(playing.getBackingTrack()).willReturn(backingTrack);
+        given(backingTrack.getPlaytimeSec()).willReturn(null);
+        given(playingRepository.findByIdWithBackingTrack(1L)).willReturn(Optional.of(playing));
+
+        Analysis completed = completedAnalysis(1L, 90);
+        given(analysisRepository.findByPlayingIdAndUserIdOrderByStartBarAscIdAsc(1L, 1L))
+                .willReturn(List.of(completed));
+
+        HistoryDetailResponseDTO response = historyService.getHistoryDetail(1L, 1L);
+
+        assertThat(response.totalBars()).isNull();
+        assertThat(response.analyses().get(0).estimatedSeconds()).isNull();
     }
 }

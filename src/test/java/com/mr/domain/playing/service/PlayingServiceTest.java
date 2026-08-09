@@ -119,7 +119,6 @@ class PlayingServiceTest {
     ValidatedFile recordingResponse =
             new ValidatedFile(
                     RECORDING_OBJECT_KEY,
-                    RECORDING_FILE_URL,
                     1_157_632L,
                     "audio/mpeg"
             );
@@ -171,7 +170,7 @@ class PlayingServiceTest {
                         .thenReturn(midiEvents);
 
                 return null;
-            }).when(playing).completeWithMidiData(anyList(), eq(RECORDING_FILE_URL));
+            }).when(playing).completeWithMidiData(anyList(), eq(RECORDING_OBJECT_KEY));
 
             // when
             MidiEventSaveResponse response =
@@ -201,7 +200,7 @@ class PlayingServiceTest {
                     );
 
             verify(playing)
-                    .completeWithMidiData(anyList(), eq(RECORDING_FILE_URL));
+                    .completeWithMidiData(anyList(), eq(RECORDING_OBJECT_KEY));
 
             ArgumentCaptor<Object> eventCaptor =
                     ArgumentCaptor.forClass(Object.class);
@@ -335,7 +334,7 @@ class PlayingServiceTest {
                         .thenReturn(midiEvents);
 
                 return null;
-            }).when(playing).completeWithMidiData(anyList(), anyString());
+            }).when(playing).completeWithMidiData(anyList(), eq(RECORDING_OBJECT_KEY));
 
             // when
             playingService.saveMidiEvents(
@@ -360,7 +359,7 @@ class PlayingServiceTest {
             verify(playing)
                     .completeWithMidiData(
                             anyList(),
-                            eq(RECORDING_FILE_URL)
+                            eq(RECORDING_OBJECT_KEY)
                     );
 
             verify(eventPublisher)

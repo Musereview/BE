@@ -192,7 +192,7 @@ class RecordingObjectKeyGeneratorTest {
                     objectKeyGenerator.generate(
                             1L,
                             "recording.m4a",
-                            "audio/mp4"
+                            "audio/mpeg"
                     )
             )
                     .isInstanceOf(GeneralException.class)

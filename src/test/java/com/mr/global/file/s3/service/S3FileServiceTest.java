@@ -519,8 +519,6 @@ class S3FileServiceTest {
                     any(HeadObjectRequest.class)
             )).thenReturn(headObjectResponse);
 
-            mockFileUrl();
-
             // when
             ValidatedFile response =
                     s3FileService.validateUploadedFile(
@@ -583,8 +581,6 @@ class S3FileServiceTest {
             when(s3Client.headObject(
                     any(HeadObjectRequest.class)
             )).thenReturn(headObjectResponse);
-
-            mockFileUrl();
 
             // when
             ValidatedFile response =
@@ -1067,21 +1063,6 @@ class S3FileServiceTest {
                     S3ErrorStatus.PRESIGNED_URL_CREATE_FAILED
             );
         }
-    }
-
-    private void mockFileUrl() throws Exception {
-        S3Utilities s3Utilities =
-                mock(S3Utilities.class);
-
-        when(s3Client.utilities())
-                .thenReturn(s3Utilities);
-
-        when(s3Utilities.getUrl(
-                org.mockito.ArgumentMatchers
-                        .<Consumer<GetUrlRequest.Builder>>any()
-        )).thenReturn(
-                URI.create(FILE_URL).toURL()
-        );
     }
 
     private void verifyDeleteObject() {

@@ -8,7 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.mentor.dto.res.MentorMessageHistoryResponseDTO;
@@ -16,7 +15,6 @@ import com.mr.domain.mentor.entity.MentorMessage;
 import com.mr.domain.mentor.entity.enums.MessageRole;
 import com.mr.domain.mentor.exception.MentorErrorStatus;
 import com.mr.domain.mentor.repository.MentorMessageRepository;
-import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -51,8 +49,7 @@ class MentorServiceTest {
     @Test
     @DisplayName("대화 세션이 없으면 빈 메시지 목록 반환")
     void getMessageHistory_noSession_returnsEmptyMessages() {
-        Analysis analysis = analysisOwnedBy(1L);
-        given(analysisRepository.findById(10L)).willReturn(Optional.of(analysis));
+        given(analysisRepository.findUserIdById(10L)).willReturn(Optional.of(1L));
         given(mentorMessageRepository.findByMentorChatSessionAnalysisIdOrderByCreatedAtAscIdAsc(10L))
                 .willReturn(List.of());
 
@@ -65,7 +62,6 @@ class MentorServiceTest {
     @Test
     @DisplayName("대화 메시지와 판단 근거 JSON 반환")
     void getMessageHistory_success() {
-        Analysis analysis = analysisOwnedBy(1L);
         MentorMessage message = mock(MentorMessage.class);
         LocalDateTime createdAt = LocalDateTime.of(2026, 7, 1, 14, 35);
 
@@ -76,7 +72,7 @@ class MentorServiceTest {
                 """);
         given(message.getContent()).willReturn("텐션음을 자주 사용했어요.");
         given(message.getCreatedAt()).willReturn(createdAt);
-        given(analysisRepository.findById(10L)).willReturn(Optional.of(analysis));
+        given(analysisRepository.findUserIdById(10L)).willReturn(Optional.of(1L));
         given(mentorMessageRepository.findByMentorChatSessionAnalysisIdOrderByCreatedAtAscIdAsc(10L))
                 .willReturn(List.of(message));
 
@@ -92,8 +88,7 @@ class MentorServiceTest {
     @Test
     @DisplayName("다른 사용자의 분석이면 접근 거부")
     void getMessageHistory_otherOwner_throwsAccessDenied() {
-        Analysis analysis = analysisOwnedBy(1L);
-        given(analysisRepository.findById(10L)).willReturn(Optional.of(analysis));
+        given(analysisRepository.findUserIdById(10L)).willReturn(Optional.of(1L));
 
         assertThatThrownBy(() -> mentorService.getMessageHistory(2L, 10L))
                 .isInstanceOf(GeneralException.class)
@@ -105,7 +100,7 @@ class MentorServiceTest {
     @Test
     @DisplayName("분석이 없으면 분석 미존재 오류")
     void getMessageHistory_analysisNotFound_throwsNotFound() {
-        given(analysisRepository.findById(10L)).willReturn(Optional.empty());
+        given(analysisRepository.findUserIdById(10L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> mentorService.getMessageHistory(1L, 10L))
                 .isInstanceOf(GeneralException.class)
@@ -115,7 +110,6 @@ class MentorServiceTest {
     @Test
     @DisplayName("판단 근거 JSON 하나가 손상되어도 나머지 대화 내역 반환")
     void getMessageHistory_invalidReferences_returnsNullAndContinues() {
-        Analysis analysis = analysisOwnedBy(1L);
         MentorMessage invalidMessage = mock(MentorMessage.class);
         MentorMessage validMessage = mock(MentorMessage.class);
 
@@ -126,7 +120,7 @@ class MentorServiceTest {
         given(validMessage.getId()).willReturn(31L);
         given(validMessage.getRole()).willReturn(MessageRole.USER);
         given(validMessage.getContent()).willReturn("다음 질문");
-        given(analysisRepository.findById(10L)).willReturn(Optional.of(analysis));
+        given(analysisRepository.findUserIdById(10L)).willReturn(Optional.of(1L));
         given(mentorMessageRepository.findByMentorChatSessionAnalysisIdOrderByCreatedAtAscIdAsc(10L))
                 .willReturn(List.of(invalidMessage, validMessage));
 
@@ -137,13 +131,5 @@ class MentorServiceTest {
         assertThat(response.messages().get(0).referencesJson()).isNull();
         assertThat(response.messages().get(1).mentorMessageId()).isEqualTo(31L);
         assertThat(response.messages().get(1).content()).isEqualTo("다음 질문");
-    }
-
-    private Analysis analysisOwnedBy(Long userId) {
-        User user = mock(User.class);
-        Analysis analysis = mock(Analysis.class);
-        given(user.getUserId()).willReturn(userId);
-        given(analysis.getUser()).willReturn(user);
-        return analysis;
     }
 }
