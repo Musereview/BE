@@ -13,6 +13,12 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:}
 
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+      leak-detection-threshold: 20000
+
+
   # 공통 JPA 및 하이버네이트 구동 설정
   jpa:
     hibernate:
@@ -38,6 +44,12 @@ spring:
 
   flyway:
     enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
 
 # Spring Security 및 JWT 인증 설정
 jwt:
