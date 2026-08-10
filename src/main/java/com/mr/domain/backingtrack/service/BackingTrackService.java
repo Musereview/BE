@@ -56,7 +56,7 @@ public class BackingTrackService {
     @Transactional
     public BackingTrackCreateResponseDTO.CreateResultDTO createBackingTrack(
             Long userId,
-            BackingTrackSaveRequestDTO.SaveDTO request
+            BackingTrackSaveRequestDTO.CreateDTO request
     ){
         validateChordDuplicates(request.chordProgression());
         validateChordSequence(request.timeSignature(), request.chordProgression());
@@ -124,7 +124,7 @@ public class BackingTrackService {
     public BackingTrackUpdateResponseDTO.UpdateResultDTO updateBackingTrack(
             Long userId,
             Long backingTrackId,
-            BackingTrackSaveRequestDTO.SaveDTO request
+            BackingTrackSaveRequestDTO.UpdateDTO request
     ) {
         validateChordDuplicates(request.chordProgression());
         validateChordSequence(request.timeSignature(), request.chordProgression());

@@ -47,7 +47,7 @@ public class BackingTrackController {
     @PostMapping
     public ApiResponse<BackingTrackCreateResponseDTO.CreateResultDTO> createBackingTrack(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid @RequestBody BackingTrackSaveRequestDTO.SaveDTO request
+            @Valid @RequestBody BackingTrackSaveRequestDTO.CreateDTO request
     ) {
         BackingTrackCreateResponseDTO.CreateResultDTO result =
                 backingTrackService.createBackingTrack(userDetails.getUserId(), request);
@@ -86,7 +86,7 @@ public class BackingTrackController {
     public ApiResponse<BackingTrackUpdateResponseDTO.UpdateResultDTO> updateBackingTrack(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable @Min(value = 1, message = "BACKING_TRACK_400_23") Long backingTrackId,
-            @Valid @RequestBody BackingTrackSaveRequestDTO.SaveDTO request
+            @Valid @RequestBody BackingTrackSaveRequestDTO.UpdateDTO request
     ) {
         Long userId = userDetails.getUserId();
         BackingTrackUpdateResponseDTO.UpdateResultDTO result =
