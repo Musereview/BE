@@ -5,6 +5,7 @@ import com.mr.global.file.s3.config.S3Properties;
 import com.mr.global.file.s3.dto.FileUploadCommand;
 import com.mr.global.file.s3.dto.ValidatedFile;
 import com.mr.global.file.s3.dto.PresignedUrlUpload;
+import com.mr.global.file.s3.enums.S3FileType;
 import com.mr.global.file.s3.exception.S3ErrorStatus;
 import com.mr.global.file.s3.util.ContentTypeUtils;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +44,7 @@ public class S3FileService {
      * Presigned PUT URL을 발급합니다.
      */
     public PresignedUrlUpload createPresignedUpload(
-            Long ownerId, FileUploadCommand command
+            Long ownerId, S3FileType fileType, FileUploadCommand command
     ){
 
         validateOwnerId(ownerId);
@@ -54,6 +55,7 @@ public class S3FileService {
         String objectKey =
                 objectKeyGenerator.generate(
                         ownerId,
+                        fileType,
                         command.originalFileName(),
                         normalizedContentType
                 );
@@ -114,12 +116,10 @@ public class S3FileService {
      * - 실제 파일 크기가 허용 범위인지
      * - 실제 Content-Type이 허용된 형식인지
      */
-    public ValidatedFile validateUploadedFile(
-            Long ownerId,
-            String objectKey
+    public ValidatedFile validateUploadedFile(Long ownerId, S3FileType fileType, String objectKey
     ) {
         validateOwnerId(ownerId);
-        validateObjectKey(ownerId, objectKey);
+        validateObjectKey(ownerId, fileType, objectKey);
 
         HeadObjectResponse headObject = getHeadObject(objectKey);
 
@@ -146,12 +146,10 @@ public class S3FileService {
     }
 
     // 파일 조회용 Presigned GET URL을 발급
-    public String createPresignedDownload(
-            Long ownerId,
-            String objectKey
+    public String createPresignedDownload(Long ownerId, S3FileType fileType, String objectKey
     ) {
         validateOwnerId(ownerId);
-        validateObjectKey(ownerId, objectKey);
+        validateObjectKey(ownerId, fileType, objectKey);
 
         GetObjectRequest getObjectRequest =
                 GetObjectRequest.builder()
@@ -292,9 +290,7 @@ public class S3FileService {
         }
     }
 
-    private void validateObjectKey(
-            Long ownerId,
-            String objectKey
+    private void validateObjectKey(Long ownerId, S3FileType fileType, String objectKey
     ) {
 
         if (objectKey == null || objectKey.isBlank()) {
@@ -303,7 +299,7 @@ public class S3FileService {
             );
         }
 
-        if (!objectKeyGenerator.belongsToOwner(ownerId, objectKey)) {
+        if (!objectKeyGenerator.belongsToOwner(ownerId, fileType, objectKey)) {
             throw new GeneralException(S3ErrorStatus.INVALID_OBJECT_KEY);
         }
     }
