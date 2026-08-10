@@ -78,8 +78,8 @@ class HomeServiceTest {
         lenient().when(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).thenReturn(List.of());
         lenient().when(playingRepository.findPlayingsByUserAndStatus(anyLong(), any(), any()))
                 .thenReturn(new SliceImpl<>(List.of()));
-        lenient().when(learningService.getCurrentLearning(anyLong())).thenReturn(null);
-        lenient().when(learningService.getRecentActivity(anyLong())).thenReturn(null);
+        lenient().when(learningService.getCurrentLearningAndRecentActivity(anyLong()))
+                .thenReturn(new LearningService.CurrentLearningAndRecentActivity(null, null));
     }
 
     private Playing mockPlaying(LocalDateTime endedAt, Integer durationSec) {
@@ -268,7 +268,8 @@ class HomeServiceTest {
 
         LearningHomeResponseDTO.CurrentLearning currentLearning =
                 LearningHomeResponseDTO.CurrentLearning.of(learning, "11th 텐션 노트 활용하기", 10, 13L);
-        given(learningService.getCurrentLearning(1L)).willReturn(currentLearning);
+        given(learningService.getCurrentLearningAndRecentActivity(1L))
+                .willReturn(new LearningService.CurrentLearningAndRecentActivity(currentLearning, null));
 
         HomeResponseDTO response = homeService.getHome(1L);
 
@@ -297,7 +298,8 @@ class HomeServiceTest {
 
         LearningHomeResponseDTO.RecentActivity recentActivity =
                 new LearningHomeResponseDTO.RecentActivity(5L, 12L, "11th 텐션 노트 활용하기", "RETRY", 12L);
-        given(learningService.getRecentActivity(1L)).willReturn(recentActivity);
+        given(learningService.getCurrentLearningAndRecentActivity(1L))
+                .willReturn(new LearningService.CurrentLearningAndRecentActivity(null, recentActivity));
 
         HomeResponseDTO response = homeService.getHome(1L);
 
@@ -349,7 +351,8 @@ class HomeServiceTest {
 
         LearningHomeResponseDTO.CurrentLearning currentLearning =
                 LearningHomeResponseDTO.CurrentLearning.of(learning, "11th 텐션 노트 활용하기", 10, 13L);
-        given(learningService.getCurrentLearning(1L)).willReturn(currentLearning);
+        given(learningService.getCurrentLearningAndRecentActivity(1L))
+                .willReturn(new LearningService.CurrentLearningAndRecentActivity(currentLearning, null));
         given(learningService.getRecommendedLearnings(1L, 13L)).willReturn(List.of());
 
         homeService.getHome(1L);

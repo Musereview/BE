@@ -35,10 +35,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -231,8 +233,9 @@ public class LearningService {
     public LearningHomeResponseDTO.HomeResultDTO getHome(Long userId) {
         ensureUserExists(userId);
 
-        LearningHomeResponseDTO.CurrentLearning currentLearning = getCurrentLearning(userId);
-        LearningHomeResponseDTO.RecentActivity recentActivity = getRecentActivity(userId);
+        List<UserLearningProgress> recentProgress = findRecentActiveProgress(userId);
+        LearningHomeResponseDTO.CurrentLearning currentLearning = buildCurrentLearning(userId, recentProgress);
+        LearningHomeResponseDTO.RecentActivity recentActivity = buildRecentActivity(userId, recentProgress);
 
         List<LearningHomeResponseDTO.TheoryPackageItem> theoryPackages = Stream.of(
                         LearningDifficulty.BEGINNER, LearningDifficulty.INTERMEDIATE, LearningDifficulty.ADVANCED)
@@ -250,50 +253,73 @@ public class LearningService {
         return LearningHomeResponseDTO.HomeResultDTO.of(currentLearning, recentActivity, theoryPackages, accompanimentPackages);
     }
 
-    public LearningHomeResponseDTO.CurrentLearning getCurrentLearning(Long userId) {
-        return findLatestActiveProgress(userId)
-                .map(latest -> {
-                    Learning learning = latest.getLearning();
-                    long totalStepCount = learningStepRepository.countByLearningId(learning.getId());
-                    long completedStepCount = userLearningProgressRepository
-                            .countCompletedStepsByUserIdAndLearningId(userId, learning.getId());
-                    int progressRate = resolveProgressRate(completedStepCount, totalStepCount);
-
-                    // 진행률 0%/100%면 홈 화면에 카드 자체를 숨김
-                    if (progressRate == 0 || progressRate == 100) {
-                        return null;
-                    }
-
-                    Long nextStepId = resolveNextStepId(userId, learning.getId(), latest.getLearningStep(), latest.getScore());
-
-                    return LearningHomeResponseDTO.CurrentLearning.of(
-                            learning,
-                            latest.getLearningStep().getTitle(),
-                            progressRate,
-                            nextStepId);
-                })
-                .orElse(null);
+    // 학습 홈 + 메인 홈이 공유하는 currentLearning/recentActivity 조합. 최근 진행 기록 조회를 요청당 1회로 통합
+    // (PR #193 고원정님 리뷰 — getCurrentLearning()/getRecentActivity()가 각자 findLatestActiveProgress를 호출해 중복 조회였음)
+    public CurrentLearningAndRecentActivity getCurrentLearningAndRecentActivity(Long userId) {
+        List<UserLearningProgress> recentProgress = findRecentActiveProgress(userId);
+        return new CurrentLearningAndRecentActivity(
+                buildCurrentLearning(userId, recentProgress),
+                buildRecentActivity(userId, recentProgress));
     }
 
-    // 진행률(currentLearning)과 무관하게 가장 최근에 시도한 단계 (재도전도 최근 학습으로 취급, PM 확인 2026-08-10)
-    // nextStepId는 currentLearning과 동일한 resolveNextStepId 재사용 — null이면(=패키지 100% 완료, 이어갈 단계 없음) 전체를 숨김(FE 확인 완료, 2026-08-10)
-    public LearningHomeResponseDTO.RecentActivity getRecentActivity(Long userId) {
-        return findLatestActiveProgress(userId)
-                .map(progress -> buildRecentActivity(userId, progress))
-                .orElse(null);
+    public record CurrentLearningAndRecentActivity(
+            LearningHomeResponseDTO.CurrentLearning currentLearning,
+            LearningHomeResponseDTO.RecentActivity recentActivity
+    ) {
     }
 
-    private LearningHomeResponseDTO.RecentActivity buildRecentActivity(Long userId, UserLearningProgress progress) {
-        Long nextStepId = resolveNextStepId(
-                userId, progress.getLearning().getId(), progress.getLearningStep(), progress.getScore());
-
-        if (nextStepId == null) {
+    private LearningHomeResponseDTO.CurrentLearning buildCurrentLearning(Long userId, List<UserLearningProgress> recentProgress) {
+        if (recentProgress.isEmpty()) {
             return null;
         }
 
-        return LearningHomeResponseDTO.RecentActivity.from(progress, nextStepId);
+        UserLearningProgress latest = recentProgress.get(0);
+        Learning learning = latest.getLearning();
+        long totalStepCount = learningStepRepository.countByLearningId(learning.getId());
+        long completedStepCount = userLearningProgressRepository
+                .countCompletedStepsByUserIdAndLearningId(userId, learning.getId());
+        int progressRate = resolveProgressRate(completedStepCount, totalStepCount);
+
+        // 진행률 0%/100%면 홈 화면에 카드 자체를 숨김
+        if (progressRate == 0 || progressRate == 100) {
+            return null;
+        }
+
+        Long nextStepId = resolveNextStepId(userId, learning.getId(), latest.getLearningStep(), latest.getScore());
+
+        return LearningHomeResponseDTO.CurrentLearning.of(learning, latest.getLearningStep().getTitle(), progressRate, nextStepId);
     }
 
+    // 진행률(currentLearning)과 무관하게 가장 최근에 시도한 단계 (재도전도 최근 학습으로 취급, PM 확인 2026-08-10)
+    // 가장 최근 행이 속한 패키지가 100% 완료(=resolveNextStepId가 null)면 그 행은 건너뛰고, 그 직전에 만졌던
+    // 다른(아직 미완료인) 패키지가 있으면 그걸로 대체한다 — 안 그러면 방금 다 끝낸 패키지 하나 때문에
+    // 그 직전의 진짜 재도전 기록까지 통째로 숨어버림(PR #193 은우님 리뷰)
+    private LearningHomeResponseDTO.RecentActivity buildRecentActivity(Long userId, List<UserLearningProgress> recentProgress) {
+        Set<Long> checkedLearningIds = new HashSet<>();
+
+        for (UserLearningProgress progress : recentProgress) {
+            Long learningId = progress.getLearning().getId();
+            if (!checkedLearningIds.add(learningId)) {
+                continue;
+            }
+
+            Long nextStepId = resolveNextStepId(userId, learningId, progress.getLearningStep(), progress.getScore());
+            if (nextStepId != null) {
+                return LearningHomeResponseDTO.RecentActivity.from(progress, nextStepId);
+            }
+        }
+
+        return null;
+    }
+
+    // currentLearning/recentActivity가 공유하는 최근 진행 기록 조회 — 최상단 항목의 패키지가 100%여도
+    // 더 훑을 수 있게 1건이 아니라 상위 20건을 가져온다
+    private List<UserLearningProgress> findRecentActiveProgress(Long userId) {
+        return userLearningProgressRepository
+                .findTop20ByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId);
+    }
+
+    // 추천 학습 폴백(인접 단계 보충)용 단건 조회 — 재도전 스캔이 필요 없어 기존 방식 유지
     private Optional<UserLearningProgress> findLatestActiveProgress(Long userId) {
         return userLearningProgressRepository
                 .findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId);

@@ -64,9 +64,10 @@ public class HomeService {
         List<Playing> recentCompleted =
                 playingRepository.findByUserAndStatusSince(userId, PlayingStatus.COMPLETED, since);
 
-        LearningHomeResponseDTO.CurrentLearning currentLearning = learningService.getCurrentLearning(userId);
-        RecentLearningActivity recentLearningActivity =
-                RecentLearningActivity.from(learningService.getRecentActivity(userId));
+        LearningService.CurrentLearningAndRecentActivity latestActivity =
+                learningService.getCurrentLearningAndRecentActivity(userId);
+        LearningHomeResponseDTO.CurrentLearning currentLearning = latestActivity.currentLearning();
+        RecentLearningActivity recentLearningActivity = RecentLearningActivity.from(latestActivity.recentActivity());
 
         return new HomeResponseDTO(
                 buildUserSummary(user),
