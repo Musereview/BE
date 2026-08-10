@@ -448,6 +448,7 @@ class LearningServiceTest {
         when(latest.getLearning()).thenReturn(currentPackage);
         when(latest.getLearningStep()).thenReturn(lastStep);
         when(latest.getScore()).thenReturn(93);
+        when(latest.getLearningStatus()).thenReturn("COMPLETED");
 
         LearningStep step1 = mock(LearningStep.class);
         when(step1.getStepNo()).thenReturn(1);
@@ -489,8 +490,51 @@ class LearningServiceTest {
         assertThat(result.currentLearning().stepTitle()).isEqualTo("11th 텐션 노트 활용하기");
         assertThat(result.currentLearning().progressRate()).isEqualTo(25);
         assertThat(result.currentLearning().nextStepId()).isEqualTo(13L);
+        assertThat(result.recentActivity()).isNotNull();
+        assertThat(result.recentActivity().learningId()).isEqualTo(1L);
+        assertThat(result.recentActivity().learningStepId()).isEqualTo(12L);
+        assertThat(result.recentActivity().stepTitle()).isEqualTo("11th 텐션 노트 활용하기");
+        assertThat(result.recentActivity().status()).isEqualTo("COMPLETED");
+        assertThat(result.recentActivity().nextStepId()).isEqualTo(13L);
         assertThat(result.theoryPackages()).hasSize(1);
         assertThat(result.accompanimentPackages()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getHome - 재도전만 있어 진행률이 0%여도 recentActivity는 채워진다")
+    void getHome_retryOnly_recentActivityFilledEvenWhenCurrentLearningIsNull() {
+        Long userId = 1L;
+
+        Learning currentPackage = mock(Learning.class);
+        when(currentPackage.getId()).thenReturn(1L);
+
+        LearningStep lastStep = mock(LearningStep.class);
+        when(lastStep.getId()).thenReturn(12L);
+        when(lastStep.getTitle()).thenReturn("11th 텐션 노트 활용하기");
+
+        UserLearningProgress latest = mock(UserLearningProgress.class);
+        when(latest.getLearning()).thenReturn(currentPackage);
+        when(latest.getLearningStep()).thenReturn(lastStep);
+        when(latest.getScore()).thenReturn(50);
+        when(latest.getLearningStatus()).thenReturn("RETRY");
+
+        when(userRepository.existsById(userId)).thenReturn(true);
+        when(userLearningProgressRepository.findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
+                .thenReturn(Optional.of(latest));
+        when(learningStepRepository.countByLearningId(1L)).thenReturn(4L);
+        when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, 1L)).thenReturn(0L);
+        when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
+                eq(LearningCategory.THEORY), any())).thenReturn(Optional.empty());
+        when(learningRepository.findTop3ByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory.ACCOMPANIMENT))
+                .thenReturn(Collections.emptyList());
+
+        LearningHomeResponseDTO.HomeResultDTO result = learningService.getHome(userId);
+
+        assertThat(result.currentLearning()).isNull();
+        assertThat(result.recentActivity()).isNotNull();
+        assertThat(result.recentActivity().learningStepId()).isEqualTo(12L);
+        assertThat(result.recentActivity().status()).isEqualTo("RETRY");
+        assertThat(result.recentActivity().nextStepId()).isEqualTo(12L);
     }
 
     @Test
@@ -510,24 +554,48 @@ class LearningServiceTest {
         LearningHomeResponseDTO.HomeResultDTO result = learningService.getHome(userId);
 
         assertThat(result.currentLearning()).isNull();
+        assertThat(result.recentActivity()).isNull();
     }
 
     @Test
-    @DisplayName("getHome - 최근 학습 패키지 진행률이 100%면 currentLearning은 null이다")
-    void getHome_progressIs100Percent_currentLearningIsNull() {
+    @DisplayName("getHome - 최근 학습 패키지 진행률이 100%면 currentLearning과 recentActivity 모두 null이다")
+    void getHome_progressIs100Percent_currentLearningAndRecentActivityAreNull() {
         Long userId = 1L;
 
         Learning currentPackage = mock(Learning.class);
         when(currentPackage.getId()).thenReturn(1L);
 
+        LearningStep step1 = mock(LearningStep.class);
+        when(step1.getId()).thenReturn(11L);
+        when(step1.getStepNo()).thenReturn(1);
+
+        LearningStep lastStep = mock(LearningStep.class);
+        when(lastStep.getId()).thenReturn(12L);
+        when(lastStep.getStepNo()).thenReturn(2);
+
         UserLearningProgress latest = mock(UserLearningProgress.class);
         when(latest.getLearning()).thenReturn(currentPackage);
+        when(latest.getLearningStep()).thenReturn(lastStep);
+        when(latest.getScore()).thenReturn(95);
+
+        // 패키지 안 모든 단계가 완료 상태 — resolveNextStepId가 뒤/전체 어디서도 미완료를 못 찾고 null을 반환해야 함
+        UserLearningProgress step1Progress = mock(UserLearningProgress.class);
+        when(step1Progress.getLearningStep()).thenReturn(step1);
+        when(step1Progress.getScore()).thenReturn(92);
+
+        UserLearningProgress step2Progress = mock(UserLearningProgress.class);
+        when(step2Progress.getLearningStep()).thenReturn(lastStep);
+        when(step2Progress.getScore()).thenReturn(95);
 
         when(userRepository.existsById(userId)).thenReturn(true);
         when(userLearningProgressRepository.findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
                 .thenReturn(Optional.of(latest));
         when(learningStepRepository.countByLearningId(1L)).thenReturn(2L);
         when(userLearningProgressRepository.countCompletedStepsByUserIdAndLearningId(userId, 1L)).thenReturn(2L);
+        when(learningStepRepository.findByLearning_IdOrderByStepNoAsc(1L))
+                .thenReturn(List.of(step1, lastStep));
+        when(userLearningProgressRepository.findByUser_UserIdAndLearning_Id(userId, 1L))
+                .thenReturn(List.of(step1Progress, step2Progress));
         when(learningRepository.findFirstByCategoryAndDifficultyAndIsActiveTrueOrderByTitleAsc(
                 eq(LearningCategory.THEORY), any())).thenReturn(Optional.empty());
         when(learningRepository.findTop3ByCategoryAndIsActiveTrueOrderByTitleAsc(LearningCategory.ACCOMPANIMENT))
@@ -536,6 +604,7 @@ class LearningServiceTest {
         LearningHomeResponseDTO.HomeResultDTO result = learningService.getHome(userId);
 
         assertThat(result.currentLearning()).isNull();
+        assertThat(result.recentActivity()).isNull();
     }
 
     @Test
@@ -546,8 +615,15 @@ class LearningServiceTest {
         Learning currentPackage = mock(Learning.class);
         when(currentPackage.getId()).thenReturn(1L);
 
+        LearningStep lastStep = mock(LearningStep.class);
+        when(lastStep.getId()).thenReturn(12L);
+        when(lastStep.getTitle()).thenReturn("11th 텐션 노트 활용하기");
+
         UserLearningProgress latest = mock(UserLearningProgress.class);
         when(latest.getLearning()).thenReturn(currentPackage);
+        when(latest.getLearningStep()).thenReturn(lastStep);
+        when(latest.getScore()).thenReturn(60);
+        when(latest.getLearningStatus()).thenReturn("RETRY");
 
         when(userRepository.existsById(userId)).thenReturn(true);
         when(userLearningProgressRepository.findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
@@ -562,6 +638,9 @@ class LearningServiceTest {
         LearningHomeResponseDTO.HomeResultDTO result = learningService.getHome(userId);
 
         assertThat(result.currentLearning()).isNull();
+        assertThat(result.recentActivity()).isNotNull();
+        assertThat(result.recentActivity().status()).isEqualTo("RETRY");
+        assertThat(result.recentActivity().nextStepId()).isEqualTo(12L);
     }
 
     @Test

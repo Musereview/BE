@@ -232,6 +232,7 @@ public class LearningService {
         ensureUserExists(userId);
 
         LearningHomeResponseDTO.CurrentLearning currentLearning = getCurrentLearning(userId);
+        LearningHomeResponseDTO.RecentActivity recentActivity = getRecentActivity(userId);
 
         List<LearningHomeResponseDTO.TheoryPackageItem> theoryPackages = Stream.of(
                         LearningDifficulty.BEGINNER, LearningDifficulty.INTERMEDIATE, LearningDifficulty.ADVANCED)
@@ -246,7 +247,7 @@ public class LearningService {
         List<LearningAccompanimentListResponseDTO.AccompanimentItem> accompanimentPackages =
                 toAccompanimentItems(userId, accompanimentLearnings);
 
-        return LearningHomeResponseDTO.HomeResultDTO.of(currentLearning, theoryPackages, accompanimentPackages);
+        return LearningHomeResponseDTO.HomeResultDTO.of(currentLearning, recentActivity, theoryPackages, accompanimentPackages);
     }
 
     public LearningHomeResponseDTO.CurrentLearning getCurrentLearning(Long userId) {
@@ -272,6 +273,25 @@ public class LearningService {
                             nextStepId);
                 })
                 .orElse(null);
+    }
+
+    // 진행률(currentLearning)과 무관하게 가장 최근에 시도한 단계 (재도전도 최근 학습으로 취급, PM 확인 2026-08-10)
+    // nextStepId는 currentLearning과 동일한 resolveNextStepId 재사용 — null이면(=패키지 100% 완료, 이어갈 단계 없음) 전체를 숨김(FE 확인 완료, 2026-08-10)
+    public LearningHomeResponseDTO.RecentActivity getRecentActivity(Long userId) {
+        return findLatestActiveProgress(userId)
+                .map(progress -> buildRecentActivity(userId, progress))
+                .orElse(null);
+    }
+
+    private LearningHomeResponseDTO.RecentActivity buildRecentActivity(Long userId, UserLearningProgress progress) {
+        Long nextStepId = resolveNextStepId(
+                userId, progress.getLearning().getId(), progress.getLearningStep(), progress.getScore());
+
+        if (nextStepId == null) {
+            return null;
+        }
+
+        return LearningHomeResponseDTO.RecentActivity.from(progress, nextStepId);
     }
 
     private Optional<UserLearningProgress> findLatestActiveProgress(Long userId) {
