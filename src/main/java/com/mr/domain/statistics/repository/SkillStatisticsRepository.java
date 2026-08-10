@@ -4,6 +4,7 @@ import com.mr.domain.statistics.entity.SkillStatistics;
 import com.mr.domain.statistics.entity.enums.PeriodType;
 import com.mr.domain.statistics.entity.enums.SkillType;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -15,6 +16,9 @@ public interface SkillStatisticsRepository extends JpaRepository<SkillStatistics
 
     Optional<SkillStatistics> findByUser_UserIdAndPeriodTypeAndPeriodStartAndSkillType(
             Long userId, PeriodType periodType, LocalDate periodStart, SkillType skillType);
+
+    List<SkillStatistics> findAllByUser_UserIdAndPeriodTypeAndPeriodStartBetween(
+            Long userId, PeriodType periodType, LocalDate from, LocalDate to);
 
     @Modifying(clearAutomatically = true)
     @Query("delete from SkillStatistics ss where ss.user.userId = :userId")
