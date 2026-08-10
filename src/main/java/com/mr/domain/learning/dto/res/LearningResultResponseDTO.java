@@ -3,7 +3,7 @@ package com.mr.domain.learning.dto.res;
 import com.mr.domain.learning.entity.UserLearningProgress;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public class LearningResultResponseDTO {
     @Schema(description = "학습 결과 저장 응답")
@@ -24,7 +24,7 @@ public class LearningResultResponseDTO {
             Integer score,
 
             @Schema(description = "저장/갱신 시각", type = "string", example = "2026-07-07T15:30:00")
-            LocalDateTime completedAt
+            Instant completedAt
     ) {
         public static SaveResultResultDTO from(UserLearningProgress progress) {
             return new SaveResultResultDTO(

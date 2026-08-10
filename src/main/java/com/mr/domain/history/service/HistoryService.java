@@ -16,7 +16,9 @@ import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.file.s3.service.S3FileService;
 import com.mr.global.util.RelativeDateFormatter;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +48,7 @@ public class HistoryService {
     public HistoryListResponseDTO getHistories(Long userId, int page, int size, HistoryPeriod period) {
         validatePaging(page, size);
 
-        LocalDateTime cutoff = resolveCutoff(period);
+        Instant cutoff = resolveCutoff(period);
         PageRequest pageRequest = PageRequest.of(page, size);
         Slice<Playing> slice = cutoff == null
                 ? playingRepository.findPlayingsByUserAndStatus(
@@ -113,7 +115,7 @@ public class HistoryService {
         return items;
     }
 
-    private Long findNextPlayingId(Long userId, LocalDateTime cutoff, Slice<Playing> slice) {
+    private Long findNextPlayingId(Long userId, Instant cutoff, Slice<Playing> slice) {
         if (!slice.hasNext() || slice.getContent().isEmpty()) {
             return null;
         }
@@ -187,14 +189,14 @@ public class HistoryService {
         }
     }
 
-    private LocalDateTime resolveCutoff(HistoryPeriod period) {
+    private Instant resolveCutoff(HistoryPeriod period) {
         if (period == null) {
             return null;
         }
 
         return switch (period) {
-            case WEEKLY -> LocalDateTime.now().minusDays(WEEKLY_WINDOW_DAYS);
-            case MONTHLY -> LocalDateTime.now().minusDays(MONTHLY_WINDOW_DAYS);
+            case WEEKLY -> Instant.now().minus(WEEKLY_WINDOW_DAYS, ChronoUnit.DAYS);
+            case MONTHLY -> Instant.now().minus(MONTHLY_WINDOW_DAYS, ChronoUnit.DAYS);
             case RECENT -> null; // 필터 없음과 동일
         };
     }

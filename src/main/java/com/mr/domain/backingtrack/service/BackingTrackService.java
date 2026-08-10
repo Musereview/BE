@@ -31,7 +31,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -298,7 +299,7 @@ public class BackingTrackService {
     // 추천 백킹트랙 조회 로직
     public BackingTrackRecommendedResponseDTO.RecommendedResponseDTO getRecommendedTracks() {
 
-        LocalDateTime oneWeekAgo = LocalDateTime.now().minusWeeks(1);   // 현재로부터 일주일 전
+        Instant oneWeekAgo = Instant.now().minus(7, ChronoUnit.DAYS);   // 현재로부터 일주일 전
 
         List<BackingTrack> topTracks = backingTrackRepository.findTop3RecommendedTracks(oneWeekAgo);
 

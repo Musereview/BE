@@ -19,8 +19,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -47,9 +49,14 @@ public class StatisticsService {
         userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
-        LocalDateTime thisWeekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY).atStartOfDay();
-        LocalDateTime lastWeekStart = thisWeekStart.minusWeeks(1);
-        LocalDateTime fourWeeksAgoStart = thisWeekStart.minusWeeks(WEEKLY_TREND_WEEKS - 1L);
+        ZoneId kstZone = ZoneId.of("Asia/Seoul");
+        Instant thisWeekStart = LocalDate.now(kstZone)
+                .with(DayOfWeek.MONDAY)
+                .atStartOfDay(kstZone)
+                .toInstant();
+
+        Instant lastWeekStart = thisWeekStart.minus(7, ChronoUnit.DAYS);
+        Instant fourWeeksAgoStart = thisWeekStart.minus((WEEKLY_TREND_WEEKS - 1L) * 7, ChronoUnit.DAYS);
 
         List<Playing> playings =
                 playingRepository.findByUserAndStatusSince(userId, PlayingStatus.COMPLETED, lastWeekStart);
@@ -65,17 +72,18 @@ public class StatisticsService {
         );
     }
 
-    private ScoreAggregate[] buildWeeklyScoreAggregates(List<Analysis> analyses, LocalDateTime thisWeekStart) {
+    private ScoreAggregate[] buildWeeklyScoreAggregates(List<Analysis> analyses, Instant thisWeekStart) {
         ScoreAggregate[] aggregates = new ScoreAggregate[WEEKLY_TREND_WEEKS];
         for (int weeksAgo = 0; weeksAgo < WEEKLY_TREND_WEEKS; weeksAgo++) {
-            LocalDateTime from = thisWeekStart.minusWeeks(weeksAgo);
-            aggregates[weeksAgo] = aggregateTotalScore(analyses, from, from.plusWeeks(1));
+            Instant from = thisWeekStart.minus(weeksAgo * 7L, ChronoUnit.DAYS);
+            Instant toExclusive = from.plus(7, ChronoUnit.DAYS);
+            aggregates[weeksAgo] = aggregateTotalScore(analyses, from, toExclusive);
         }
         return aggregates;
     }
 
     private WeeklySummary buildWeeklySummary(List<Playing> playings, ScoreAggregate[] weeklyScoreAggregates,
-            LocalDateTime thisWeekStart, LocalDateTime lastWeekStart) {
+            Instant thisWeekStart, Instant lastWeekStart) {
         int thisWeekMinutes = sumMinutes(playings, thisWeekStart, null);
         int lastWeekMinutes = sumMinutes(playings, lastWeekStart, thisWeekStart);
         int thisWeekCount = countInRange(playings, thisWeekStart, null);
@@ -95,7 +103,7 @@ public class StatisticsService {
     }
 
     private List<DomainGrowth> buildDomainGrowth(List<Analysis> analyses,
-            LocalDateTime thisWeekStart, LocalDateTime lastWeekStart) {
+            Instant thisWeekStart, Instant lastWeekStart) {
         List<DomainGrowth> result = new ArrayList<>();
         for (SkillType skillType : SkillType.values()) {
             ScoreAggregate current = aggregateSkillScore(analyses, skillType, thisWeekStart, null);
@@ -122,7 +130,7 @@ public class StatisticsService {
         return new WeeklyTrend(diffFromPreviousWeek, items);
     }
 
-    private ScoreAggregate aggregateTotalScore(List<Analysis> analyses, LocalDateTime from, LocalDateTime toExclusive) {
+    private ScoreAggregate aggregateTotalScore(List<Analysis> analyses, Instant from, Instant toExclusive) {
         List<Integer> scores = analyses.stream()
                 .filter(a -> isWithin(a.getCompletedAt(), from, toExclusive))
                 .map(Analysis::getTotalScore)
@@ -134,7 +142,7 @@ public class StatisticsService {
     }
 
     private ScoreAggregate aggregateSkillScore(List<Analysis> analyses, SkillType skillType,
-            LocalDateTime from, LocalDateTime toExclusive) {
+            Instant from, Instant toExclusive) {
         List<BigDecimal> scores = analyses.stream()
                 .filter(a -> isWithin(a.getCompletedAt(), from, toExclusive))
                 .map(a -> AnalysisSkillScoreResolver.resolve(a, skillType))
@@ -145,14 +153,14 @@ public class StatisticsService {
         return new ScoreAggregate(sum, scores.size());
     }
 
-    private boolean isWithin(LocalDateTime target, LocalDateTime from, LocalDateTime toExclusive) {
+    private boolean isWithin(Instant target, Instant from, Instant toExclusive) {
         if (target == null || target.isBefore(from)) {
             return false;
         }
         return toExclusive == null || target.isBefore(toExclusive);
     }
 
-    private int sumMinutes(List<Playing> playings, LocalDateTime from, LocalDateTime toExclusive) {
+    private int sumMinutes(List<Playing> playings, Instant from, Instant toExclusive) {
         int totalSeconds = playings.stream()
                 .filter(p -> isWithin(p.getEndedAt(), from, toExclusive))
                 .mapToInt(p -> p.getDurationSec() != null ? p.getDurationSec() : 0)
@@ -160,7 +168,7 @@ public class StatisticsService {
         return totalSeconds / SECONDS_PER_MINUTE;
     }
 
-    private int countInRange(List<Playing> playings, LocalDateTime from, LocalDateTime toExclusive) {
+    private int countInRange(List<Playing> playings, Instant from, Instant toExclusive) {
         return (int) playings.stream()
                 .filter(p -> isWithin(p.getEndedAt(), from, toExclusive))
                 .count();

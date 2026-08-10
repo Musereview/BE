@@ -12,7 +12,7 @@ import com.mr.domain.analysis.entity.enums.ContentFormat;
 import com.mr.domain.analysis.entity.enums.LlmStatus;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Locale;
 
 public record AnalysisResultResponseDTO(
@@ -22,7 +22,7 @@ public record AnalysisResultResponseDTO(
         String genre,
         String key,
         Integer bpm,
-        LocalDateTime playedAt,
+        Instant playedAt,
         String recordingFileUrl,
         String backingTrackAudioFileUrl,
         AnalysisStatus status,
@@ -34,8 +34,8 @@ public record AnalysisResultResponseDTO(
         DomainScores domainScores,
         Report report,
         @JsonProperty("result") JsonNode rawResult,
-        LocalDateTime createdAt,
-        LocalDateTime completedAt
+        Instant createdAt,
+        Instant completedAt
 ) {
 
     public static AnalysisResultResponseDTO from(
@@ -106,8 +106,8 @@ public record AnalysisResultResponseDTO(
             String content,
             String modelName,
             String promptVersion,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            Instant createdAt,
+            Instant updatedAt
     ) {
 
         private static Report fromNullable(AnalysisReport analysisReport) {

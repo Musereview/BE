@@ -9,7 +9,7 @@ import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.MidiType;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public record HistoryDetailResponseDTO(
@@ -19,7 +19,7 @@ public record HistoryDetailResponseDTO(
         String key,
         Integer bpm,
         String timeSignature,
-        LocalDateTime playedAt,
+        Instant playedAt,
         Integer durationMinutes,
         Integer durationSec,
         String recordingFileUrl,
@@ -84,7 +84,7 @@ public record HistoryDetailResponseDTO(
             String oneLineSummary,
             AnalysisStatus status,
             Integer estimatedSeconds,
-            LocalDateTime createdAt
+            Instant createdAt
     ) {
 
         public static AnalysisSummary from(Analysis analysis, BarMetrics barMetrics) {

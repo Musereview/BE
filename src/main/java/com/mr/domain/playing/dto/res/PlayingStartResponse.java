@@ -6,14 +6,14 @@ import com.mr.domain.backingtrack.entity.enums.ScaleType;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public record PlayingStartResponse(
         Long playingId,
         PlayingStatus status,
         BackingTrackResponse backingTrack,
-        LocalDateTime startedAt
+        Instant startedAt
 ) {
 
     public static PlayingStartResponse from (Playing playing) {

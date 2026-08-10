@@ -2,15 +2,16 @@ package com.mr.domain.analysis.dto.res;
 
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 
 public record AnalysisStatusResponseDTO(
         Long analysisId,
         AnalysisStatus status,
         Integer progressRate,
         String message,
-        LocalDateTime createdAt,
-        LocalDateTime completedAt
+        Instant createdAt,
+        Instant completedAt
 ) {
 
     public static AnalysisStatusResponseDTO from(

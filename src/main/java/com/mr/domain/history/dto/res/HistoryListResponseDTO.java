@@ -4,7 +4,7 @@ import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.Playing;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public record HistoryListResponseDTO(
@@ -26,7 +26,7 @@ public record HistoryListResponseDTO(
             Integer scoreChange,
             Integer durationMinutes,
             Integer durationSec,
-            LocalDateTime playedAt,
+            Instant playedAt,
             String relativeDate
     ) {
 

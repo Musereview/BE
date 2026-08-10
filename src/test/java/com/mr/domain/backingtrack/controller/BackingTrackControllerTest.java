@@ -17,7 +17,7 @@ import com.mr.domain.user.entity.enums.UserRole;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.principal.CustomUserDetails;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
@@ -93,7 +93,7 @@ class BackingTrackControllerTest {
 
             BackingTrackCreateResponseDTO.CreateResultDTO response =
                     BackingTrackCreateResponseDTO.CreateResultDTO.of(
-                            BACKING_TRACK_ID, "테스트 트랙", LocalDateTime.now()
+                            BACKING_TRACK_ID, "테스트 트랙", Instant.now()
                     );
 
             given(backingTrackService.createBackingTrack(anyLong(), any()))
@@ -217,7 +217,7 @@ class BackingTrackControllerTest {
 
             BackingTrackUpdateResponseDTO.UpdateResultDTO response =
                     BackingTrackUpdateResponseDTO.UpdateResultDTO.of(
-                            BACKING_TRACK_ID, "테스트 트랙", LocalDateTime.now()
+                            BACKING_TRACK_ID, "테스트 트랙", Instant.now()
                     );
 
             given(backingTrackService.updateBackingTrack(anyLong(), anyLong(), any()))

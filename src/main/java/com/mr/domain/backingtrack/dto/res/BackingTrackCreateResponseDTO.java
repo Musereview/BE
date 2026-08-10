@@ -2,7 +2,7 @@ package com.mr.domain.backingtrack.dto.res;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public class BackingTrackCreateResponseDTO {
 
@@ -10,11 +10,10 @@ public class BackingTrackCreateResponseDTO {
             Long backingTrackId,
             String title,
 
-            // 날짜 포맷
-            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
-            LocalDateTime createdAt
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
+            Instant createdAt
     ) {
-        public static CreateResultDTO of(Long backingTrackId, String title, LocalDateTime createdAt) {
+        public static CreateResultDTO of(Long backingTrackId, String title, Instant createdAt) {
             return new CreateResultDTO(backingTrackId, title, createdAt);
         }
     }

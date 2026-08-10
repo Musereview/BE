@@ -33,6 +33,7 @@ import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import static com.mr.domain.backingtrack.entity.enums.AccessLevel.PUBLIC;
@@ -229,7 +230,12 @@ public class PlayingService {
         int intervalHours = 10; // 10시간 단위로 알림
         int intervalSeconds = intervalHours * 3600;
 
-        Instant weekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY).atStartOfDay();
+        // 한국 시간(KST) 기준으로 이번 주 월요일 자정을 구한 뒤 Instant로 변환
+        ZoneId kstZone = ZoneId.of("Asia/Seoul");
+        Instant weekStart = LocalDate.now(kstZone)
+                .with(DayOfWeek.MONDAY)
+                .atStartOfDay(kstZone)
+                .toInstant();
 
         // 방금 끝낸 연주를 제외한 이전 누적 시간
         Long previousWeeklySeconds = playingRepository.sumDurationSecExcludeCurrent(

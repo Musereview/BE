@@ -2,8 +2,9 @@ package com.mr.domain.user.dto.res;
 
 import com.mr.domain.user.entity.enums.TheoryLevel;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDateTime;
 import lombok.Builder;
+
+import java.time.Instant;
 
 public class UserProfileResponseDTO {
 
@@ -76,6 +77,6 @@ public class UserProfileResponseDTO {
             TheoryLevel skillLevel,
 
             @Schema(description = "처리 완료 시각", example = "2026-07-24T01:30:00")
-            LocalDateTime updatedAt
+            Instant updatedAt
     ) {}
 }

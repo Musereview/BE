@@ -28,7 +28,9 @@ import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.file.s3.service.S3FileService;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,7 +64,7 @@ class HistoryServiceTest {
                 playingRepository, analysisRepository, s3FileService, new AnalysisBarCalculator());
     }
 
-    private Playing mockPlaying(Long playingId, Long userId, PlayingStatus status, LocalDateTime endedAt) {
+    private Playing mockPlaying(Long playingId, Long userId, PlayingStatus status, Instant endedAt) {
         User user = mock(User.class);
         lenient().when(user.getUserId()).thenReturn(userId);
 
@@ -84,7 +86,7 @@ class HistoryServiceTest {
         lenient().when(playing.getUser()).thenReturn(user);
 
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
-        LocalDateTime now = LocalDateTime.of(2026, 7, 31, 12, 0);
+        Instant now = Instant.parse("2026-07-31T12:00:00Z");
         analysis.startProcessing(now);
         analysis.complete(totalScore, AnalysisGrade.GOOD, "요약", null, null, null, null, null, now);
         return analysis;
@@ -106,7 +108,7 @@ class HistoryServiceTest {
     @Test
     @DisplayName("getHistories - 최신 COMPLETED 분석이 없는 Playing은 latestAnalysisId가 null이다")
     void getHistories_noCompletedAnalysis_latestAnalysisIdIsNull() {
-        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
+        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, Instant.now());
         given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(new SliceImpl<>(List.of(playing), PageRequest.of(0, 10), false));
         given(analysisRepository.findByPlayingIdInAndStatusOrderByCreatedAtDescIdDesc(
@@ -123,8 +125,8 @@ class HistoryServiceTest {
     @Test
     @DisplayName("getHistories - 마지막 페이지에서는 인접 항목과 점수 차이를 계산하고 마지막 항목은 null이다")
     void getHistories_scoreChange_comparesAdjacentItemsOnLastPage() {
-        Playing playing1 = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
-        Playing playing2 = mockPlaying(2L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now().minusDays(1));
+        Playing playing1 = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, Instant.now());
+        Playing playing2 = mockPlaying(2L, 1L, PlayingStatus.COMPLETED, Instant.now().minus(1, ChronoUnit.DAYS));
         given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(new SliceImpl<>(List.of(playing1, playing2), PageRequest.of(0, 10), false));
 
@@ -145,8 +147,8 @@ class HistoryServiceTest {
     @Test
     @DisplayName("getHistories - 다음 페이지가 있으면 현재 페이지 마지막 항목도 다음 연주와 점수 차이를 계산한다")
     void getHistories_scoreChange_comparesLastItemWithNextPage() {
-        LocalDateTime firstEndedAt = LocalDateTime.of(2026, 7, 31, 12, 0);
-        LocalDateTime secondEndedAt = firstEndedAt.minusDays(1);
+        Instant firstEndedAt = Instant.parse("2026-07-31T12:00:00Z");
+        Instant secondEndedAt = firstEndedAt.minus(1, ChronoUnit.DAYS);
         Playing playing1 = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, firstEndedAt);
         Playing playing2 = mockPlaying(2L, 1L, PlayingStatus.COMPLETED, secondEndedAt);
         given(playingRepository.findPlayingsByUserAndStatus(
@@ -176,14 +178,14 @@ class HistoryServiceTest {
     @Test
     @DisplayName("기간 필터가 있으면 cutoff 전용 쿼리로 다음 연주를 조회한다")
     void getHistories_scoreChange_usesSinceQueryWithPeriod() {
-        LocalDateTime endedAt = LocalDateTime.of(2026, 7, 31, 12, 0);
+        Instant endedAt = Instant.parse("2026-07-31T12:00:00Z");
         Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, endedAt);
         given(playingRepository.findPlayingsByUserAndStatusSince(
-                eq(1L), eq(PlayingStatus.COMPLETED), any(LocalDateTime.class),
+                eq(1L), eq(PlayingStatus.COMPLETED), any(Instant.class),
                 eq(PageRequest.of(0, 1))))
                 .willReturn(new SliceImpl<>(List.of(playing), PageRequest.of(0, 1), true));
         given(playingRepository.findNextPlayingIdSince(
-                eq(1L), eq(PlayingStatus.COMPLETED), any(LocalDateTime.class),
+                eq(1L), eq(PlayingStatus.COMPLETED), any(Instant.class),
                 eq(endedAt), eq(1L), eq(PageRequest.of(0, 1))))
                 .willReturn(List.of());
         given(analysisRepository.findByPlayingIdInAndStatusOrderByCreatedAtDescIdDesc(
@@ -199,14 +201,14 @@ class HistoryServiceTest {
     @DisplayName("getHistories - 기간 필터가 있으면 cutoff 전용 쿼리를 사용한다")
     void getHistories_withPeriod_usesSinceQuery() {
         given(playingRepository.findPlayingsByUserAndStatusSince(
-                eq(1L), eq(PlayingStatus.COMPLETED), any(LocalDateTime.class), eq(PageRequest.of(0, 10))))
+                eq(1L), eq(PlayingStatus.COMPLETED), any(Instant.class), eq(PageRequest.of(0, 10))))
                 .willReturn(new SliceImpl<>(List.of(), PageRequest.of(0, 10), false));
 
         HistoryListResponseDTO response = historyService.getHistories(1L, 0, 10, HistoryPeriod.WEEKLY);
 
         assertThat(response.items()).isEmpty();
         verify(playingRepository).findPlayingsByUserAndStatusSince(
-                eq(1L), eq(PlayingStatus.COMPLETED), any(LocalDateTime.class), eq(PageRequest.of(0, 10)));
+                eq(1L), eq(PlayingStatus.COMPLETED), any(Instant.class), eq(PageRequest.of(0, 10)));
     }
 
     @Test
@@ -251,7 +253,7 @@ class HistoryServiceTest {
     @Test
     @DisplayName("getHistoryDetail - 다른 사용자의 기록이면 403이고 Analysis는 조회하지 않는다")
     void getHistoryDetail_otherUsersPlaying_throws403() {
-        Playing playing = mockPlaying(1L, 2L, PlayingStatus.COMPLETED, LocalDateTime.now());
+        Playing playing = mockPlaying(1L, 2L, PlayingStatus.COMPLETED, Instant.now());
         given(playingRepository.findByIdWithBackingTrack(1L)).willReturn(Optional.of(playing));
 
         assertThatThrownBy(() -> historyService.getHistoryDetail(1L, 1L))
@@ -275,7 +277,7 @@ class HistoryServiceTest {
     @Test
     @DisplayName("getHistoryDetail - 정상 조회 시 상태 무관하게 모든 분석을 반환한다")
     void getHistoryDetail_success_returnsAllAnalysesRegardlessOfStatus() {
-        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
+        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, Instant.now());
         BackingTrack backingTrack = mock(BackingTrack.class);
         String recordingObjectKey = "recordings/1/2026-08-06/test.webm";
         String recordingFileUrl = "https://example.com/presigned-recording.webm";
@@ -309,7 +311,7 @@ class HistoryServiceTest {
     @Test
     @DisplayName("getHistoryDetail - BPM/박자/재생시간이 있으면 totalBars와 구간별 estimatedSeconds를 계산한다")
     void getHistoryDetail_success_calculatesBarMetrics() {
-        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
+        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, Instant.now());
         BackingTrack backingTrack = mock(BackingTrack.class);
         given(playing.getBackingTrack()).willReturn(backingTrack);
         given(backingTrack.getTimeSignature()).willReturn("4/4");
@@ -330,7 +332,7 @@ class HistoryServiceTest {
     @Test
     @DisplayName("getHistoryDetail - 마디 계산 정보가 없으면 조회는 성공하고 마디 관련 필드만 null이다")
     void getHistoryDetail_missingBarMetrics_returnsNullBarFields() {
-        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
+        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, Instant.now());
         BackingTrack backingTrack = mock(BackingTrack.class);
         given(playing.getBackingTrack()).willReturn(backingTrack);
         given(backingTrack.getPlaytimeSec()).willReturn(null);

@@ -5,7 +5,8 @@ import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.MidiType;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 import java.util.List;
 
 public record AnalysisContextResponse(
@@ -15,7 +16,7 @@ public record AnalysisContextResponse(
         String key,
         Integer bpm,
         String timeSignature,
-        LocalDateTime playedAt,
+        Instant playedAt,
         Integer durationMinutes,
         Integer durationSec,
         String recordingFileUrl,

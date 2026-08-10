@@ -3,7 +3,8 @@ package com.mr.domain.mentor.dto.res;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mr.domain.mentor.entity.MentorMessage;
 import com.mr.domain.mentor.entity.enums.MessageRole;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 import java.util.List;
 
 public record MentorMessageHistoryResponseDTO(
@@ -16,7 +17,7 @@ public record MentorMessageHistoryResponseDTO(
             MessageRole role,
             JsonNode referencesJson,
             String content,
-            LocalDateTime createdAt
+            Instant createdAt
     ) {
 
         public static Message from(MentorMessage message, JsonNode referencesJson) {

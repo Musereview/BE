@@ -6,20 +6,20 @@ import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingMode;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record PlayingDetailResponse(
         Long playingId,
         PlayingStatus status,
         PlayingMode mode,
-        LocalDateTime startedAt,
-        LocalDateTime endedAt,
+        Instant startedAt,
+        Instant endedAt,
         Integer duration,
         Integer bpm,
         String recordingFileUrl,
         boolean isPublic,
         BackingTrackInfo backingTrack,
-        LocalDateTime createdAt
+        Instant createdAt
 ) {
     public static PlayingDetailResponse from(Playing playing, String recordingFileUrl) {
         return new PlayingDetailResponse(
