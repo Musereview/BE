@@ -46,8 +46,8 @@ public class BackingTrackSaveRequestDTO {
             @Max(value = 600, message = "재생 시간은 최대 600초(10분) 이하여야 합니다.")
             Integer playtimeSec,
 
-            @Size(max = 255, message = "오디오 파일 URL은 255자 이내여야 합니다.")
-            String audioFileUrl,
+            @Size(max = 255, message = "오디오 파일 Object Key는 255자 이내여야 합니다.")
+            String audioObjectKey,
 
             @NotNull(message = "공개 범위는 필수입니다.")
             AccessLevel accessLevel,

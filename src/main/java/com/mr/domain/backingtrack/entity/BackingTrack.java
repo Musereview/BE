@@ -87,8 +87,8 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     private Integer playtimeSec;
 
     // 오디오 파일
-    @Column(name = "audio_file_url", length = 255)
-    private String audioFileUrl;
+    @Column(name = "audio_object_key", length = 255)
+    private String audioObjectKey;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "midi_data", columnDefinition = "jsonb")
@@ -115,7 +115,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     @Builder(access = lombok.AccessLevel.PRIVATE)
     private BackingTrack(User user, Long academyId, String title, String genre,
                          String keySignature, ScaleType scaleType, String timeSignature,
-                         Integer bpm, Integer playtimeSec, String audioFileUrl,
+                         Integer bpm, Integer playtimeSec, String audioObjectKey,
                          JsonNode midiData, Integer playCount,
                          AccessLevel accessLevel, Level level) {
         this.user = user;
@@ -127,7 +127,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
         this.timeSignature = timeSignature;
         this.bpm = bpm;
         this.playtimeSec = playtimeSec;
-        this.audioFileUrl = audioFileUrl;
+        this.audioObjectKey = audioObjectKey;
         this.midiData = midiData;
         this.playCount = playCount != null ? playCount : 0;
         this.accessLevel = accessLevel != null ? accessLevel : AccessLevel.PRIVATE;
@@ -136,7 +136,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
 
     public static BackingTrack create(User user, Long academyId, String title, String genre,
                                       String keySignature, ScaleType scaleType, String timeSignature,
-                                      Integer bpm, Integer playtimeSec, String audioFileUrl,
+                                      Integer bpm, Integer playtimeSec, String audioObjectKey,
                                       JsonNode midiData, AccessLevel accessLevel, Level level) {
         return BackingTrack.builder()
                 .user(user)
@@ -148,7 +148,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
                 .timeSignature(timeSignature)
                 .bpm(bpm)
                 .playtimeSec(playtimeSec)
-                .audioFileUrl(audioFileUrl)
+                .audioObjectKey(audioObjectKey)
                 .midiData(midiData)
                 .playCount(0)
                 .accessLevel(accessLevel)
@@ -158,7 +158,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
 
     public void updateTrackInfo(String title, String genre, String keySignature,
                                 ScaleType scaleType, String timeSignature, Integer bpm,
-                                Integer playtimeSec, String audioFileUrl, AccessLevel accessLevel, Level level) {
+                                Integer playtimeSec, AccessLevel accessLevel, Level level) {
         this.title = title;
         this.genre = genre;
         this.keySignature = keySignature;
@@ -166,7 +166,6 @@ public class BackingTrack extends BaseTimeDeletedEntity {
         this.timeSignature = timeSignature;
         this.bpm = bpm;
         this.playtimeSec = playtimeSec;
-        this.audioFileUrl = audioFileUrl;
         if (accessLevel != null) this.accessLevel = accessLevel;
         if (level != null) this.level = level;
     }
