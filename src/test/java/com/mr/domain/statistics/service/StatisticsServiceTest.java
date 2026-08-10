@@ -115,10 +115,14 @@ class StatisticsServiceTest {
 
         statisticsService.getStatistics(1L);
 
+        LocalDate thisWeekMonday = LocalDate.now(FIXED_CLOCK).with(DayOfWeek.MONDAY);
+        Instant expectedPlayingSince = thisWeekMonday.minusWeeks(1).atStartOfDay(SERVICE_ZONE_ID).toInstant();
+        Instant expectedAnalysisSince = thisWeekMonday.minusWeeks(3).atStartOfDay(SERVICE_ZONE_ID).toInstant();
+
         verify(playingRepository).findByUserAndStatusSince(
-                1L, PlayingStatus.COMPLETED, Instant.parse("2026-07-20T00:00:00Z"));
+                1L, PlayingStatus.COMPLETED, expectedPlayingSince);
         verify(analysisRepository).findByUserAndStatusSince(
-                1L, AnalysisStatus.COMPLETED, Instant.parse("2026-07-06T00:00:00Z"));
+                1L, AnalysisStatus.COMPLETED, expectedAnalysisSince);
     }
     @Test
     @DisplayName("getStatistics - 연습/분석 이력이 전혀 없으면 모든 수치가 0이다")

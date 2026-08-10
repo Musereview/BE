@@ -228,8 +228,9 @@ class UserProfileServiceTest {
         Instrument piano = Instrument.create("PIANO", "피아노");
         StudentInstrument primaryInstrument = StudentInstrument.createPrimary(student, piano);
         // 가입 40일 전 생성된 구독 (end_date = 시작일 + 30일 → 이미 10일 지남)
+        Instant startDate = Instant.now().minus(40, ChronoUnit.DAYS);
         Subscription subscription = Subscription.create(
-                user, "PRO", Instant.now().minus(40, ChronoUnit.DAYS), Instant.now().plus(10, ChronoUnit.DAYS));
+                user, "PRO", startDate, startDate.plus(30, ChronoUnit.DAYS));
 
         given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
         given(studentRepository.findByUser(user)).willReturn(Optional.of(student));

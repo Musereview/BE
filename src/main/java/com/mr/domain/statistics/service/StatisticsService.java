@@ -50,7 +50,7 @@ public class StatisticsService {
                 .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
         ZoneId kstZone = ZoneId.of("Asia/Seoul");
-        Instant thisWeekStart = LocalDate.now(kstZone)
+        Instant thisWeekStart = Instant.now(clock).atZone(kstZone).toLocalDate()
                 .with(DayOfWeek.MONDAY)
                 .atStartOfDay(kstZone)
                 .toInstant();

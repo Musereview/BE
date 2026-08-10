@@ -232,7 +232,7 @@ public class PlayingService {
 
         // 한국 시간(KST) 기준으로 이번 주 월요일 자정을 구한 뒤 Instant로 변환
         ZoneId kstZone = ZoneId.of("Asia/Seoul");
-        Instant weekStart = LocalDate.now(kstZone)
+        Instant weekStart = Instant.now(clock).atZone(kstZone).toLocalDate()
                 .with(DayOfWeek.MONDAY)
                 .atStartOfDay(kstZone)
                 .toInstant();
