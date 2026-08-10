@@ -180,7 +180,7 @@ public record HomeResponseDTO(
             @Schema(description = "BPM", example = "120")
             Integer bpm,
 
-            @Schema(description = "연습 종료 시각", example = "2026-05-04T14:32:00")
+            @Schema(description = "연습 종료 시각", example = "2026-05-04T14:32:00Z")
             Instant playedAt,
 
             @Schema(description = "상대 시간 표기", example = "오늘")

@@ -81,7 +81,7 @@ class AnalysisRecoverySchedulerTest {
 
         verify(analysisProcessingService).recoverStaleProcessing(
                 21L,
-                Instant.parse("2026-07-31T11:58:00Z")
+                Instant.parse("2026-07-31T02:58:00Z")
         );
     }
 }

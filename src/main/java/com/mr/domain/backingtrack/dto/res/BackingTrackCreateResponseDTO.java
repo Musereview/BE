@@ -10,7 +10,7 @@ public class BackingTrackCreateResponseDTO {
             Long backingTrackId,
             String title,
 
-            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "UTC")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX", timezone = "UTC")
             Instant createdAt
     ) {
         public static CreateResultDTO of(Long backingTrackId, String title, Instant createdAt) {

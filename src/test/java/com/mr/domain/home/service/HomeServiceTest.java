@@ -145,7 +145,7 @@ class HomeServiceTest {
     void getHome_threeConsecutiveDaysIncludingToday_currentDaysIsThree() {
         stubBaseline(1L);
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED)).willReturn(List.of(
                 toInstant(today), toInstant(today.minusDays(1)), toInstant(today.minusDays(2)), toInstant(today.minusDays(5))
         ));
@@ -160,7 +160,7 @@ class HomeServiceTest {
     void getHome_longStreak_notCappedByLookbackWindow() {
         stubBaseline(1L);
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         List<Instant> endedDates = java.util.stream.IntStream.range(0, 65)
                 .mapToObj(today::minusDays)
                 .map(this::toInstant)

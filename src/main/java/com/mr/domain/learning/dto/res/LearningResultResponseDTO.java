@@ -23,7 +23,7 @@ public class LearningResultResponseDTO {
             @Schema(description = "저장된 점수", example = "95")
             Integer score,
 
-            @Schema(description = "저장/갱신 시각", type = "string", example = "2026-07-07T15:30:00")
+            @Schema(description = "저장/갱신 시각", type = "string", example = "2026-07-07T15:30:00Z")
             Instant completedAt
     ) {
         public static SaveResultResultDTO from(UserLearningProgress progress) {
