@@ -83,7 +83,7 @@ public class BackingTrackService {
                 request.timeSignature(),
                 request.bpm(),
                 request.playtimeSec(),
-                request.audioObjectKey(),
+                audioObjectKey,
                 null,   // midi 데이터는 생성 시 null로 초기화 (mvp후 별도 API나 이벤트로 업데이트)
                 request.accessLevel(),
                 request.level()
