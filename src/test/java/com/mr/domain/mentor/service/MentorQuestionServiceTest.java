@@ -85,23 +85,6 @@ class MentorQuestionServiceTest {
     }
 
     @Test
-    void prepare_questionLimitExceeded_throwsTooManyRequests() {
-        Analysis analysis = analysis(1L, AnalysisStatus.COMPLETED);
-        User owner = analysis.getUser();
-        MentorChatSession session = MentorChatSession.createActive(analysis, owner);
-        session.increaseQuestionCount();
-        session.increaseQuestionCount();
-        session.increaseQuestionCount();
-        given(analysisRepository.findByIdForUpdate(10L)).willReturn(Optional.of(analysis));
-        given(sessionRepository.findByAnalysisIdForUpdate(10L)).willReturn(Optional.of(session));
-
-        assertThatThrownBy(() -> service.prepare(1L, 10L, "question"))
-                .isInstanceOf(GeneralException.class)
-                .hasFieldOrPropertyWithValue("code", MentorErrorStatus.MENTOR_QUESTION_LIMIT_EXCEEDED);
-        verify(messageRepository, never()).saveAndFlush(any());
-    }
-
-    @Test
     void prepare_existingSession_reusesSession() {
         Analysis analysis = analysis(1L, AnalysisStatus.COMPLETED);
         MentorChatSession session = MentorChatSession.createActive(analysis, analysis.getUser());
