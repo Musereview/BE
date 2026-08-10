@@ -129,9 +129,6 @@ public class MentorChatSession extends BaseTimeEntity {
         if (this.status != MentorChatStatus.ACTIVE && this.status != MentorChatStatus.GENERATING) {
             throw new GeneralException(MentorErrorStatus.MENTOR_SESSION_NOT_ACTIVE);
         }
-        if (this.questionCount >= 3) {
-            throw new GeneralException(MentorErrorStatus.MENTOR_QUESTION_LIMIT_EXCEEDED);
-        }
         this.status = MentorChatStatus.GENERATING;
         this.generationToken = UUID.randomUUID().toString();
         this.generationStartedAt = LocalDateTime.now();
