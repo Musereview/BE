@@ -232,7 +232,6 @@ class AnalysisServiceTest {
         given(playing.getUser()).willReturn(user);
         given(playing.getStatus()).willReturn(PlayingStatus.COMPLETED);
         given(playingRepository.findByIdWithBackingTrackForUpdate(31L)).willReturn(Optional.of(playing));
-        given(analysisRepository.existsByPlayingIdAndStatusIn(eq(31L), any())).willReturn(false);
         given(analysisRequestFactory.create(playing, 1, 8))
                 .willReturn(new AiAnalysisRequest(null, List.of(), List.of()));
         given(analysisRepository.save(any(Analysis.class)))
@@ -242,14 +241,6 @@ class AnalysisServiceTest {
                 1L, new AnalysisCreateRequestDTO(31L, 1, 8)
         );
 
-        verify(analysisRepository).existsByPlayingIdAndStatusIn(
-                31L,
-                List.of(
-                        AnalysisStatus.PENDING,
-                        AnalysisStatus.PROCESSING,
-                        AnalysisStatus.COMPLETED
-                )
-        );
         assertThat(response.playingId()).isEqualTo(31L);
         assertThat(response.status()).isEqualTo(AnalysisStatus.PENDING);
         verify(eventPublisher).publishEvent(any(AnalysisRequestedEvent.class));

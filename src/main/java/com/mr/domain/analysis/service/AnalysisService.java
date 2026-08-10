@@ -22,7 +22,6 @@ import com.mr.domain.playing.exception.PlayingErrorStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.file.s3.service.S3FileService;
-import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,16 +55,6 @@ public class AnalysisService {
         }
         if (playing.getStatus() != PlayingStatus.COMPLETED) {
             throw new GeneralException(PlayingErrorStatus.INVALID_PLAYING_STATUS);
-        }
-        if (analysisRepository.existsByPlayingIdAndStatusIn(
-                playing.getId(),
-                List.of(
-                        AnalysisStatus.PENDING,
-                        AnalysisStatus.PROCESSING,
-                        AnalysisStatus.COMPLETED
-                )
-        )) {
-            throw new GeneralException(AnalysisErrorStatus.ANALYSIS_ALREADY_IN_PROGRESS);
         }
 
         String requestJson;

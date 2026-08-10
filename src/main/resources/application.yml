@@ -15,6 +15,10 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/mr_db}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+      leak-detection-threshold: 20000
 
   # 공통 JPA 및 하이버네이트 구동 설정
   jpa:
@@ -26,11 +30,26 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+  # 레디스 설정 (develop 브랜치)
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      connect-timeout: ${SPRING_DATA_REDIS_CONNECT_TIMEOUT:2s}
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:2s}
+
   # 파일 업로드 용량 제한
   servlet:
     multipart:
       max-file-size: 20MB
       max-request-size: 20MB
+
+# Actuator 엔드포인트 설정 (develop 브랜치)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
 
 # Spring Security 및 JWT 인증 설정
 jwt:
@@ -65,7 +84,7 @@ aws:
       access-key: ${AWS_S3_ACCESS_KEY:dummy-access}
       secret-key: ${AWS_S3_SECRET_KEY:dummy-secret}
 
-# 팀원 PR로 추가된 내부 AI 분석 서버 설정 (바인딩 에러 방지용 기본값 포함)
+# 내부 AI 분석 서버 설정
 ai:
   internal:
     base-url: ${AI_INTERNAL_BASE_URL:http://localhost:8000}
