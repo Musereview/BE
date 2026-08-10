@@ -5,6 +5,7 @@ import com.mr.domain.home.dto.res.HomeResponseDTO.AttendanceStatus;
 import com.mr.domain.home.dto.res.HomeResponseDTO.DayOfWeekCode;
 import com.mr.domain.home.dto.res.HomeResponseDTO.LearningSummary;
 import com.mr.domain.home.dto.res.HomeResponseDTO.PracticeSummary;
+import com.mr.domain.home.dto.res.HomeResponseDTO.RecentLearningActivity;
 import com.mr.domain.home.dto.res.HomeResponseDTO.RecentPlaying;
 import com.mr.domain.home.dto.res.HomeResponseDTO.RecommendedLearning;
 import com.mr.domain.home.dto.res.HomeResponseDTO.Streak;
@@ -64,12 +65,15 @@ public class HomeService {
                 playingRepository.findByUserAndStatusSince(userId, PlayingStatus.COMPLETED, since);
 
         LearningHomeResponseDTO.CurrentLearning currentLearning = learningService.getCurrentLearning(userId);
+        RecentLearningActivity recentLearningActivity =
+                RecentLearningActivity.from(learningService.getRecentActivity(userId));
 
         return new HomeResponseDTO(
                 buildUserSummary(user),
                 buildStreak(practiceDates),
                 buildPracticeSummary(recentCompleted),
                 LearningSummary.from(currentLearning),
+                recentLearningActivity,
                 buildRecommendedLearnings(userId, currentLearning),
                 buildRecentPlayings(userId)
         );
