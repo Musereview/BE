@@ -42,7 +42,8 @@ public record AnalysisResultResponseDTO(
             Analysis analysis,
             AnalysisReport analysisReport,
             JsonNode rawResult,
-            String recordingFileUrl
+            String recordingFileUrl,
+            String backingTrackAudioFileUrl
     ) {
         Playing playing = analysis.getPlaying();
         BackingTrack backingTrack = playing.getBackingTrack();
@@ -55,7 +56,7 @@ public record AnalysisResultResponseDTO(
                 playing.getBpm(),
                 playing.getEndedAt(),
                 recordingFileUrl,
-                backingTrack != null ? backingTrack.getAudioFileUrl() : null,
+                backingTrackAudioFileUrl,
                 analysis.getStatus(),
                 analysis.getStartBar(),
                 analysis.getEndBar(),

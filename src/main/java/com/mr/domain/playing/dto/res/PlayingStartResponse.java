@@ -16,11 +16,12 @@ public record PlayingStartResponse(
         LocalDateTime startedAt
 ) {
 
-    public static PlayingStartResponse from (Playing playing) {
+    public static PlayingStartResponse from (Playing playing, String backingTrackAudioFileUrl) {
         return new PlayingStartResponse(
                 playing.getId(),
                 playing.getStatus(),
-                BackingTrackResponse.from(playing.getBackingTrack()),
+                BackingTrackResponse.from(
+                        playing.getBackingTrack(), backingTrackAudioFileUrl),
                 playing.getStartedAt()
         );
     }
@@ -38,11 +39,11 @@ public record PlayingStartResponse(
             List<ChordProgressionResponse> chordProgression
 
     ) {
-        public static BackingTrackResponse from(BackingTrack backingTrack) {
+        public static BackingTrackResponse from(BackingTrack backingTrack, String audioFileUrl) {
             return new BackingTrackResponse(
                     backingTrack.getId(),
                     backingTrack.getTitle(),
-                    backingTrack.getAudioFileUrl(),
+                    audioFileUrl,
                     backingTrack.getGenre(),
                     backingTrack.getKeySignature(),
                     backingTrack.getScaleType(),
