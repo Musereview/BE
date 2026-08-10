@@ -24,6 +24,7 @@ BEGIN
               OR audio_object_key LIKE 'http%'
               OR audio_object_key LIKE '%X-Amz%'
               OR btrim(audio_object_key) = ''
+              OR audio_object_key NOT LIKE 'backing-tracks/%'
           )
     ) THEN
         RAISE EXCEPTION 'audio_object_key migration validation failed';
