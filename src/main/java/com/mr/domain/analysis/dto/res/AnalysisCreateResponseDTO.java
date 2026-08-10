@@ -2,7 +2,8 @@ package com.mr.domain.analysis.dto.res;
 
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 
 public record AnalysisCreateResponseDTO(
         Long analysisId,
@@ -10,7 +11,7 @@ public record AnalysisCreateResponseDTO(
         AnalysisStatus status,
         Integer startBar,
         Integer endBar,
-        LocalDateTime createdAt
+        Instant createdAt
 ) {
     public static AnalysisCreateResponseDTO from(Analysis analysis) {
         return new AnalysisCreateResponseDTO(analysis.getId(), analysis.getPlaying().getId(), analysis.getStatus(),

@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,12 +26,12 @@ public interface BackingTrackRepository extends JpaRepository<BackingTrack, Long
             "ORDER BY b.playCount DESC, b.createdAt DESC")
     List<BackingTrack> findTopByAccessLevelAndAnalysisCompleted(
             @Param("accessLevel") AccessLevel accessLevel,
-            @Param("oneWeekAgo") LocalDateTime oneWeekAgo,
+            @Param("oneWeekAgo") Instant oneWeekAgo,
             Pageable pageable
     );
 
     // 서비스 단에서 깔끔하게 호출하기 위한 default 메서드 래핑
-    default List<BackingTrack> findTop3RecommendedTracks(LocalDateTime oneWeekAgo) {
+    default List<BackingTrack> findTop3RecommendedTracks(Instant oneWeekAgo) {
         return findTopByAccessLevelAndAnalysisCompleted(
                 AccessLevel.PUBLIC,
                 oneWeekAgo,

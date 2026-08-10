@@ -31,8 +31,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.mr.domain.backingtrack.entity.enums.AccessLevel.PUBLIC;
@@ -229,7 +229,7 @@ public class PlayingService {
         int intervalHours = 10; // 10시간 단위로 알림
         int intervalSeconds = intervalHours * 3600;
 
-        LocalDateTime weekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY).atStartOfDay();
+        Instant weekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY).atStartOfDay();
 
         // 방금 끝낸 연주를 제외한 이전 누적 시간
         Long previousWeeklySeconds = playingRepository.sumDurationSecExcludeCurrent(

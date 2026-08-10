@@ -6,7 +6,7 @@ import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.user.entity.enums.TheoryLevel;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.DayOfWeek;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Schema(description = "홈 화면 요약 조회 응답")
@@ -181,7 +181,7 @@ public record HomeResponseDTO(
             Integer bpm,
 
             @Schema(description = "연습 종료 시각", example = "2026-05-04T14:32:00")
-            LocalDateTime playedAt,
+            Instant playedAt,
 
             @Schema(description = "상대 시간 표기", example = "오늘")
             String relativeTime,

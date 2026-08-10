@@ -9,7 +9,7 @@ import com.mr.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -58,19 +58,19 @@ public class MentorChatSession extends BaseTimeEntity {
     private String disabledReason;
 
     @Column(name = "last_message_at")
-    private LocalDateTime lastMessageAt;
+    private Instant lastMessageAt;
 
     @Column(name = "generation_token", length = 36)
     private String generationToken;
 
     @Column(name = "generation_started_at")
-    private LocalDateTime generationStartedAt;
+    private Instant generationStartedAt;
 
     @Column(name = "question_count", nullable = false)
     private Integer questionCount;
 
     private MentorChatSession(Analysis analysis, User user, MentorChatStatus status,
-                              String disabledReason, LocalDateTime lastMessageAt) {
+                              String disabledReason, Instant lastMessageAt) {
         validateAnalysis(analysis);
         validateUser(user);
 
@@ -114,7 +114,7 @@ public class MentorChatSession extends BaseTimeEntity {
     }
 
     public void updateLastMessageAt() {
-        this.lastMessageAt = LocalDateTime.now();
+        this.lastMessageAt = Instant.now();
     }
 
     public void increaseQuestionCount() {
@@ -134,7 +134,7 @@ public class MentorChatSession extends BaseTimeEntity {
         }
         this.status = MentorChatStatus.GENERATING;
         this.generationToken = UUID.randomUUID().toString();
-        this.generationStartedAt = LocalDateTime.now();
+        this.generationStartedAt = Instant.now();
         return this.generationToken;
     }
 
@@ -144,7 +144,7 @@ public class MentorChatSession extends BaseTimeEntity {
             throw new GeneralException(MentorErrorStatus.MENTOR_SESSION_NOT_ACTIVE);
         }
         this.questionCount += 1;
-        this.lastMessageAt = LocalDateTime.now();
+        this.lastMessageAt = Instant.now();
         this.status = MentorChatStatus.ACTIVE;
         clearGeneration();
     }
@@ -159,7 +159,7 @@ public class MentorChatSession extends BaseTimeEntity {
 
     private boolean isStale(Duration staleAfter) {
         return this.generationStartedAt == null
-                || !this.generationStartedAt.isAfter(LocalDateTime.now().minus(staleAfter));
+                || !this.generationStartedAt.isAfter(Instant.now().minus(staleAfter));
     }
 
     private void clearGeneration() {

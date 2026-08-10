@@ -2,7 +2,7 @@ package com.mr.global.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import lombok.Getter;
 
 @Getter
@@ -10,11 +10,11 @@ import lombok.Getter;
 public abstract class BaseTimeDeletedEntity extends BaseTimeEntity {
 
     @Column(name = "deleted_at")
-    protected LocalDateTime deletedAt;
+    protected Instant deletedAt;
 
     public void softDelete() {
         if (this.deletedAt == null) {
-            this.deletedAt = LocalDateTime.now();
+            this.deletedAt = Instant.now();
         }
     }
 

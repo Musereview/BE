@@ -5,7 +5,7 @@ import com.mr.domain.notification.exception.NotificationErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.NotificationEvent;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 
 public record NotificationResponseDTO (
@@ -15,7 +15,7 @@ public record NotificationResponseDTO (
         String content,
         Boolean isRead,
         Long targetId,
-        LocalDateTime createdAt
+        Instant createdAt
 ) {
     public static NotificationResponseDTO from(Notification notification) {
         String rawContent = notification.getContent();
