@@ -10,7 +10,6 @@ import com.mr.domain.analysis.repository.AnalysisRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -82,7 +81,7 @@ class AnalysisRecoverySchedulerTest {
 
         verify(analysisProcessingService).recoverStaleProcessing(
                 21L,
-                LocalDateTime.of(2026, 7, 31, 11, 58)
+                Instant.parse("2026-07-31T11:58:00Z")
         );
     }
 }

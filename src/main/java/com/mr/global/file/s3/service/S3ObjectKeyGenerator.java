@@ -6,7 +6,7 @@ import com.mr.global.file.s3.exception.S3ErrorStatus;
 import com.mr.global.file.s3.util.ContentTypeUtils;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -17,10 +17,10 @@ public class S3ObjectKeyGenerator {
 
     private static final ZoneId KOREA_ZONE_ID = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter DATE_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(KOREA_ZONE_ID);
 
     private static final DateTimeFormatter TIME_FORMATTER =
-            DateTimeFormatter.ofPattern("HHmmss");
+            DateTimeFormatter.ofPattern("HHmmss").withZone(KOREA_ZONE_ID);
 
     private static final int UUID_LENGTH = 6;
 
@@ -40,13 +40,13 @@ public class S3ObjectKeyGenerator {
         String extension =
                 resolveExtension(originalFileName, contentType);
 
-        LocalDateTime now =
-                LocalDateTime.now(KOREA_ZONE_ID);
+        Instant now =
+                Instant.now();
 
 
         String generatedFileName =
                 "%s_%s.%s".formatted(
-                        now.format(TIME_FORMATTER),
+                        TIME_FORMATTER.format(now),
                         createShortUuid(),
                         extension
                 );
@@ -54,7 +54,7 @@ public class S3ObjectKeyGenerator {
         return "%s/%d/%s/%s".formatted(
                 s3Properties.keyPrefix(),
                 userId,
-                now.format(DATE_FORMATTER),
+                DATE_FORMATTER.format(now),
                 generatedFileName
         );
     }

@@ -48,7 +48,6 @@ import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -589,9 +588,10 @@ class PlayingServiceTest {
             when(playing.getDurationSec())
                     .thenReturn(300);
 
-            LocalDateTime weekStart = fixedDate
+            Instant weekStart = fixedDate
                     .with(DayOfWeek.MONDAY)
-                    .atStartOfDay();
+                    .atStartOfDay(ZoneId.of("Asia/Seoul"))
+                    .toInstant();
 
             when(playingRepository.sumDurationSecExcludeCurrent(
                     userId,
@@ -1045,8 +1045,8 @@ class PlayingServiceTest {
         @DisplayName("본인의 연주 기록을 삭제한다")
         void deletePlayingSuccess() {
             // given
-            LocalDateTime deletedAt =
-                    LocalDateTime.of(2026, 1, 1, 15, 30);
+            Instant deletedAt =
+                    Instant.parse("2026-01-01T15:30:00Z");
 
             when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
                     .thenReturn(Optional.of(playing));

@@ -28,9 +28,9 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,7 +58,7 @@ class StatisticsServiceTest {
 
     private StatisticsService statisticsService;
 
-    private final LocalDateTime thisWeekStart = LocalDate.now(FIXED_CLOCK).with(DayOfWeek.MONDAY).atStartOfDay();
+    private final Instant thisWeekStart = LocalDate.now(FIXED_CLOCK).with(DayOfWeek.MONDAY).atStartOfDay(SERVICE_ZONE_ID).toInstant();
 
     @BeforeEach
     void setUp() {
@@ -72,14 +72,14 @@ class StatisticsServiceTest {
         lenient().when(analysisRepository.findByUserAndStatusSince(anyLong(), any(), any())).thenReturn(List.of());
     }
 
-    private Playing mockPlaying(LocalDateTime endedAt, Integer durationSec) {
+    private Playing mockPlaying(Instant endedAt, Integer durationSec) {
         Playing playing = mock(Playing.class);
         lenient().when(playing.getEndedAt()).thenReturn(endedAt);
         lenient().when(playing.getDurationSec()).thenReturn(durationSec);
         return playing;
     }
 
-    private Analysis mockAnalysis(LocalDateTime completedAt, Integer totalScore, BigDecimal scaleScore,
+    private Analysis mockAnalysis(Instant completedAt, Integer totalScore, BigDecimal scaleScore,
             BigDecimal tensionScore, BigDecimal progressionScore, BigDecimal voiceLeadingScore) {
         Analysis analysis = mock(Analysis.class);
         lenient().when(analysis.getCompletedAt()).thenReturn(completedAt);
@@ -116,9 +116,9 @@ class StatisticsServiceTest {
         statisticsService.getStatistics(1L);
 
         verify(playingRepository).findByUserAndStatusSince(
-                1L, PlayingStatus.COMPLETED, LocalDateTime.of(2026, 7, 20, 0, 0));
+                1L, PlayingStatus.COMPLETED, Instant.parse("2026-07-20T00:00:00Z"));
         verify(analysisRepository).findByUserAndStatusSince(
-                1L, AnalysisStatus.COMPLETED, LocalDateTime.of(2026, 7, 6, 0, 0));
+                1L, AnalysisStatus.COMPLETED, Instant.parse("2026-07-06T00:00:00Z"));
     }
     @Test
     @DisplayName("getStatistics - 연습/분석 이력이 전혀 없으면 모든 수치가 0이다")
@@ -157,9 +157,9 @@ class StatisticsServiceTest {
         stubBaseline(1L);
 
         List<Playing> playings = List.of(
-                mockPlaying(thisWeekStart.plusDays(1), 600),
-                mockPlaying(thisWeekStart.plusDays(2), 600),
-                mockPlaying(thisWeekStart.minusDays(3), 1200)
+                mockPlaying(thisWeekStart.plus(1, ChronoUnit.DAYS), 600),
+                mockPlaying(thisWeekStart.plus(2, ChronoUnit.DAYS), 600),
+                mockPlaying(thisWeekStart.minus(3, ChronoUnit.DAYS), 1200)
         );
         given(playingRepository.findByUserAndStatusSince(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(playings);
@@ -176,7 +176,7 @@ class StatisticsServiceTest {
     @DisplayName("getStatistics - 지난 주 연습 이력이 없어도 practiceMinutesDiff/completedSessionCountDiff는 0-가드 없이 단순 차감된다")
     void getStatistics_noPreviousWeekPlaying_diffIsPlainSubtraction() {
         stubBaseline(1L);
-        List<Playing> playings = List.of(mockPlaying(thisWeekStart.plusDays(1), 600));
+        List<Playing> playings = List.of(mockPlaying(thisWeekStart.plus(1, ChronoUnit.DAYS), 600));
         given(playingRepository.findByUserAndStatusSince(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(playings);
 
@@ -192,9 +192,9 @@ class StatisticsServiceTest {
         stubBaseline(1L);
 
         List<Analysis> analyses = List.of(
-                mockAnalysis(thisWeekStart.plusDays(1), 90,
+                mockAnalysis(thisWeekStart.plus(1, ChronoUnit.DAYS), 90,
                         BigDecimal.valueOf(85), BigDecimal.valueOf(72), BigDecimal.valueOf(88), BigDecimal.valueOf(63)),
-                mockAnalysis(thisWeekStart.minusDays(3), 80,
+                mockAnalysis(thisWeekStart.minus(3, ChronoUnit.DAYS), 80,
                         BigDecimal.valueOf(77), BigDecimal.valueOf(66), BigDecimal.valueOf(84), BigDecimal.valueOf(73))
         );
         given(analysisRepository.findByUserAndStatusSince(eq(1L), eq(AnalysisStatus.COMPLETED), any()))
@@ -220,7 +220,7 @@ class StatisticsServiceTest {
         stubBaseline(1L);
 
         List<Analysis> analyses = List.of(
-                mockAnalysis(thisWeekStart.plusDays(1), 90,
+                mockAnalysis(thisWeekStart.plus(1, ChronoUnit.DAYS), 90,
                         BigDecimal.valueOf(85), BigDecimal.valueOf(72), BigDecimal.valueOf(88), BigDecimal.valueOf(63))
         );
         given(analysisRepository.findByUserAndStatusSince(eq(1L), eq(AnalysisStatus.COMPLETED), any()))
@@ -240,8 +240,8 @@ class StatisticsServiceTest {
         stubBaseline(1L);
 
         List<Analysis> analyses = List.of(
-                mockAnalysis(thisWeekStart.plusDays(1), 80, null, null, null, null),
-                mockAnalysis(thisWeekStart.plusDays(1), null, null, null, null, null)
+                mockAnalysis(thisWeekStart.plus(1, ChronoUnit.DAYS), 80, null, null, null, null),
+                mockAnalysis(thisWeekStart.plus(1, ChronoUnit.DAYS), null, null, null, null, null)
         );
         given(analysisRepository.findByUserAndStatusSince(eq(1L), eq(AnalysisStatus.COMPLETED), any()))
                 .willReturn(analyses);
@@ -256,14 +256,14 @@ class StatisticsServiceTest {
     void getStatistics_playingVsAnalysisCount_areIndependent() {
         stubBaseline(1L);
 
-        List<Playing> playings = List.of(mockPlaying(thisWeekStart.plusDays(1), 600));
+        List<Playing> playings = List.of(mockPlaying(thisWeekStart.plus(1, ChronoUnit.DAYS), 600));
         given(playingRepository.findByUserAndStatusSince(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(playings);
 
         List<Analysis> analyses = List.of(
-                mockAnalysis(thisWeekStart.plusDays(1), 80, null, null, null, null),
-                mockAnalysis(thisWeekStart.plusDays(1), 90, null, null, null, null),
-                mockAnalysis(thisWeekStart.plusDays(1), 100, null, null, null, null)
+                mockAnalysis(thisWeekStart.plus(1, ChronoUnit.DAYS), 80, null, null, null, null),
+                mockAnalysis(thisWeekStart.plus(1, ChronoUnit.DAYS), 90, null, null, null, null),
+                mockAnalysis(thisWeekStart.plus(1, ChronoUnit.DAYS), 100, null, null, null, null)
         );
         given(analysisRepository.findByUserAndStatusSince(eq(1L), eq(AnalysisStatus.COMPLETED), any()))
                 .willReturn(analyses);
@@ -280,10 +280,10 @@ class StatisticsServiceTest {
         stubBaseline(1L);
 
         List<Analysis> analyses = List.of(
-                mockAnalysis(thisWeekStart.plusDays(1), 93, null, null, null, null),
-                mockAnalysis(thisWeekStart.minusWeeks(1).plusDays(1), 63, null, null, null, null),
-                mockAnalysis(thisWeekStart.minusWeeks(2).plusDays(1), 78, null, null, null, null),
-                mockAnalysis(thisWeekStart.minusWeeks(3).plusDays(1), 60, null, null, null, null)
+                mockAnalysis(thisWeekStart.plus(1, ChronoUnit.DAYS), 93, null, null, null, null),
+                mockAnalysis(thisWeekStart.minus(6, ChronoUnit.DAYS), 63, null, null, null, null),
+                mockAnalysis(thisWeekStart.minus(13, ChronoUnit.DAYS), 78, null, null, null, null),
+                mockAnalysis(thisWeekStart.minus(20, ChronoUnit.DAYS), 60, null, null, null, null)
         );
         given(analysisRepository.findByUserAndStatusSince(eq(1L), eq(AnalysisStatus.COMPLETED), any()))
                 .willReturn(analyses);
@@ -307,7 +307,7 @@ class StatisticsServiceTest {
         stubBaseline(1L);
 
         List<Analysis> analyses = List.of(
-                mockAnalysis(thisWeekStart.minusWeeks(4).minusDays(1), 999, null, null, null, null)
+                mockAnalysis(thisWeekStart.minus(29, ChronoUnit.DAYS), 999, null, null, null, null)
         );
         given(analysisRepository.findByUserAndStatusSince(eq(1L), eq(AnalysisStatus.COMPLETED), any()))
                 .willReturn(analyses);
