@@ -2,6 +2,7 @@ package com.mr.global.file.s3.service;
 
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.file.s3.config.S3Properties;
+import com.mr.global.file.s3.enums.S3FileType;
 import com.mr.global.file.s3.exception.S3ErrorStatus;
 import com.mr.global.file.s3.util.ContentTypeUtils;
 import org.springframework.stereotype.Component;
@@ -31,9 +32,11 @@ public class S3ObjectKeyGenerator {
     }
 
     // 사용자별 S3 Object Key를 생성
-    // 생성 예시: recordings/1/2026-08-05/152310_a1b2c3.webm
+    // 생성 예시1 : recordings/1/2026-08-05/152310_a1b2c3.webm
+    // 생성 예시2 : backing-tracks/1/2026-08-05/152310_a1b2c3.webm
     public String generate(
             Long userId,
+            S3FileType fileType,
             String originalFileName,
             String contentType
     ) {
@@ -52,19 +55,19 @@ public class S3ObjectKeyGenerator {
                 );
 
         return "%s/%d/%s/%s".formatted(
-                s3Properties.keyPrefix(),
+                fileType.getPrefix(),
                 userId,
                 now.format(DATE_FORMATTER),
                 generatedFileName
         );
     }
 
-    public boolean belongsToOwner(Long ownerId, String objectKey) {
+    public boolean belongsToOwner(Long ownerId, S3FileType fileType, String objectKey) {
         if (ownerId == null || objectKey == null) {
             return false;
         }
 
-        String expectedPrefix = s3Properties.keyPrefix() + "/" + ownerId + "/";
+        String expectedPrefix = fileType.getPrefix() + "/" + ownerId + "/";
 
         return objectKey.startsWith(expectedPrefix);
     }

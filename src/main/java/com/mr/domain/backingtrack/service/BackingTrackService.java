@@ -6,12 +6,14 @@ import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.backingtrack.dto.req.BackingTrackListRequestDTO;
 import com.mr.domain.backingtrack.dto.req.BackingTrackSaveRequestDTO;
+import com.mr.domain.backingtrack.dto.req.BackingTrackUploadUrlRequest;
 import com.mr.domain.backingtrack.dto.req.PlayCountIncreaseRequestDTO;
 import com.mr.domain.backingtrack.dto.res.BackingTrackCreateResponseDTO;
 import com.mr.domain.backingtrack.dto.res.BackingTrackDetailResponseDTO;
 import com.mr.domain.backingtrack.dto.res.BackingTrackListResponseDTO;
 import com.mr.domain.backingtrack.dto.res.BackingTrackRecommendedResponseDTO;
 import com.mr.domain.backingtrack.dto.res.BackingTrackUpdateResponseDTO;
+import com.mr.domain.backingtrack.dto.res.BackingTrackUploadUrlResponse;
 import com.mr.domain.backingtrack.dto.res.PlayCountIncreaseResponseDTO;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.backingtrack.entity.ChordProgression;
@@ -22,12 +24,12 @@ import com.mr.domain.user.entity.User;
 import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.enums.S3FileType;
+import com.mr.global.file.s3.service.S3FileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +47,7 @@ public class BackingTrackService {
     private final BackingTrackRepository backingTrackRepository;
     private final UserRepository userRepository;
     private final AnalysisRepository analysisRepository;
+    private final S3FileService s3FileService;
 
     private static final Long TEMP_DEFAULT_ACADEMY_ID = 1L; // MVP 임시 학원 ID
     private static final int PAGE_SIZE = 9;
@@ -53,13 +56,22 @@ public class BackingTrackService {
     @Transactional
     public BackingTrackCreateResponseDTO.CreateResultDTO createBackingTrack(
             Long userId,
-            BackingTrackSaveRequestDTO.SaveDTO request
+            BackingTrackSaveRequestDTO.CreateDTO request
     ){
         validateChordDuplicates(request.chordProgression());
         validateChordSequence(request.timeSignature(), request.chordProgression());
 
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
+
+        String audioObjectKey =
+                request.audioObjectKey() == null || request.audioObjectKey().isBlank()
+                        ? null
+                        : request.audioObjectKey();
+
+        if (audioObjectKey != null) {
+            s3FileService.validateUploadedFile(userId, S3FileType.BACKING_TRACK, audioObjectKey);
+        }
 
         BackingTrack backingTrack = BackingTrack.create(
                 user,
@@ -71,7 +83,7 @@ public class BackingTrackService {
                 request.timeSignature(),
                 request.bpm(),
                 request.playtimeSec(),
-                request.audioFileUrl(),
+                audioObjectKey,
                 null,   // midi 데이터는 생성 시 null로 초기화 (mvp후 별도 API나 이벤트로 업데이트)
                 request.accessLevel(),
                 request.level()
@@ -96,12 +108,23 @@ public class BackingTrackService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public BackingTrackUploadUrlResponse createAudioUploadUrl(
+            Long userId, BackingTrackUploadUrlRequest request
+    ) {
+        return BackingTrackUploadUrlResponse.from(s3FileService.createPresignedUpload(
+                userId,
+                S3FileType.BACKING_TRACK,
+                request.toCommand()
+        ));
+    }
+
     // 백킹트랙 수정
     @Transactional
     public BackingTrackUpdateResponseDTO.UpdateResultDTO updateBackingTrack(
             Long userId,
             Long backingTrackId,
-            BackingTrackSaveRequestDTO.SaveDTO request
+            BackingTrackSaveRequestDTO.UpdateDTO request
     ) {
         validateChordDuplicates(request.chordProgression());
         validateChordSequence(request.timeSignature(), request.chordProgression());
@@ -121,7 +144,6 @@ public class BackingTrackService {
                 request.timeSignature(),
                 request.bpm(),
                 request.playtimeSec(),
-                request.audioFileUrl(),
                 request.accessLevel(),
                 request.level()
         );
@@ -279,6 +301,15 @@ public class BackingTrackService {
 
         String creatorName = track.getUser().getNickname();
 
+        String audioFileUrl = null;
+        if (track.getAudioObjectKey() != null && !track.getAudioObjectKey().isBlank()) {
+            audioFileUrl = s3FileService.createPresignedDownload(
+                    track.getUser().getUserId(),
+                    S3FileType.BACKING_TRACK,
+                    track.getAudioObjectKey()
+            );
+        }
+
         return BackingTrackDetailResponseDTO.DetailResponseDTO.of(
                 track.getId(),
                 track.getTitle(),
@@ -290,7 +321,7 @@ public class BackingTrackService {
                 track.getPlaytimeSec(),
                 track.getLevel().name(),
                 creatorName,
-                track.getAudioFileUrl(),
+                audioFileUrl,
                 chordDetails
         );
     }

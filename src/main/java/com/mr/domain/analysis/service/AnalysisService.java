@@ -16,11 +16,13 @@ import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.analysis.factory.AnalysisRequestFactory;
 import com.mr.domain.analysis.repository.AnalysisReportRepository;
 import com.mr.domain.analysis.repository.AnalysisRepository;
+import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.enums.S3FileType;
 import com.mr.global.file.s3.service.S3FileService;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -109,14 +111,33 @@ public class AnalysisService {
         String recordingFileUrl =
                 s3FileService.createPresignedDownload(
                         userId,
+                        S3FileType.RECORDING,
                         analysis.getPlaying().getRecordingObjectKey()
                 );
+
+        BackingTrack backingTrack =
+                analysis.getPlaying().getBackingTrack();
+
+        String backingTrackAudioFileUrl = null;
+
+        if (backingTrack != null
+                && backingTrack.getAudioObjectKey() != null
+                && !backingTrack.getAudioObjectKey().isBlank()) {
+
+            backingTrackAudioFileUrl =
+                    s3FileService.createPresignedDownload(
+                            backingTrack.getUser().getUserId(),
+                            S3FileType.BACKING_TRACK,
+                            backingTrack.getAudioObjectKey()
+                    );
+        }
 
         return AnalysisResultResponseDTO.from(
                 analysis,
                 analysisReport,
                 rawResult,
-                recordingFileUrl
+                recordingFileUrl,
+                backingTrackAudioFileUrl
         );
     }
 

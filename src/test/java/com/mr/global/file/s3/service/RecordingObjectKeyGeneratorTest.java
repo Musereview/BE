@@ -9,6 +9,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
 
+import com.mr.global.file.s3.enums.S3FileType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -24,6 +25,7 @@ class RecordingObjectKeyGeneratorTest {
     private static final ZoneId KOREA_ZONE_ID = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final S3FileType FILE_TYPE = S3FileType.RECORDING;
 
     private S3ObjectKeyGenerator objectKeyGenerator;
 
@@ -66,6 +68,7 @@ class RecordingObjectKeyGeneratorTest {
             // when
             String objectKey = objectKeyGenerator.generate(
                     userId,
+                    FILE_TYPE,
                     "recording.mp3",
                     "audio/mpeg"
             );
@@ -123,6 +126,7 @@ class RecordingObjectKeyGeneratorTest {
             // when
             String objectKey = objectKeyGenerator.generate(
                     userId,
+                    FILE_TYPE,
                     "recording.wav",
                     "audio/wav"
             );
@@ -147,6 +151,7 @@ class RecordingObjectKeyGeneratorTest {
             // when
             String objectKey = objectKeyGenerator.generate(
                     userId,
+                    FILE_TYPE,
                     "recording",
                     "audio/mpeg"
             );
@@ -170,6 +175,7 @@ class RecordingObjectKeyGeneratorTest {
             // when
             String objectKey = objectKeyGenerator.generate(
                     userId,
+                    FILE_TYPE,
                     "recording",
                     "audio/x-wav"
             );
@@ -191,6 +197,7 @@ class RecordingObjectKeyGeneratorTest {
             assertThatThrownBy(() ->
                     objectKeyGenerator.generate(
                             1L,
+                            FILE_TYPE,
                             "recording.m4a",
                             "audio/mpeg"
                     )
@@ -215,6 +222,7 @@ class RecordingObjectKeyGeneratorTest {
             assertThatThrownBy(() ->
                     objectKeyGenerator.generate(
                             1L,
+                            FILE_TYPE,
                             "recording",
                             "audio/mp4"
                     )
@@ -250,6 +258,7 @@ class RecordingObjectKeyGeneratorTest {
             boolean result =
                     objectKeyGenerator.belongsToOwner(
                             userId,
+                            FILE_TYPE,
                             objectKey
                     );
 
@@ -271,6 +280,7 @@ class RecordingObjectKeyGeneratorTest {
             boolean result =
                     objectKeyGenerator.belongsToOwner(
                             userId,
+                            FILE_TYPE,
                             objectKey
                     );
 
@@ -285,6 +295,7 @@ class RecordingObjectKeyGeneratorTest {
             assertThat(
                     objectKeyGenerator.belongsToOwner(
                             null,
+                            FILE_TYPE,
                             "recordings/1/2026-08-02/test.mp3"
                     )
             )
@@ -297,6 +308,7 @@ class RecordingObjectKeyGeneratorTest {
             assertThat(
                     objectKeyGenerator.belongsToOwner(
                             1L,
+                            FILE_TYPE,
                             null
                     )
             )
@@ -309,6 +321,7 @@ class RecordingObjectKeyGeneratorTest {
             assertThat(
                     objectKeyGenerator.belongsToOwner(
                             1L,
+                            FILE_TYPE,
                             " "
                     )
             )

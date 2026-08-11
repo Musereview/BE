@@ -27,6 +27,7 @@ import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.enums.S3FileType;
 import com.mr.global.file.s3.service.S3FileService;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -276,14 +277,20 @@ class HistoryServiceTest {
     @DisplayName("getHistoryDetail - 정상 조회 시 상태 무관하게 모든 분석을 반환한다")
     void getHistoryDetail_success_returnsAllAnalysesRegardlessOfStatus() {
         Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, LocalDateTime.now());
+        User backingTrackOwner = mock(User.class);
         BackingTrack backingTrack = mock(BackingTrack.class);
         String recordingObjectKey = "recordings/1/2026-08-06/test.webm";
         String recordingFileUrl = "https://example.com/presigned-recording.webm";
-        String backingTrackAudioFileUrl = backingTrack.toString();
+        String backingTrackObjectKey ="backing-tracks/2/2026-08-06/test.mp3";
+        String backingTrackAudioFileUrl = "https://example.com/presigned-backing-track.mp3";
         given(playing.getRecordingObjectKey()).willReturn(recordingObjectKey);
-        given(s3FileService.createPresignedDownload(1L, recordingObjectKey)).willReturn(recordingFileUrl);
+        given(s3FileService.createPresignedDownload(1L, S3FileType.RECORDING, recordingObjectKey)).willReturn(recordingFileUrl);
         given(playing.getBackingTrack()).willReturn(backingTrack);
-        given(backingTrack.getAudioFileUrl()).willReturn(backingTrackAudioFileUrl);
+        given(backingTrack.getUser()).willReturn(backingTrackOwner);
+        given(backingTrackOwner.getUserId()).willReturn(2L);
+        given(backingTrack.getAudioObjectKey()).willReturn(backingTrackObjectKey);
+        given(s3FileService.createPresignedDownload(2L, S3FileType.BACKING_TRACK, backingTrackObjectKey
+        )).willReturn(backingTrackAudioFileUrl);
         given(backingTrack.getTimeSignature()).willReturn("4/4");
         given(backingTrack.getPlaytimeSec()).willReturn(120);
         given(playingRepository.findByIdWithBackingTrack(1L)).willReturn(Optional.of(playing));
@@ -298,7 +305,7 @@ class HistoryServiceTest {
 
         HistoryDetailResponseDTO response = historyService.getHistoryDetail(1L, 1L);
 
-        verify(s3FileService).createPresignedDownload(1L, recordingObjectKey);
+        verify(s3FileService).createPresignedDownload(1L, S3FileType.RECORDING, recordingObjectKey);
 
         assertThat(response.recordingFileUrl()).isEqualTo(recordingFileUrl);
         assertThat(response.backingTrackAudioFileUrl()).isEqualTo(backingTrackAudioFileUrl);
