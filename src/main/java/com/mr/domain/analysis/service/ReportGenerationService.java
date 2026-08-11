@@ -113,7 +113,7 @@ public class ReportGenerationService {
             );
         } catch (Exception exception) {
             log.warn("Gemini report generation failed; using rule-based fallback.", exception);
-            JsonNode enrichedResult = analysisResultEnricher.enrich(analysisResult);
+            JsonNode enrichedResult = analysisResultEnricher.regenerateSummary(analysisResult);
             return new GeneratedAnalysisReport(
                     ReportGenerationType.RULE_BASED,
                     enrichedResult.path("summary").asText(),

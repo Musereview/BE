@@ -85,6 +85,19 @@ class AnalysisResultEnricherTest {
     }
 
     @Test
+    void regenerateSummary_replacesExistingSummaryWithoutChangingOriginal() throws Exception {
+        JsonNode original = resultWithoutSummary();
+        ((com.fasterxml.jackson.databind.node.ObjectNode) original).put("summary", "기존 요약");
+
+        JsonNode regenerated = enricher.regenerateSummary(original);
+
+        assertThat(regenerated.path("summary").asText())
+                .isNotEqualTo("기존 요약")
+                .contains("조성에 어울리는 음 선택");
+        assertThat(original.path("summary").asText()).isEqualTo("기존 요약");
+    }
+
+    @Test
     void withSummary_replacesSummaryWithoutChangingOriginal() throws Exception {
         JsonNode original = resultWithoutSummary();
         ((com.fasterxml.jackson.databind.node.ObjectNode) original).put("summary", "기존 요약");

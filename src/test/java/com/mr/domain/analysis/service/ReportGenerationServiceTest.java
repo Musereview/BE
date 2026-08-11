@@ -177,6 +177,22 @@ class ReportGenerationServiceTest {
     }
 
     @Test
+    void generate_regeneratesSummaryOnFallbackEvenWhenInputHasExistingSummary() {
+        ((com.fasterxml.jackson.databind.node.ObjectNode) result).put("summary", "재사용하면 안 되는 기존 요약");
+        given(geminiClient.generateReport(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString()
+        )).willThrow(new RuntimeException("quota exceeded"));
+
+        GeneratedAnalysisReport report = service.generate(result);
+
+        assertThat(report.generationType()).isEqualTo(ReportGenerationType.RULE_BASED);
+        assertThat(report.summary()).isNotEqualTo("재사용하면 안 되는 기존 요약");
+        assertThat(report.content()).doesNotContain("재사용하면 안 되는 기존 요약");
+        assertThat(result.path("summary").asText()).isEqualTo("재사용하면 안 되는 기존 요약");
+    }
+
+    @Test
     void generate_fallsBackWhenGeminiReportIs699Characters() {
         given(geminiClient.generateReport(
                 org.mockito.ArgumentMatchers.anyString(),

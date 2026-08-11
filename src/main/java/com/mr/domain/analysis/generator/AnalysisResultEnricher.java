@@ -17,6 +17,10 @@ public class AnalysisResultEnricher {
             return result;
         }
 
+        return regenerateSummary(result);
+    }
+
+    public JsonNode regenerateSummary(JsonNode result) {
         ObjectNode enriched = ((ObjectNode) result).deepCopy();
         enriched.put("summary", generateSummary(result));
         return enriched;
