@@ -5,6 +5,7 @@ import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.analysis.service.AnalysisBarCalculator;
 import com.mr.domain.analysis.service.AnalysisBarCalculator.BarMetrics;
+import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.history.dto.req.HistoryPeriod;
 import com.mr.domain.history.dto.res.HistoryDetailResponseDTO;
 import com.mr.domain.history.dto.res.HistoryListResponseDTO;
@@ -14,6 +15,7 @@ import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.enums.S3FileType;
 import com.mr.global.file.s3.service.S3FileService;
 import com.mr.global.util.RelativeDateFormatter;
 import java.time.LocalDateTime;
@@ -77,11 +79,28 @@ public class HistoryService {
         String recordingFileUrl =
                 s3FileService.createPresignedDownload(
                         userId,
+                        S3FileType.RECORDING,
                         playing.getRecordingObjectKey()
                 );
 
+        BackingTrack backingTrack = playing.getBackingTrack();
+
+        String backingTrackAudioFileUrl = null;
+
+        if (backingTrack != null
+                && backingTrack.getAudioObjectKey() != null
+                && !backingTrack.getAudioObjectKey().isBlank()) {
+
+            backingTrackAudioFileUrl =
+                    s3FileService.createPresignedDownload(
+                            backingTrack.getUser().getUserId(),
+                            S3FileType.BACKING_TRACK,
+                            backingTrack.getAudioObjectKey()
+                    );
+        }
+
         return HistoryDetailResponseDTO.from(
-                playing, analyses, recordingFileUrl, resolveBarMetrics(playing));
+                playing, analyses, recordingFileUrl, backingTrackAudioFileUrl, resolveBarMetrics(playing));
     }
 
     // 백킹트랙 정보 불완전 시 조회 실패 대신 마디 관련 필드만 null 처리

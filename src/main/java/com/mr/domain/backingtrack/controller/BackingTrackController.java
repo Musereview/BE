@@ -2,12 +2,14 @@ package com.mr.domain.backingtrack.controller;
 
 import com.mr.domain.backingtrack.dto.req.BackingTrackListRequestDTO;
 import com.mr.domain.backingtrack.dto.req.BackingTrackSaveRequestDTO;
+import com.mr.domain.backingtrack.dto.req.BackingTrackUploadUrlRequest;
 import com.mr.domain.backingtrack.dto.req.PlayCountIncreaseRequestDTO;
 import com.mr.domain.backingtrack.dto.res.BackingTrackCreateResponseDTO;
 import com.mr.domain.backingtrack.dto.res.BackingTrackDetailResponseDTO;
 import com.mr.domain.backingtrack.dto.res.BackingTrackListResponseDTO;
 import com.mr.domain.backingtrack.dto.res.BackingTrackRecommendedResponseDTO;
 import com.mr.domain.backingtrack.dto.res.BackingTrackUpdateResponseDTO;
+import com.mr.domain.backingtrack.dto.res.BackingTrackUploadUrlResponse;
 import com.mr.domain.backingtrack.dto.res.PlayCountIncreaseResponseDTO;
 import com.mr.domain.backingtrack.service.BackingTrackService;
 import com.mr.global.apipayload.ApiResponse;
@@ -45,12 +47,35 @@ public class BackingTrackController {
     @PostMapping
     public ApiResponse<BackingTrackCreateResponseDTO.CreateResultDTO> createBackingTrack(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid @RequestBody BackingTrackSaveRequestDTO.SaveDTO request
+            @Valid @RequestBody BackingTrackSaveRequestDTO.CreateDTO request
     ) {
         BackingTrackCreateResponseDTO.CreateResultDTO result =
                 backingTrackService.createBackingTrack(userDetails.getUserId(), request);
 
         return ApiResponse.onSuccess(result);
+    }
+
+    @Operation(
+            summary = "백킹트랙 오디오 파일 업로드 URL 발급",
+            description = """
+                백킹트랙 생성 시 첨부할 오디오 파일을 S3에 직접 업로드하기 위한
+                Presigned PUT URL을 발급합니다.
+
+                파일 업로드 후 반환된 objectKey를
+                백킹트랙 생성 API의 audioObjectKey 필드로 전달합니다.
+                """
+    )
+    @PostMapping("/audio-upload-url")
+    public ApiResponse<BackingTrackUploadUrlResponse> createAudioUploadUrl(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody BackingTrackUploadUrlRequest request
+    ) {
+        return ApiResponse.onSuccess(
+                backingTrackService.createAudioUploadUrl(
+                        userDetails.getUserId(),
+                        request
+                )
+        );
     }
 
     @Operation(
@@ -61,7 +86,7 @@ public class BackingTrackController {
     public ApiResponse<BackingTrackUpdateResponseDTO.UpdateResultDTO> updateBackingTrack(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable @Min(value = 1, message = "BACKING_TRACK_400_23") Long backingTrackId,
-            @Valid @RequestBody BackingTrackSaveRequestDTO.SaveDTO request
+            @Valid @RequestBody BackingTrackSaveRequestDTO.UpdateDTO request
     ) {
         Long userId = userDetails.getUserId();
         BackingTrackUpdateResponseDTO.UpdateResultDTO result =
