@@ -266,7 +266,7 @@ class HomeServiceTest {
         given(learning.getDifficulty()).willReturn(com.mr.domain.learning.entity.enums.LearningDifficulty.ADVANCED);
 
         LearningHomeResponseDTO.CurrentLearning currentLearning =
-                LearningHomeResponseDTO.CurrentLearning.of(learning, "11th 텐션 노트 활용하기", "RETRY", 10, 13L);
+                LearningHomeResponseDTO.CurrentLearning.of(learning, "11th 텐션 노트 활용하기", 10, 13L);
         given(learningService.getCurrentLearning(1L)).willReturn(currentLearning);
 
         HomeResponseDTO response = homeService.getHome(1L);
@@ -275,7 +275,6 @@ class HomeServiceTest {
         assertThat(response.currentLearning().learningId()).isEqualTo(5L);
         assertThat(response.currentLearning().subtitle()).isEqualTo("11th 텐션 노트 활용하기");
         assertThat(response.currentLearning().level()).isEqualTo("ADVANCED");
-        assertThat(response.currentLearning().status()).isEqualTo("RETRY");
         assertThat(response.currentLearning().progressRate()).isEqualTo(10);
         assertThat(response.currentLearning().nextStepId()).isEqualTo(13L);
     }
@@ -318,7 +317,7 @@ class HomeServiceTest {
         given(learning.getDifficulty()).willReturn(com.mr.domain.learning.entity.enums.LearningDifficulty.ADVANCED);
 
         LearningHomeResponseDTO.CurrentLearning currentLearning =
-                LearningHomeResponseDTO.CurrentLearning.of(learning, "11th 텐션 노트 활용하기", "RETRY", 10, 13L);
+                LearningHomeResponseDTO.CurrentLearning.of(learning, "11th 텐션 노트 활용하기", 10, 13L);
         given(learningService.getCurrentLearning(1L)).willReturn(currentLearning);
         given(learningService.getRecommendedLearnings(1L, 13L)).willReturn(List.of());
 

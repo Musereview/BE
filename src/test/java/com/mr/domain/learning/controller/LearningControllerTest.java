@@ -243,7 +243,7 @@ class LearningControllerTest {
     @DisplayName("GET /api/learnings/home - 학습 홈 조회 성공")
     void getHome_success() throws Exception {
         LearningHomeResponseDTO.CurrentLearning currentLearning =
-                new LearningHomeResponseDTO.CurrentLearning(1L, "Tension Notes", "ADVANCED", "11th 텐션 노트 활용하기", "RETRY", 10, 13L);
+                new LearningHomeResponseDTO.CurrentLearning(1L, "Tension Notes", "ADVANCED", "11th 텐션 노트 활용하기", 10, 13L);
         LearningHomeResponseDTO.TheoryPackageItem theoryItem =
                 new LearningHomeResponseDTO.TheoryPackageItem(2L, "Diatonic Chords", "BEGINNER", "요약");
         LearningAccompanimentListResponseDTO.AccompanimentItem accompanimentItem =
@@ -255,7 +255,6 @@ class LearningControllerTest {
         mockMvc.perform(get("/api/learnings/home"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.currentLearning.stepTitle").value("11th 텐션 노트 활용하기"))
-                .andExpect(jsonPath("$.data.currentLearning.status").value("RETRY"))
                 .andExpect(jsonPath("$.data.currentLearning.nextStepId").value(13))
                 .andExpect(jsonPath("$.data.theoryPackages[0].title").value("Diatonic Chords"))
                 .andExpect(jsonPath("$.data.accompanimentPackages[0].progressRate").value(100));

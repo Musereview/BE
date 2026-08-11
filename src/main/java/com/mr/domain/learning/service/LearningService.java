@@ -277,7 +277,7 @@ public class LearningService {
 
             return LearningHomeResponseDTO.CurrentLearning.of(
                     progress.getLearning(), progress.getLearningStep().getTitle(),
-                    progress.getLearningStatus(), progressRate, nextStepId);
+                    progressRate, nextStepId);
         }
 
         return null;

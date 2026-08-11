@@ -448,7 +448,6 @@ class LearningServiceTest {
         when(latest.getLearning()).thenReturn(currentPackage);
         when(latest.getLearningStep()).thenReturn(lastStep);
         when(latest.getScore()).thenReturn(93);
-        when(latest.getLearningStatus()).thenReturn("COMPLETED");
 
         LearningStep step1 = mock(LearningStep.class);
         when(step1.getStepNo()).thenReturn(1);
@@ -488,7 +487,6 @@ class LearningServiceTest {
 
         assertThat(result.currentLearning()).isNotNull();
         assertThat(result.currentLearning().stepTitle()).isEqualTo("11th 텐션 노트 활용하기");
-        assertThat(result.currentLearning().status()).isEqualTo("COMPLETED");
         assertThat(result.currentLearning().progressRate()).isEqualTo(25);
         assertThat(result.currentLearning().nextStepId()).isEqualTo(13L);
         assertThat(result.theoryPackages()).hasSize(1);
@@ -513,7 +511,6 @@ class LearningServiceTest {
         when(latest.getLearning()).thenReturn(currentPackage);
         when(latest.getLearningStep()).thenReturn(lastStep);
         when(latest.getScore()).thenReturn(50);
-        when(latest.getLearningStatus()).thenReturn("RETRY");
 
         when(userRepository.existsById(userId)).thenReturn(true);
         when(userLearningProgressRepository.findTop20ByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(userId))
@@ -529,7 +526,6 @@ class LearningServiceTest {
 
         assertThat(result.currentLearning()).isNotNull();
         assertThat(result.currentLearning().stepTitle()).isEqualTo("11th 텐션 노트 활용하기");
-        assertThat(result.currentLearning().status()).isEqualTo("RETRY");
         assertThat(result.currentLearning().progressRate()).isEqualTo(0);
         assertThat(result.currentLearning().nextStepId()).isEqualTo(12L);
     }
@@ -632,7 +628,6 @@ class LearningServiceTest {
         when(progressA.getLearning()).thenReturn(packageA);
         when(progressA.getLearningStep()).thenReturn(stepA2);
         when(progressA.getScore()).thenReturn(60);
-        when(progressA.getLearningStatus()).thenReturn("RETRY");
 
         when(userRepository.existsById(userId)).thenReturn(true);
         // last_studied_at 최신순 — 방금 끝낸 B가 맨 앞, 그 전에 재도전한 A가 뒤에 옴
@@ -653,7 +648,6 @@ class LearningServiceTest {
         assertThat(result.currentLearning()).isNotNull();
         assertThat(result.currentLearning().learningId()).isEqualTo(1L);
         assertThat(result.currentLearning().stepTitle()).isEqualTo("11th 텐션 노트 활용하기");
-        assertThat(result.currentLearning().status()).isEqualTo("RETRY");
         assertThat(result.currentLearning().progressRate()).isEqualTo(0);
         assertThat(result.currentLearning().nextStepId()).isEqualTo(12L);
     }

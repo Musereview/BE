@@ -111,9 +111,6 @@ public record HomeResponseDTO(
             @Schema(description = "패키지 난이도", example = "ADVANCED")
             String level,
 
-            @Schema(description = "단계 상태. RETRY(재도전) 또는 COMPLETED(완료)", example = "RETRY")
-            String status,
-
             @Schema(description = "패키지 진행률(%), 0~99", example = "10")
             int progressRate,
 
@@ -131,7 +128,6 @@ public record HomeResponseDTO(
                     currentLearning.title(),
                     currentLearning.stepTitle(),
                     currentLearning.difficulty(),
-                    currentLearning.status(),
                     currentLearning.progressRate(),
                     currentLearning.nextStepId()
             );
