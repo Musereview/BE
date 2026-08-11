@@ -16,6 +16,8 @@ import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -220,6 +222,23 @@ class ReportGenerationServiceTest {
         GeneratedAnalysisReport report = service.generate(result);
 
         assertThat(report.generationType()).isEqualTo(ReportGenerationType.RULE_BASED);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {700, 1_500})
+    void generate_acceptsGeminiReportAtValidLengthBoundaries(int reportLength) {
+        given(geminiClient.generateReport(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString()
+        )).willReturn(new GeminiGenerationResult(
+                structuredResponse(reportWithLength(reportLength)),
+                100, 50, 150, false
+        ));
+
+        GeneratedAnalysisReport report = service.generate(result);
+
+        assertThat(report.generationType()).isEqualTo(ReportGenerationType.LLM);
+        assertThat(report.content()).hasSize(reportLength);
     }
 
     @Test
