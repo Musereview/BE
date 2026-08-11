@@ -139,7 +139,7 @@ public class BackingTrackController {
     }
 
     @Operation(
-            summary = "추천 백킹크랙 조회API",
+            summary = "추천 백킹트랙 조회API",
             description = "최근 1주일 기준으로 AI 분석이 완료(COMPLETED)된 백킹트랙 중 playCount가 높은 TOP3 백킹트랙을 조회\n" +
                     "playCount 내림차순으로 정렬"
     )
