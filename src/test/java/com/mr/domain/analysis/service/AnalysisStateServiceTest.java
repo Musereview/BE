@@ -41,7 +41,7 @@ import org.springframework.context.ApplicationEventPublisher;
 @ExtendWith(MockitoExtension.class)
 class AnalysisStateServiceTest {
 
-    private static final Instant PROCESSING_STARTED_AT = Instant.parse("2026-07-31T12:00:00Z");
+    private static final Instant PROCESSING_STARTED_AT = Instant.parse("2026-07-31T03:00:00Z");
     private static final Clock FIXED_CLOCK = Clock.fixed(
             Instant.parse("2026-07-31T03:00:00Z"),
             ZoneId.of("Asia/Seoul")

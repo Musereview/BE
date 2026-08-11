@@ -592,16 +592,17 @@ class PlayingServiceTest {
                     .atStartOfDay(zoneId)
                     .toInstant();
 
-            when(clock.instant())
+            // lenient() 를 붙여서 불필요한 스터빙 에러를 방지합니다.
+            org.mockito.Mockito.lenient().when(clock.instant())
                     .thenReturn(fixedInstant);
 
-            when(clock.getZone())
+            org.mockito.Mockito.lenient().when(clock.getZone())
                     .thenReturn(zoneId);
 
-            when(playing.getStatus())
+            org.mockito.Mockito.lenient().when(playing.getStatus())
                     .thenReturn(PlayingStatus.COMPLETED);
 
-            when(playing.getDurationSec())
+            org.mockito.Mockito.lenient().when(playing.getDurationSec())
                     .thenReturn(300);
 
             Instant weekStart = fixedDate
@@ -609,7 +610,7 @@ class PlayingServiceTest {
                     .atStartOfDay(ZoneId.of("Asia/Seoul"))
                     .toInstant();
 
-            when(playingRepository.sumDurationSecExcludeCurrent(
+            org.mockito.Mockito.lenient().when(playingRepository.sumDurationSecExcludeCurrent(
                     userId,
                     PlayingStatus.COMPLETED,
                     weekStart,
