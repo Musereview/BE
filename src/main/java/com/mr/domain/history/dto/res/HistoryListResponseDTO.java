@@ -1,8 +1,10 @@
 package com.mr.domain.history.dto.res;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.Playing;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 import java.util.List;
@@ -26,7 +28,11 @@ public record HistoryListResponseDTO(
             Integer scoreChange,
             Integer durationMinutes,
             Integer durationSec,
+
+            @Schema(description = "연주 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
             Instant playedAt,
+
             String relativeDate
     ) {
 

@@ -1,9 +1,11 @@
 package com.mr.domain.notification.dto.res;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mr.domain.notification.entity.Notification;
 import com.mr.domain.notification.exception.NotificationErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.NotificationEvent;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 
@@ -15,6 +17,9 @@ public record NotificationResponseDTO (
         String content,
         Boolean isRead,
         Long targetId,
+
+        @Schema(description = "알림 생성 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
         Instant createdAt
 ) {
     public static NotificationResponseDTO from(Notification notification) {

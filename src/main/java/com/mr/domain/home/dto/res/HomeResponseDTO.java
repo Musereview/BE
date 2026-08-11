@@ -1,5 +1,6 @@
 package com.mr.domain.home.dto.res;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.learning.dto.res.LearningHomeResponseDTO;
 import com.mr.domain.playing.entity.Playing;
@@ -180,7 +181,8 @@ public record HomeResponseDTO(
             @Schema(description = "BPM", example = "120")
             Integer bpm,
 
-            @Schema(description = "연습 종료 시각", example = "2026-05-04T14:32:00Z")
+            @Schema(description = "연습 종료 시각 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
             Instant playedAt,
 
             @Schema(description = "상대 시간 표기", example = "오늘")
