@@ -26,7 +26,9 @@ public record AnalysisContextResponse(
         Integer totalBars
 ) {
 
-    public static AnalysisContextResponse from(Playing playing, int totalBars, String recordingFileUrl) {
+    public static AnalysisContextResponse from(
+            Playing playing, int totalBars, String recordingFileUrl, String backingTrackAudioFileUrl)
+    {
         BackingTrack backingTrack = playing.getBackingTrack();
 
         return new AnalysisContextResponse(
@@ -40,7 +42,7 @@ public record AnalysisContextResponse(
                 toDurationMinutes(playing.getDurationSec()),
                 playing.getDurationSec(),
                 recordingFileUrl,
-                backingTrack.getAudioFileUrl(),
+                backingTrackAudioFileUrl,
                 playing.getMidiData().stream().map(MidiEvent::from).toList(),
                 backingTrack.getMidiData(),
                 totalBars
