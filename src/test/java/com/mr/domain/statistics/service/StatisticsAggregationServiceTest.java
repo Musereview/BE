@@ -32,7 +32,6 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
@@ -98,7 +97,7 @@ class StatisticsAggregationServiceTest {
     }
 
     private PlayingRepository.PracticeTotals mockPracticeTotals(
-            long sessionCount, long totalDurationSec, LocalDateTime lastEndedAt) {
+            long sessionCount, long totalDurationSec, Instant lastEndedAt) {
         PlayingRepository.PracticeTotals totals = mock(PlayingRepository.PracticeTotals.class);
         lenient().when(totals.getSessionCount()).thenReturn(sessionCount);
         lenient().when(totals.getTotalDurationSec()).thenReturn(totalDurationSec);
@@ -146,7 +145,7 @@ class StatisticsAggregationServiceTest {
     @DisplayName("onPlayingCompleted - UserStatistics가 없으면 새로 만들어 전체 기간 집계값을 채운다")
     void onPlayingCompleted_noExistingUserStatistics_createsWithAggregatedTotals() {
         stubBaseline();
-        LocalDateTime lastEndedAt = LocalDateTime.now();
+        Instant lastEndedAt =Instant.now();
         PlayingRepository.PracticeTotals totals = mockPracticeTotals(5L, 1200L, lastEndedAt);
         given(playingRepository.aggregateTotalsByUserAndStatus(userId, PlayingStatus.COMPLETED))
                 .willReturn(totals);
@@ -166,7 +165,7 @@ class StatisticsAggregationServiceTest {
     void onPlayingCompleted_existingUserStatistics_updatesWithoutCreating() {
         stubBaseline();
         UserStatistics existing = UserStatistics.createForUser(mock(User.class));
-        PlayingRepository.PracticeTotals totals = mockPracticeTotals(3L, 600L, LocalDateTime.now());
+        PlayingRepository.PracticeTotals totals = mockPracticeTotals(3L, 600L, Instant.now());
         given(playingRepository.aggregateTotalsByUserAndStatus(userId, PlayingStatus.COMPLETED))
                 .willReturn(totals);
         given(userStatisticsRepository.findByUser_UserId(userId)).willReturn(Optional.of(existing));
@@ -206,11 +205,11 @@ class StatisticsAggregationServiceTest {
         given(userStatisticsRepository.findByUser_UserId(userId))
                 .willReturn(Optional.of(UserStatistics.createForUser(mock(User.class))));
         List<Playing> weeklyPlayings = List.of(mockPlaying(600), mockPlaying(1200));
-        given(playingRepository.findByUserAndStatusSince(userId, PlayingStatus.COMPLETED, weekStart.atStartOfDay()))
+        given(playingRepository.findByUserAndStatusSince(userId, PlayingStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
                 .willReturn(weeklyPlayings);
         List<Analysis> weeklyAnalyses = List.of(
                 mockAnalysis(90, null, null, null, null), mockAnalysis(80, null, null, null, null));
-        given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay()))
+        given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
                 .willReturn(weeklyAnalyses);
 
         service.onPlayingCompleted(userId);
@@ -256,7 +255,7 @@ class StatisticsAggregationServiceTest {
         given(practiceStatisticsRepository.findByUser_UserIdAndPeriodTypeAndPeriodStart(userId, PeriodType.WEEKLY, weekStart))
                 .willReturn(Optional.of(existing));
         List<Playing> weeklyPlayings = List.of(mockPlaying(300));
-        given(playingRepository.findByUserAndStatusSince(userId, PlayingStatus.COMPLETED, weekStart.atStartOfDay()))
+        given(playingRepository.findByUserAndStatusSince(userId, PlayingStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
                 .willReturn(weeklyPlayings);
 
         service.onPlayingCompleted(userId);
@@ -277,7 +276,7 @@ class StatisticsAggregationServiceTest {
                 .willReturn(Optional.of(UserStatistics.createForUser(mock(User.class))));
         List<Analysis> weeklyAnalyses = List.of(mockAnalysis(null,
                 new BigDecimal("90.0"), new BigDecimal("70.0"), new BigDecimal("88.0"), new BigDecimal("60.0")));
-        given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay()))
+        given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
                 .willReturn(weeklyAnalyses);
 
         SkillStatistics lastWeekScale = SkillStatistics.create(
@@ -326,7 +325,7 @@ class StatisticsAggregationServiceTest {
                 .willReturn(Optional.of(UserStatistics.createForUser(mock(User.class))));
         List<Analysis> weeklyAnalyses = List.of(mockAnalysis(null,
                 new BigDecimal("90.0"), new BigDecimal("91.0"), new BigDecimal("92.0"), new BigDecimal("93.0")));
-        given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay()))
+        given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
                 .willReturn(weeklyAnalyses);
 
         SkillStatistics existingScale = SkillStatistics.createWithPreviousScore(
@@ -375,7 +374,7 @@ class StatisticsAggregationServiceTest {
                 .willReturn(Optional.of(UserStatistics.createForUser(mock(User.class))));
         List<Analysis> weeklyAnalyses = List.of(mockAnalysis(null,
                 null, new BigDecimal("70.0"), new BigDecimal("80.0"), new BigDecimal("90.0")));
-        given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay()))
+        given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
                 .willReturn(weeklyAnalyses);
 
         service.onAnalysisCompleted(userId);
@@ -393,7 +392,7 @@ class StatisticsAggregationServiceTest {
     @DisplayName("onPlayingCompleted - UserStatistics 저장 중 예외가 발생하면 삼키지 않고 그대로 전파한다")
     void onPlayingCompleted_saveFails_propagatesException() {
         stubBaseline();
-        PlayingRepository.PracticeTotals totals = mockPracticeTotals(1L, 60L, LocalDateTime.now());
+        PlayingRepository.PracticeTotals totals = mockPracticeTotals(1L, 60L, Instant.now());
         given(playingRepository.aggregateTotalsByUserAndStatus(userId, PlayingStatus.COMPLETED))
                 .willReturn(totals);
         given(userStatisticsRepository.findByUser_UserId(userId)).willReturn(Optional.empty());

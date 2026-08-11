@@ -1,9 +1,11 @@
 package com.mr.domain.user.dto.res;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mr.domain.user.entity.enums.TheoryLevel;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDateTime;
 import lombok.Builder;
+
+import java.time.Instant;
 
 public class UserProfileResponseDTO {
 
@@ -75,7 +77,8 @@ public class UserProfileResponseDTO {
             @Schema(description = "수정된 화성학 숙련도", example = "ADVANCED")
             TheoryLevel skillLevel,
 
-            @Schema(description = "처리 완료 시각", example = "2026-07-24T01:30:00")
-            LocalDateTime updatedAt
+            @Schema(description = "처리 완료 시각 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+            Instant updatedAt
     ) {}
 }

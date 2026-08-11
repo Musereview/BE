@@ -22,7 +22,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,7 @@ public class StatisticsAggregationService {
 
     private static final int SCORE_SCALE = 1;
     private static final int SECONDS_PER_MINUTE = 60;
+    private static final ZoneId KOREA_ZONE_ID = ZoneId.of("Asia/Seoul");
 
     private final UserRepository userRepository;
     private final UserStatisticsRepository userStatisticsRepository;
@@ -87,13 +90,13 @@ public class StatisticsAggregationService {
     }
 
     private void refreshWeeklyPracticeStatistics(Long userId) {
-        LocalDate weekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY);
+        LocalDate weekStart = Instant.now(clock).atZone(KOREA_ZONE_ID).toLocalDate().with(DayOfWeek.MONDAY);
         LocalDate weekEnd = weekStart.plusDays(6);
 
         List<Playing> playings = playingRepository.findByUserAndStatusSince(
-                userId, PlayingStatus.COMPLETED, weekStart.atStartOfDay());
+                userId, PlayingStatus.COMPLETED, weekStart.atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant());
         List<Analysis> analyses = analysisRepository.findByUserAndStatusSince(
-                userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay());
+                userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant());
 
         int practiceMinutes = minutesFromSeconds(sumDurationSec(playings));
         int sessionCount = playings.size();
@@ -108,12 +111,12 @@ public class StatisticsAggregationService {
     }
 
     private void refreshWeeklySkillStatistics(Long userId) {
-        LocalDate weekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY);
+        LocalDate weekStart = Instant.now(clock).atZone(KOREA_ZONE_ID).toLocalDate().with(DayOfWeek.MONDAY);
         LocalDate weekEnd = weekStart.plusDays(6);
         LocalDate lastWeekStart = weekStart.minusWeeks(1);
 
         List<Analysis> analyses = analysisRepository.findByUserAndStatusSince(
-                userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay());
+                userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant());
 
         for (SkillType skillType : SkillType.values()) {
             upsertWeeklySkillStatistics(userId, skillType, weekStart, weekEnd, lastWeekStart, analyses);

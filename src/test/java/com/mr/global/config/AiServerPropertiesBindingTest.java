@@ -38,7 +38,10 @@ class AiServerPropertiesBindingTest {
     @Test
     void 이전_ai_server_프리픽스만_설정되면_바인딩되지_않는다() {
         contextRunner
-                .withPropertyValues("ai.server.base-url=http://old-prefix-should-be-ignored:9999")
+                .withPropertyValues(
+                        "ai.server.base-url=http://old-prefix-should-be-ignored:9999",
+                        "ai.internal.base-url= "
+                )
                 .run(context -> {
                     assertThat(context).hasFailed();
                     assertThat(context.getStartupFailure()).hasMessageContaining("ai.internal");

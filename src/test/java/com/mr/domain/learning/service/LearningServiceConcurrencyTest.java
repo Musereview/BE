@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.context.ActiveProfiles;
 
 /**
  * 은우님 PR 리뷰 지적(#79) 검증용 통합 테스트.
@@ -36,6 +37,7 @@ import org.springframework.data.domain.Pageable;
  * 클래스 레벨 @Transactional을 안 걸어서(걸면 두 스레드가 같은 트랜잭션에 갇혀 테스트 의미가 없어짐) 각자 별도 트랜잭션으로 실행되게 한다.
  */
 @SpringBootTest
+@ActiveProfiles("test")
 class LearningServiceConcurrencyTest {
 
     @Autowired

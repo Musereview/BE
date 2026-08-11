@@ -14,7 +14,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -52,11 +53,11 @@ public class UserStatistics extends BaseTimeEntity {
     private BigDecimal averageAccuracy;
 
     @Column(name = "recent_practiced_at")
-    private LocalDateTime recentPracticedAt;
+    private Instant recentPracticedAt;
 
     private UserStatistics(User user, Integer totalPracticeMinutes, Integer totalPracticeCount,
                            Integer totalAnalysisCount, BigDecimal averageScore, BigDecimal averageAccuracy,
-                           LocalDateTime recentPracticedAt) {
+                           Instant recentPracticedAt) {
         validateUser(user);
 
         this.user = user;
@@ -87,7 +88,7 @@ public class UserStatistics extends BaseTimeEntity {
     }
 
     public void updatePracticeSummary(Integer totalPracticeMinutes, Integer totalPracticeCount,
-                                      LocalDateTime recentPracticedAt) {
+                                      Instant recentPracticedAt) {
         this.totalPracticeMinutes = totalPracticeMinutes;
         this.totalPracticeCount = totalPracticeCount;
         this.recentPracticedAt = recentPracticedAt;

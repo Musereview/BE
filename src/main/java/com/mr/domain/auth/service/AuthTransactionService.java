@@ -17,7 +17,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 @Service
@@ -64,7 +64,7 @@ public class AuthTransactionService {
         String newAccessToken = tokenProvider.createAccessToken(user.getUserId());
         String newRefreshToken = tokenProvider.createRefreshToken(user.getUserId());
         String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
-        LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
+        Instant expiryTime = tokenProvider.getRefreshTokenExpiryTime();
 
         // PostgreSQL은 제약 위반이 나는 즉시 트랜잭션 전체를 abort 상태로 만들어서,
         // 같은 트랜잭션 안에서 복구 쿼리를 다시 시도하면 그 쿼리도 실패한다.
@@ -114,7 +114,7 @@ public class AuthTransactionService {
         String newAccessToken = tokenProvider.createAccessToken(user.getUserId());
         String newRefreshToken = tokenProvider.createRefreshToken(user.getUserId());
         String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
-        LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
+        Instant expiryTime = tokenProvider.getRefreshTokenExpiryTime();
 
         socialAuth.updateRefreshToken(refreshTokenHash, expiryTime, deviceInfo);
 
@@ -156,7 +156,7 @@ public class AuthTransactionService {
         String newAccessToken = tokenProvider.createAccessToken(userId);
         String newRefreshToken = tokenProvider.createRefreshToken(userId);
         String refreshTokenHash = tokenProvider.hashToken(newRefreshToken);
-        LocalDateTime expiryTime = tokenProvider.getRefreshTokenExpiryTime();
+        Instant expiryTime = tokenProvider.getRefreshTokenExpiryTime();
 
         try {
             if (existingSocialAuth.isPresent()) {

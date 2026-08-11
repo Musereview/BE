@@ -27,8 +27,8 @@ import com.mr.global.event.AnalysisCompletedEvent;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,7 +41,7 @@ import org.springframework.context.ApplicationEventPublisher;
 @ExtendWith(MockitoExtension.class)
 class AnalysisStateServiceTest {
 
-    private static final LocalDateTime PROCESSING_STARTED_AT = LocalDateTime.of(2026, 7, 31, 12, 0);
+    private static final Instant PROCESSING_STARTED_AT = Instant.parse("2026-07-31T03:00:00Z");
     private static final Clock FIXED_CLOCK = Clock.fixed(
             Instant.parse("2026-07-31T03:00:00Z"),
             ZoneId.of("Asia/Seoul")
@@ -100,9 +100,9 @@ class AnalysisStateServiceTest {
 
     @Test
     void restartStaleProcessing_marksNullRequestAsFailed() {
-        LocalDateTime cutoff = LocalDateTime.now();
+        Instant cutoff = Instant.now();
         given(analysis.getStatus()).willReturn(AnalysisStatus.PROCESSING);
-        given(analysis.getProcessingStartedAt()).willReturn(cutoff.minusMinutes(1));
+        given(analysis.getProcessingStartedAt()).willReturn(cutoff.minus(1, ChronoUnit.MINUTES));
         given(analysis.getAnalysisRequestJson()).willReturn(null);
 
         Optional<?> claim = service.restartStaleProcessing(1L, cutoff);
@@ -330,6 +330,7 @@ class AnalysisStateServiceTest {
     ) {
         return new GeneratedAnalysisReport(
                 generationType,
+                "요약",
                 "리포트",
                 "gemini-3-flash-preview",
                 "analysis-report-v1",

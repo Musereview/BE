@@ -18,10 +18,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.Instant;
 
 @Getter
 @Entity
@@ -69,11 +70,11 @@ public class WeaknessNote extends BaseTimeEntity {
     private Learning recommendedLearningContent;
 
     @Column(name = "last_detected_at")
-    private LocalDateTime lastDetectedAt;
+    private Instant lastDetectedAt;
 
     private WeaknessNote(User user, String conceptCode, String conceptName, String weaknessType,
                          Integer occurrenceCount, Severity severity, Analysis lastAnalysis,
-                         Learning recommendedLearningContent, LocalDateTime lastDetectedAt) {
+                         Learning recommendedLearningContent, Instant lastDetectedAt) {
         validateUser(user);
 
         this.user = user;
@@ -104,7 +105,7 @@ public class WeaknessNote extends BaseTimeEntity {
                 Severity.LOW,
                 lastAnalysis,
                 recommendedLearningContent,
-                LocalDateTime.now()
+                Instant.now()
         );
     }
 
@@ -112,6 +113,6 @@ public class WeaknessNote extends BaseTimeEntity {
         this.occurrenceCount += 1;
         this.severity = severity == null ? this.severity : severity;
         this.lastAnalysis = lastAnalysis;
-        this.lastDetectedAt = LocalDateTime.now();
+        this.lastDetectedAt = Instant.now();
     }
 }

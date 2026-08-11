@@ -40,6 +40,7 @@ class StatisticsServiceTest {
     @Mock UserRepository userRepository;
     @Mock PracticeStatisticsRepository practiceRepository;
     @Mock SkillStatisticsRepository skillRepository;
+
     private StatisticsService service;
 
     @BeforeEach
@@ -104,6 +105,7 @@ class StatisticsServiceTest {
         List<SkillStatistics> skills = List.of(
                 skill(THIS_WEEK.minusWeeks(1), SkillType.SCALE, new BigDecimal("77.00")),
                 skill(THIS_WEEK, SkillType.SCALE, new BigDecimal("85.00")));
+
         given(practiceRepository.findAllByUser_UserIdAndPeriodTypeAndPeriodStartBetween(
                 1L, PeriodType.WEEKLY, THIS_WEEK.minusWeeks(3), THIS_WEEK)).willReturn(practices);
         given(skillRepository.findAllByUser_UserIdAndPeriodTypeAndPeriodStartBetween(
@@ -129,7 +131,9 @@ class StatisticsServiceTest {
                 skill(THIS_WEEK, SkillType.SCALE, new BigDecimal("85.00")));
         given(skillRepository.findAllByUser_UserIdAndPeriodTypeAndPeriodStartBetween(
                 1L, PeriodType.WEEKLY, THIS_WEEK.minusWeeks(1), THIS_WEEK)).willReturn(skills);
+
         StatisticsResponseDTO response = service.getStatistics(1L);
+
         assertThat(response.domainGrowth().get(0).currentScore()).isEqualByComparingTo("85.0");
         assertThat(response.domainGrowth().get(0).diff()).isEqualByComparingTo("0.0");
     }

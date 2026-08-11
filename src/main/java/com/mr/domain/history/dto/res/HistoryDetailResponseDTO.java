@@ -1,5 +1,6 @@
 package com.mr.domain.history.dto.res;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
@@ -8,8 +9,9 @@ import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.MidiType;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public record HistoryDetailResponseDTO(
@@ -19,7 +21,11 @@ public record HistoryDetailResponseDTO(
         String key,
         Integer bpm,
         String timeSignature,
-        LocalDateTime playedAt,
+
+        @Schema(description = "연주 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+        Instant playedAt,
+
         Integer durationMinutes,
         Integer durationSec,
         String recordingFileUrl,
@@ -86,7 +92,10 @@ public record HistoryDetailResponseDTO(
             String oneLineSummary,
             AnalysisStatus status,
             Integer estimatedSeconds,
-            LocalDateTime createdAt
+
+            @Schema(description = "분석 리포트 생성 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+            Instant createdAt
     ) {
 
         public static AnalysisSummary from(Analysis analysis, BarMetrics barMetrics) {

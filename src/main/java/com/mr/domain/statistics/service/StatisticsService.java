@@ -18,7 +18,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -45,7 +47,11 @@ public class StatisticsService {
     public StatisticsResponseDTO getStatistics(Long userId) {
         userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
-        LocalDate thisWeek = LocalDate.now(clock).with(DayOfWeek.MONDAY);
+
+        ZoneId kstZone = ZoneId.of("Asia/Seoul");
+        LocalDate thisWeek = Instant.now(clock).atZone(kstZone).toLocalDate()
+                .with(DayOfWeek.MONDAY);
+
         LocalDate lastWeek = thisWeek.minusWeeks(1);
         LocalDate trendStart = thisWeek.minusWeeks(WEEKLY_TREND_WEEKS - 1L);
 
@@ -53,8 +59,10 @@ public class StatisticsService {
                 .findAllByUser_UserIdAndPeriodTypeAndPeriodStartBetween(
                         userId, PeriodType.WEEKLY, trendStart, thisWeek)
                 .stream().collect(Collectors.toMap(PracticeStatistics::getPeriodStart, Function.identity()));
+
         Map<SkillType, SkillStatistics> currentSkills = new EnumMap<>(SkillType.class);
         Map<SkillType, SkillStatistics> previousSkills = new EnumMap<>(SkillType.class);
+
         skillStatisticsRepository.findAllByUser_UserIdAndPeriodTypeAndPeriodStartBetween(
                         userId, PeriodType.WEEKLY, lastWeek, thisWeek)
                 .forEach(statistics -> {
@@ -84,7 +92,7 @@ public class StatisticsService {
     }
 
     private List<DomainGrowth> buildDomainGrowth(Map<SkillType, SkillStatistics> current,
-            Map<SkillType, SkillStatistics> previous) {
+                                                 Map<SkillType, SkillStatistics> previous) {
         List<DomainGrowth> result = new ArrayList<>();
         for (SkillType type : SkillType.values()) {
             BigDecimal currentScore = scoreOf(current.get(type));

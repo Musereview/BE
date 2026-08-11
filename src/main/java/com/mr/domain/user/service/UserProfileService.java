@@ -23,12 +23,14 @@ import com.mr.domain.user.repository.StudentRepository;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.SecurityUtil;
-import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -110,9 +112,9 @@ public class UserProfileService {
                 .orElseThrow(() -> new GeneralException(InstrumentErrorStatus.INSTRUMENT_NOT_SEEDED));
         studentInstrumentRepository.save(StudentInstrument.createPrimary(student, piano));
 
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         Subscription subscription = subscriptionRepository.save(
-                Subscription.create(user, SubscriptionTier.PRO.name(), now, now.plusDays(SUBSCRIPTION_PERIOD_DAYS)));
+                Subscription.create(user, SubscriptionTier.PRO.name(), now, now.plus(SUBSCRIPTION_PERIOD_DAYS, ChronoUnit.DAYS)));
 
         return UserProfileResponseDTO.OnboardingResponse.builder()
                 .userId(user.getUserId())
@@ -153,7 +155,7 @@ public class UserProfileService {
                 .userId(user.getUserId())
                 .nickname(user.getNickname())
                 .skillLevel(student.getTheoryLevel())
-                .updatedAt(LocalDateTime.now())
+                .updatedAt(Instant.now())
                 .build();
     }
 
