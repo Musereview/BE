@@ -20,13 +20,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
-@Tag(name = "알림(Notification)", description = "알림 조회 및 읽음 처리 api")
+@Tag(name = "알림", description = "알림 조회 및 읽음 처리 API")
 public class NotificationController {
 
     private final NotificationService notificationService;
 
     @Operation(
-            summary = "알림 목록 조회",
+            summary = "알림 목록 조회 API",
             description = "사용자의 알림 화면을 켤 때, 로그인한 사용자에게 온 알림 리스트를 기본적으로 최신 순으로 반환합니다."
     )
     @GetMapping
@@ -40,7 +40,7 @@ public class NotificationController {
     }
 
     @Operation(
-            summary = "알림 읽음 처리",
+            summary = "알림 읽음 처리 API",
             description = "해당 알림의 상태를 읽음으로 변경합니다."
     )
     @PatchMapping("/{notificationId}/read")
@@ -54,7 +54,7 @@ public class NotificationController {
     }
 
     @Operation(
-            summary = "알림 전체 읽음 처리",
+            summary = "알림 전체 읽음 처리 API",
             description = "사용자의 미확인 상태인 알림 전체 읽음 처리"
     )
     @PatchMapping("/read-all")
@@ -66,7 +66,7 @@ public class NotificationController {
     }
 
     @Operation(
-            summary = "안 읽은 알림 여부 확인 (사이드바 뱃지용)",
+            summary = "안 읽은 알림 여부 확인 (사이드바 뱃지용) API",
             description = "미확인 상태인 알림의 존재 여부 확인"
     )
     @GetMapping("/unread-status")
