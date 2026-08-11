@@ -30,7 +30,7 @@ public class ReportGenerationService {
 
     static final String PROMPT_VERSION = "analysis-report-v3";
     private static final BigDecimal TEMPERATURE = new BigDecimal("0.30");
-    private static final int MIN_REPORT_LENGTH = 600;
+    private static final int MIN_REPORT_LENGTH = 700;
     private static final int MIN_SUMMARY_LENGTH = 20;
     private static final int MAX_SUMMARY_LENGTH = 150;
     private static final Pattern SENTENCE_ENDING = Pattern.compile("[.!?。！？](?=\\s|$)");

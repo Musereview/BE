@@ -177,6 +177,21 @@ class ReportGenerationServiceTest {
     }
 
     @Test
+    void generate_fallsBackWhenGeminiReportIs699Characters() {
+        given(geminiClient.generateReport(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString()
+        )).willReturn(new GeminiGenerationResult(
+                structuredResponse(reportWithLength(699)),
+                100, 50, 150, false
+        ));
+
+        GeneratedAnalysisReport report = service.generate(result);
+
+        assertThat(report.generationType()).isEqualTo(ReportGenerationType.RULE_BASED);
+    }
+
+    @Test
     void generate_fallsBackWhenGeminiResponseIsNotValidJson() {
         given(geminiClient.generateReport(
                 org.mockito.ArgumentMatchers.anyString(),
@@ -244,5 +259,17 @@ class ReportGenerationServiceTest {
         response.put("summary", "스케일 음 선택이 안정적이며 텐션 활용을 우선 보완하면 좋은 연주입니다.");
         response.put("report", report);
         return response.toString();
+    }
+
+    private String reportWithLength(int length) {
+        String prefix = """
+                # 연주 분석 리포트
+                ## 총평
+                ## 잘한 점
+                ## 진행 맥락
+                ## 개선 제안
+                ## 점수 요약
+                """.strip() + "\n";
+        return prefix + "가".repeat(length - prefix.length());
     }
 }
