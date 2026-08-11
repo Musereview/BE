@@ -11,8 +11,13 @@ import java.util.List;
 
 @Schema(description = "홈 화면 요약 조회 응답")
 public record HomeResponseDTO(
+        @Schema(description = "사용자 프로필 요약")
         UserSummary user,
+
+        @Schema(description = "연속 출석 현황")
         Streak streak,
+
+        @Schema(description = "주/월간 연습 시간 요약")
         PracticeSummary practiceSummary,
 
         @Schema(description = "진행 중인 학습. 학습 기록이 없거나 진행률이 0%/100%면 null")
