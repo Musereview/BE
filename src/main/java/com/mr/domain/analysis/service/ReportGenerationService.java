@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,7 @@ public class ReportGenerationService {
     private static final int MIN_REPORT_LENGTH = 600;
     private static final int MIN_SUMMARY_LENGTH = 20;
     private static final int MAX_SUMMARY_LENGTH = 150;
+    private static final Pattern SENTENCE_ENDING = Pattern.compile("[.!?。！？](?=\\s|$)");
     private static final List<String> REQUIRED_HEADINGS = List.of(
             "# 연주 분석 리포트",
             "## 총평",
@@ -145,8 +147,11 @@ public class ReportGenerationService {
     }
 
     private void validateSummary(String summary) {
+        var sentenceEndings = SENTENCE_ENDING.matcher(summary).results().toList();
         if (summary.length() < MIN_SUMMARY_LENGTH || summary.length() > MAX_SUMMARY_LENGTH
-                || summary.contains("\n") || summary.contains("\r")) {
+                || summary.contains("\n") || summary.contains("\r")
+                || sentenceEndings.size() != 1
+                || sentenceEndings.get(0).end() != summary.length()) {
             throw new IllegalStateException("Gemini returned an invalid summary.");
         }
     }

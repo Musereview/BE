@@ -192,6 +192,24 @@ class ReportGenerationServiceTest {
         assertThat(report.content()).contains("# 연주 분석 리포트");
     }
 
+    @Test
+    void generate_fallsBackWhenGeminiSummaryContainsMultipleSentences() {
+        var response = new ObjectMapper().createObjectNode();
+        response.put("summary", "스케일 음 선택이 안정적입니다. 텐션 활용을 보완하면 좋습니다.");
+        response.put("report", validMarkdownReport());
+        given(geminiClient.generateReport(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString()
+        )).willReturn(new GeminiGenerationResult(
+                response.toString(), 100, 50, 150, false
+        ));
+
+        GeneratedAnalysisReport report = service.generate(result);
+
+        assertThat(report.generationType()).isEqualTo(ReportGenerationType.RULE_BASED);
+        assertThat(report.summary()).matches("^[^.!?。！？]*[.!?。！？]$");
+    }
+
     private String validMarkdownReport() {
         return """
                 # 연주 분석 리포트

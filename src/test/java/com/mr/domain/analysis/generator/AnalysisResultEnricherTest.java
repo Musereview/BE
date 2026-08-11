@@ -19,11 +19,12 @@ class AnalysisResultEnricherTest {
         JsonNode enriched = enricher.enrich(original);
 
         assertThat(enriched.path("summary").asText())
-                .contains("조성에 어울리는 음 선택이 가장 안정적이었어요.")
-                .contains("텐션 선택의 정확도를 더 다듬으면 좋겠어요.")
-                .contains("강점과 보완 영역의 차이가 뚜렷했어요.")
+                .contains("조성에 어울리는 음 선택이 가장 안정적이었고")
+                .contains("텐션 선택의 정확도를 더 다듬을 필요가 있으며")
+                .contains("강점과 보완 영역의 차이가 뚜렷하고")
                 .doesNotContain("80.5", "95점", "좋음")
-                .hasSizeBetween(50, 120);
+                .hasSizeBetween(50, 150)
+                .matches("^[^.!?。！？]*[.!?。！？]$");
         assertThat(original.has("summary")).isFalse();
     }
 
@@ -36,7 +37,7 @@ class AnalysisResultEnricherTest {
         JsonNode enriched = enricher.enrich(original);
 
         assertThat(enriched.path("summary").asText())
-                .contains("긴장감을 살리는 텐션 활용이 가장 돋보였어요.")
+                .contains("긴장감을 살리는 텐션 활용이 가장 돋보였고")
                 .doesNotContain("100", "100점");
     }
 
@@ -69,7 +70,7 @@ class AnalysisResultEnricherTest {
 
         JsonNode enriched = enricher.enrich(original);
 
-        assertThat(enriched.path("summary").asText()).contains("영역별 점수도 고르게 나타나");
+        assertThat(enriched.path("summary").asText()).contains("영역별 점수도 고르게 나타났으며");
     }
 
     @Test
