@@ -18,7 +18,8 @@ import com.mr.domain.user.entity.enums.UserRole;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.apipayload.handler.GlobalExceptionHandler;
 import com.mr.global.security.principal.CustomUserDetails;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -119,7 +120,7 @@ class HistoryControllerTest {
     void getHistoryDetail_success() throws Exception {
         HistoryDetailResponseDTO response = new HistoryDetailResponseDTO(
                 1L, "제목", "장르", "C Major", 120, "4/4",
-                LocalDateTime.of(2026, 7, 24, 10, 0), 5, 300,
+                Instant.parse("2026-07-24T10:00:00Z"), 5, 300,
                 "https://example.com/recording.webm", "https://example.com/backing-track.mp3",
                 List.of(), null, null, List.of()
         );

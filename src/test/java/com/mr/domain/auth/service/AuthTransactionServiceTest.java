@@ -18,7 +18,8 @@ import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.security.jwt.JwtTokenProvider;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.DisplayName;
@@ -56,7 +57,7 @@ class AuthTransactionServiceTest {
         given(tokenProvider.createAccessToken(USER_ID)).willReturn("access-token");
         given(tokenProvider.createRefreshToken(USER_ID)).willReturn("refresh-token");
         given(tokenProvider.hashToken("refresh-token")).willReturn("hashed-refresh-token");
-        given(tokenProvider.getRefreshTokenExpiryTime()).willReturn(LocalDateTime.now().plusDays(7));
+        given(tokenProvider.getRefreshTokenExpiryTime()).willReturn(Instant.now().plus(7, ChronoUnit.DAYS));
 
         // 최초 조회 시점엔 없다고 판단해 신규 생성 분기로 들어가지만,
         // 동시에 들어온 다른 요청이 먼저 저장을 마쳐서 실제 저장 시점엔 유니크 제약 위반이 남
@@ -87,7 +88,7 @@ class AuthTransactionServiceTest {
         given(tokenProvider.createAccessToken(USER_ID)).willReturn("access-token");
         given(tokenProvider.createRefreshToken(USER_ID)).willReturn("refresh-token");
         given(tokenProvider.hashToken("refresh-token")).willReturn("hashed-refresh-token");
-        given(tokenProvider.getRefreshTokenExpiryTime()).willReturn(LocalDateTime.now().plusDays(7));
+        given(tokenProvider.getRefreshTokenExpiryTime()).willReturn(Instant.now().plus(7, ChronoUnit.DAYS));
         given(tokenProvider.getAccessTokenExpirationSeconds()).willReturn(1800L);
 
         AuthResponseDTO.LoginResponse response = authTransactionService.completeTokenExchange(
@@ -103,7 +104,7 @@ class AuthTransactionServiceTest {
         verify(userRepository, never()).save(any());
         verify(existingSocialAuth).updateRefreshToken(
                 org.mockito.ArgumentMatchers.eq("hashed-refresh-token"),
-                any(LocalDateTime.class),
+                any(Instant.class),
                 org.mockito.ArgumentMatchers.eq("device")
         );
     }

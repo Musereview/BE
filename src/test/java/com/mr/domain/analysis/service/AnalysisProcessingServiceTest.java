@@ -18,7 +18,8 @@ import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.client.ai.AiAnalysisRequest;
 import com.mr.global.client.ai.AiServerClient;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,7 +53,7 @@ class AnalysisProcessingServiceTest {
 
     @Test
     void recoverStaleProcessing_doesNotCallAiWhenWorkIsNoLongerStale() {
-        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(2);
+        Instant cutoff = Instant.now().minus(2, ChronoUnit.MINUTES);
         given(analysisStateService.restartStaleProcessing(1L, cutoff)).willReturn(Optional.empty());
         AnalysisProcessingService service = new AnalysisProcessingService(
                 analysisStateService, aiServerClient, reportGenerationService,
@@ -68,7 +69,7 @@ class AnalysisProcessingServiceTest {
     void process_doesNotGenerateReportWhenAiResultIsInvalid() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode invalidResult = objectMapper.readTree("{}");
-        LocalDateTime processingStartedAt = LocalDateTime.now();
+        Instant processingStartedAt = Instant.now();
         given(analysisStateService.startProcessing(1L))
                 .willReturn(Optional.of(new AnalysisProcessingClaim(
                         "{\"meta\":null,\"chords\":[],\"notes\":[]}",
@@ -95,7 +96,7 @@ class AnalysisProcessingServiceTest {
 
     @Test
     void process_marksMalformedRequestAsFailedWithoutCallingAi() {
-        LocalDateTime processingStartedAt = LocalDateTime.now();
+        Instant processingStartedAt = Instant.now();
         given(analysisStateService.startProcessing(1L))
                 .willReturn(Optional.of(new AnalysisProcessingClaim("{invalid", processingStartedAt)));
         AnalysisProcessingService service = new AnalysisProcessingService(
@@ -116,7 +117,7 @@ class AnalysisProcessingServiceTest {
     @Test
     void process_passesGeneratedReportToFencedCompletion() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
-        LocalDateTime processingStartedAt = LocalDateTime.now();
+        Instant processingStartedAt = Instant.now();
         JsonNode validResult = objectMapper.readTree("""
                 {
                   "scores": {

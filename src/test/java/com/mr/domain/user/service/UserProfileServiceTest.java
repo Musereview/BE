@@ -29,7 +29,8 @@ import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.principal.CustomUserDetails;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.AfterEach;
@@ -202,7 +203,7 @@ class UserProfileServiceTest {
         Instrument piano = Instrument.create("PIANO", "피아노");
         StudentInstrument primaryInstrument = StudentInstrument.createPrimary(student, piano);
         Subscription subscription = Subscription.create(
-                user, "PRO", LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(29));
+                user, "PRO", Instant.now().minus(1, ChronoUnit.DAYS), Instant.now().plus(29, ChronoUnit.DAYS));
 
         given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
         given(studentRepository.findByUser(user)).willReturn(Optional.of(student));
@@ -227,8 +228,9 @@ class UserProfileServiceTest {
         Instrument piano = Instrument.create("PIANO", "피아노");
         StudentInstrument primaryInstrument = StudentInstrument.createPrimary(student, piano);
         // 가입 40일 전 생성된 구독 (end_date = 시작일 + 30일 → 이미 10일 지남)
+        Instant startDate = Instant.now().minus(40, ChronoUnit.DAYS);
         Subscription subscription = Subscription.create(
-                user, "PRO", LocalDateTime.now().minusDays(40), LocalDateTime.now().minusDays(10));
+                user, "PRO", startDate, startDate.plus(30, ChronoUnit.DAYS));
 
         given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
         given(studentRepository.findByUser(user)).willReturn(Optional.of(student));

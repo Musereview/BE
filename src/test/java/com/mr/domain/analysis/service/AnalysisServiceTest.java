@@ -36,7 +36,7 @@ import com.mr.global.file.s3.enums.S3FileType;
 import com.mr.global.file.s3.service.S3FileService;
 import com.mr.global.client.ai.AiAnalysisRequest;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -106,7 +106,7 @@ class AnalysisServiceTest {
         lenient().when(backingTrack.getAudioObjectKey()).thenReturn(BACKING_TRACK_OBJECT_KEY);
 
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
-        LocalDateTime now = LocalDateTime.of(2026, 7, 31, 12, 0);
+        Instant now = Instant.parse("2026-07-31T12:00:00Z");
         analysis.startProcessing(now);
         analysis.complete(
                 85,
@@ -182,7 +182,7 @@ class AnalysisServiceTest {
         given(playing.getId()).willReturn(1L);
 
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
-        LocalDateTime now = LocalDateTime.of(2026, 7, 31, 12, 0);
+        Instant now = Instant.parse("2026-07-31T12:00:00Z");
         analysis.startProcessing(now);
         analysis.complete(85, AnalysisGrade.GOOD, "테스트 요약", null, null, null, null, null, now);
         given(analysisRepository.findById(1L)).willReturn(Optional.of(analysis));

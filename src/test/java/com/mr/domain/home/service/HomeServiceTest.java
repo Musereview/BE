@@ -30,8 +30,10 @@ import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import java.sql.Date;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,7 +83,7 @@ class HomeServiceTest {
         lenient().when(learningService.getCurrentLearning(anyLong())).thenReturn(null);
     }
 
-    private Playing mockPlaying(LocalDateTime endedAt, Integer durationSec) {
+    private Playing mockPlaying(Instant endedAt, Integer durationSec) {
         Playing playing = mock(Playing.class);
         lenient().when(playing.getId()).thenReturn(1L);
         lenient().when(playing.getEndedAt()).thenReturn(endedAt);
@@ -91,8 +93,8 @@ class HomeServiceTest {
         return playing;
     }
 
-    private Date sqlDate(LocalDate date) {
-        return Date.valueOf(date);
+    private Instant toInstant(LocalDate date) {
+        return date.atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
     }
 
     @Test
@@ -143,9 +145,9 @@ class HomeServiceTest {
     void getHome_threeConsecutiveDaysIncludingToday_currentDaysIsThree() {
         stubBaseline(1L);
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED)).willReturn(List.of(
-                sqlDate(today), sqlDate(today.minusDays(1)), sqlDate(today.minusDays(2)), sqlDate(today.minusDays(5))
+                toInstant(today), toInstant(today.minusDays(1)), toInstant(today.minusDays(2)), toInstant(today.minusDays(5))
         ));
 
         HomeResponseDTO response = homeService.getHome(1L);
@@ -158,10 +160,10 @@ class HomeServiceTest {
     void getHome_longStreak_notCappedByLookbackWindow() {
         stubBaseline(1L);
 
-        LocalDate today = LocalDate.now();
-        List<Date> endedDates = java.util.stream.IntStream.range(0, 65)
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        List<Instant> endedDates = java.util.stream.IntStream.range(0, 65)
                 .mapToObj(today::minusDays)
-                .map(this::sqlDate)
+                .map(this::toInstant)
                 .toList();
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED)).willReturn(endedDates);
 
@@ -177,7 +179,7 @@ class HomeServiceTest {
 
         LocalDate yesterday = LocalDate.now().minusDays(1);
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED))
-                .willReturn(List.of(sqlDate(yesterday)));
+                .willReturn(List.of(toInstant(yesterday)));
 
         HomeResponseDTO response = homeService.getHome(1L);
 
@@ -191,7 +193,7 @@ class HomeServiceTest {
 
         LocalDate today = LocalDate.now();
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED))
-                .willReturn(List.of(sqlDate(today), sqlDate(today), sqlDate(today)));
+                .willReturn(List.of(toInstant(today), toInstant(today), toInstant(today)));
 
         HomeResponseDTO response = homeService.getHome(1L);
 
@@ -225,10 +227,11 @@ class HomeServiceTest {
     void getHome_practiceSummary_sumsDurationInHours() {
         stubBaseline(1L);
 
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        ZoneId kstZone = ZoneId.of("Asia/Seoul");
+        Instant todayStart = LocalDate.now(kstZone).atStartOfDay(kstZone).toInstant();
         List<Playing> recent = List.of(
                 mockPlaying(todayStart, 3600),
-                mockPlaying(todayStart.plusHours(2), 3600)
+                mockPlaying(todayStart.plus(2, ChronoUnit.HOURS), 3600)
         );
         given(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).willReturn(recent);
 
@@ -243,10 +246,11 @@ class HomeServiceTest {
     void getHome_practiceSummary_excludesRecordsBeforeWeekStart() {
         stubBaseline(1L);
 
-        LocalDateTime weekStart = LocalDate.now().with(DayOfWeek.MONDAY).atStartOfDay();
+        ZoneId kstZone = ZoneId.of("Asia/Seoul");
+        Instant weekStart = LocalDate.now(kstZone).with(DayOfWeek.MONDAY).atStartOfDay(kstZone).toInstant();
         List<Playing> recent = List.of(
                 mockPlaying(weekStart, 3600),
-                mockPlaying(weekStart.minusSeconds(1), 3600)
+                mockPlaying(weekStart.minus(1, ChronoUnit.SECONDS), 3600)
         );
         given(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).willReturn(recent);
 
@@ -341,7 +345,7 @@ class HomeServiceTest {
     void getHome_recentPlayings_mapsFromRepository() {
         stubBaseline(1L);
 
-        Playing playing = mockPlaying(LocalDateTime.now(), 600);
+        Playing playing = mockPlaying(Instant.now(), 600);
         given(playingRepository.findPlayingsByUserAndStatus(1L, PlayingStatus.COMPLETED, PageRequest.of(0, 5)))
                 .willReturn(new SliceImpl<>(List.of(playing)));
 

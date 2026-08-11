@@ -2,7 +2,7 @@ package com.mr.global.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import lombok.Getter;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -12,5 +12,5 @@ public abstract class BaseTimeEntity extends BaseCreatedEntity {
 
     @LastModifiedDate
     @Column(name = "updated_at")
-    protected LocalDateTime updatedAt;
+    protected Instant updatedAt;
 }

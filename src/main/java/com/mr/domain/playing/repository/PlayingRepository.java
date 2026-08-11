@@ -4,7 +4,7 @@ import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import jakarta.persistence.LockModeType;
 import java.sql.Date;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -43,7 +43,7 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
     Slice<Playing> findPlayingsByUserAndStatusSince(
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status,
-            @Param("cutoff") LocalDateTime cutoff,
+            @Param("cutoff") Instant cutoff,
             Pageable pageable
     );
 
@@ -58,7 +58,7 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
     List<Long> findNextPlayingId(
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status,
-            @Param("endedAt") LocalDateTime endedAt,
+            @Param("endedAt") Instant endedAt,
             @Param("playingId") Long playingId,
             Pageable pageable
     );
@@ -75,8 +75,8 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
     List<Long> findNextPlayingIdSince(
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status,
-            @Param("cutoff") LocalDateTime cutoff,
-            @Param("endedAt") LocalDateTime endedAt,
+            @Param("cutoff") Instant cutoff,
+            @Param("endedAt") Instant endedAt,
             @Param("playingId") Long playingId,
             Pageable pageable
     );
@@ -109,17 +109,17 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
     List<Playing> findByUserAndStatusSince(
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status,
-            @Param("since") LocalDateTime since
+            @Param("since") Instant since
     );
 
     @Query("""
-            select distinct function('date', p.endedAt) from Playing p
+            select p.endedAt from Playing p
             where p.user.userId = :userId
               and p.status = :status
               and p.deletedAt is null
               and p.endedAt is not null
             """)
-    List<Date> findDistinctEndedDatesByUserAndStatus(
+    List<Instant> findDistinctEndedDatesByUserAndStatus(
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status
     );
@@ -141,7 +141,7 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
     interface PracticeTotals {
         Long getSessionCount();
         Long getTotalDurationSec();
-        LocalDateTime getLastEndedAt();
+        Instant getLastEndedAt();
     }
 
     Optional<Playing> findByIdAndDeletedAtIsNull(Long playingId);
@@ -161,7 +161,7 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
     Long sumDurationSecExcludeCurrent(
             @Param("userId") Long userId,
             @Param("status") PlayingStatus status,
-            @Param("since") LocalDateTime since,
+            @Param("since") Instant since,
             @Param("excludePlayingId") Long excludePlayingId
     );
 }

@@ -10,13 +10,14 @@ import com.mr.domain.analysis.exception.AnalysisErrorStatus;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
-import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
+
 class AnalysisTest {
 
-    private static final LocalDateTime NOW = LocalDateTime.of(2026, 7, 31, 12, 0);
+    private static final Instant NOW = Instant.parse("2026-07-31T12:00:00Z");
 
     @Test
     @DisplayName("createPending - user가 null이면 예외가 발생한다")
@@ -82,9 +83,9 @@ class AnalysisTest {
         Playing playing = mock(Playing.class);
         given(playing.getUser()).willReturn(user);
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
-        LocalDateTime firstAttempt = analysis.startProcessing(NOW);
+        Instant firstAttempt = analysis.startProcessing(NOW);
 
-        LocalDateTime secondAttempt = analysis.restartProcessing(NOW);
+        Instant secondAttempt = analysis.restartProcessing(NOW);
 
         assertThat(secondAttempt).isAfter(firstAttempt);
         assertThat(analysis.isCurrentProcessing(firstAttempt)).isFalse();

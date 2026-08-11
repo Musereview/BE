@@ -4,7 +4,7 @@ import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 import com.mr.domain.analysis.service.AnalysisProcessingService;
@@ -51,7 +51,7 @@ public class AnalysisRecoveryScheduler {
             fixedDelayString = "${analysis.recovery.fixed-delay-ms:30000}"
     )
     public void recoverPendingAnalyses() {
-        LocalDateTime now = LocalDateTime.now(clock);
+        Instant now = Instant.now(clock);
         List<Long> pendingIds = analysisRepository.findIdsByStatusAndCreatedAtBefore(
                 AnalysisStatus.PENDING,
                 now.minus(pendingThreshold),
@@ -59,7 +59,7 @@ public class AnalysisRecoveryScheduler {
         );
         submitPending(pendingIds);
 
-        LocalDateTime processingCutoff = now.minus(processingThreshold);
+        Instant processingCutoff = now.minus(processingThreshold);
         List<Long> processingIds = analysisRepository.findIdsByStatusAndProcessingStartedAtBefore(
                 AnalysisStatus.PROCESSING,
                 processingCutoff,
@@ -79,7 +79,7 @@ public class AnalysisRecoveryScheduler {
         }
     }
 
-    private void submitStaleProcessing(List<Long> analysisIds, LocalDateTime cutoff) {
+    private void submitStaleProcessing(List<Long> analysisIds, Instant cutoff) {
         for (Long analysisId : analysisIds) {
             try {
                 taskExecutor.execute(() -> analysisProcessingService.recoverStaleProcessing(analysisId, cutoff));

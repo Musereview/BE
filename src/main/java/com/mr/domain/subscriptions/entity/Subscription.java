@@ -17,7 +17,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Builder;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Getter
@@ -43,14 +43,14 @@ public class Subscription {
 
     // 구독 시작일
     @Column(name = "start_date", nullable = false)
-    private LocalDateTime startDate;
+    private Instant startDate;
 
     // 구독 종료일
     @Column(name = "end_date", nullable = false)
-    private LocalDateTime endDate;
+    private Instant endDate;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private Subscription(User user, String tier, LocalDateTime startDate, LocalDateTime endDate) {
+    private Subscription(User user, String tier, Instant startDate, Instant endDate) {
         this.user = user;
         this.tier = tier;
         this.startDate = startDate;
@@ -58,7 +58,7 @@ public class Subscription {
     }
 
     // 정적 팩토리 메서드 (구독 생성)
-    public static Subscription create(User user, String tier, LocalDateTime startDate, LocalDateTime endDate) {
+    public static Subscription create(User user, String tier, Instant startDate, Instant endDate) {
         validateUser(user);
         validateTier(tier);
         validateDates(startDate, endDate);
@@ -82,7 +82,7 @@ public class Subscription {
         }
     }
 
-    private static void validateDates(LocalDateTime startDate, LocalDateTime endDate) {
+    private static void validateDates(Instant startDate, Instant endDate) {
         if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
             throw new GeneralException(SubscriptionErrorStatus.INVALID_SUBSCRIPTION_DATE);
         }
@@ -90,12 +90,12 @@ public class Subscription {
 
     // 현재 구독 유효 여부 확인 (현재 시간이 시작일과 종료일 사이인지)
     public boolean isActive() {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         return !now.isBefore(this.startDate) && !now.isAfter(this.endDate);
     }
 
     // 구독 기간 연장
-    public void extendSubscription(LocalDateTime newEndDate) {
+    public void extendSubscription(Instant newEndDate) {
         if (newEndDate == null || !newEndDate.isAfter(this.endDate)) {
             throw new GeneralException(SubscriptionErrorStatus.INVALID_SUBSCRIPTION_EXTENSION_DATE);
         }

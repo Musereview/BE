@@ -16,7 +16,8 @@ import com.mr.domain.mentor.entity.enums.MessageRole;
 import com.mr.domain.mentor.exception.MentorErrorStatus;
 import com.mr.domain.mentor.repository.MentorMessageRepository;
 import com.mr.global.apipayload.exception.GeneralException;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,7 +64,7 @@ class MentorServiceTest {
     @DisplayName("대화 메시지와 판단 근거 JSON 반환")
     void getMessageHistory_success() {
         MentorMessage message = mock(MentorMessage.class);
-        LocalDateTime createdAt = LocalDateTime.of(2026, 7, 1, 14, 35);
+        Instant createdAt = Instant.parse("2026-07-01T14:35:00Z");
 
         given(message.getId()).willReturn(30L);
         given(message.getRole()).willReturn(MessageRole.ASSISTANT);

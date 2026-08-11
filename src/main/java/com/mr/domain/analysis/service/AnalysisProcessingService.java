@@ -7,7 +7,8 @@ import com.mr.domain.analysis.model.AnalysisProcessingClaim;
 import com.mr.domain.analysis.model.GeneratedAnalysisReport;
 import com.mr.global.client.ai.AiAnalysisRequest;
 import com.mr.global.client.ai.AiServerClient;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 import java.util.Optional;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,7 @@ public class AnalysisProcessingService {
         processClaimed(analysisId, () -> analysisStateService.startProcessing(analysisId));
     }
 
-    public void recoverStaleProcessing(Long analysisId, LocalDateTime cutoff) {
+    public void recoverStaleProcessing(Long analysisId, Instant cutoff) {
         processClaimed(analysisId, () -> analysisStateService.restartStaleProcessing(analysisId, cutoff));
     }
 

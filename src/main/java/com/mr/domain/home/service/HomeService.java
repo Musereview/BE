@@ -26,8 +26,10 @@ import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.util.RelativeDateFormatter;
 import java.sql.Date;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -59,7 +61,7 @@ public class HomeService {
 
         Set<LocalDate> practiceDates = fetchPracticeDates(userId);
 
-        LocalDateTime since = LocalDateTime.now().minusDays(STREAK_LOOKBACK_DAYS);
+        Instant since = Instant.now().minus(STREAK_LOOKBACK_DAYS, ChronoUnit.DAYS);
         List<Playing> recentCompleted =
                 playingRepository.findByUserAndStatusSince(userId, PlayingStatus.COMPLETED, since);
 
@@ -87,7 +89,7 @@ public class HomeService {
     // 연속 출석일수는 기간 상한이 없어야 하므로 별도로 전체 기간 날짜만 조회
     private Set<LocalDate> fetchPracticeDates(Long userId) {
         return playingRepository.findDistinctEndedDatesByUserAndStatus(userId, PlayingStatus.COMPLETED).stream()
-                .map(Date::toLocalDate)
+                .map(instant -> instant.atZone(ZoneId.of("Asia/Seoul")).toLocalDate())  // DB에서 꺼낸 UTC 시간(Instant)을 한국 시간대(Asia/Seoul)로 해서 달력 날짜(LocalDate)만 뽑아냄
                 .collect(Collectors.toSet());
     }
 
@@ -111,7 +113,7 @@ public class HomeService {
     }
 
     private int computeCurrentStreak(Set<LocalDate> practiceDates) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));   // 서버가 UTC여도 사용자는 한국 기준으로 출석을 계산해야 함
         LocalDate cursor = practiceDates.contains(today) ? today : today.minusDays(1);
 
         int streak = 0;
@@ -130,7 +132,7 @@ public class HomeService {
     }
 
     private List<DayAttendance> buildWeeklyAttendance(Set<LocalDate> practiceDates) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         LocalDate weekStart = today.with(DayOfWeek.MONDAY);
 
         List<DayAttendance> weeklyAttendance = new ArrayList<>();
@@ -170,9 +172,18 @@ public class HomeService {
     }
 
     private PracticeSummary buildPracticeSummary(List<Playing> recentCompleted) {
-        LocalDate today = LocalDate.now();
-        LocalDateTime weekStart = today.with(DayOfWeek.MONDAY).atStartOfDay();
-        LocalDateTime monthStart = today.withDayOfMonth(1).atStartOfDay();
+        ZoneId kstZone = ZoneId.of("Asia/Seoul"); // 명시적인 한국 타임존
+        LocalDate today = LocalDate.now(kstZone); // KST 기준 오늘 날짜
+
+        // 한국 시간 기준 월요일 자정(00:00)을 구한 뒤 -> UTC Instant로 변환
+        Instant weekStart = today.with(DayOfWeek.MONDAY)
+                .atStartOfDay(kstZone)
+                .toInstant();
+
+        // 한국 시간 기준 1일 자정(00:00)을 구한 뒤 -> UTC Instant로 변환
+        Instant monthStart = today.withDayOfMonth(1)
+                .atStartOfDay(kstZone)
+                .toInstant();
 
         int weeklySeconds = sumDurationSince(recentCompleted, weekStart);
         int monthlySeconds = sumDurationSince(recentCompleted, monthStart);
@@ -184,7 +195,7 @@ public class HomeService {
         );
     }
 
-    private int sumDurationSince(List<Playing> playings, LocalDateTime since) {
+    private int sumDurationSince(List<Playing> playings, Instant since) {
         return playings.stream()
                 .filter(p -> p.getEndedAt() != null && !p.getEndedAt().isBefore(since))
                 .mapToInt(p -> p.getDurationSec() != null ? p.getDurationSec() : 0)
