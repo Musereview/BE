@@ -208,6 +208,21 @@ class ReportGenerationServiceTest {
     }
 
     @Test
+    void generate_fallsBackWhenGeminiReportIs1501Characters() {
+        given(geminiClient.generateReport(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString()
+        )).willReturn(new GeminiGenerationResult(
+                structuredResponse(reportWithLength(1_501)),
+                100, 50, 150, false
+        ));
+
+        GeneratedAnalysisReport report = service.generate(result);
+
+        assertThat(report.generationType()).isEqualTo(ReportGenerationType.RULE_BASED);
+    }
+
+    @Test
     void generate_fallsBackWhenGeminiResponseIsNotValidJson() {
         given(geminiClient.generateReport(
                 org.mockito.ArgumentMatchers.anyString(),

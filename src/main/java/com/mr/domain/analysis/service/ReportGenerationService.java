@@ -31,6 +31,7 @@ public class ReportGenerationService {
     static final String PROMPT_VERSION = "analysis-report-v3";
     private static final BigDecimal TEMPERATURE = new BigDecimal("0.30");
     private static final int MIN_REPORT_LENGTH = 700;
+    private static final int MAX_REPORT_LENGTH = 1_500;
     private static final int MIN_SUMMARY_LENGTH = 20;
     private static final int MAX_SUMMARY_LENGTH = 150;
     private static final Pattern SENTENCE_ENDING = Pattern.compile("[.!?。！？](?=\\s|$)");
@@ -157,8 +158,15 @@ public class ReportGenerationService {
     }
 
     private void validateMarkdownStructure(String content) {
-        if (content == null || content.strip().length() < MIN_REPORT_LENGTH) {
+        if (content == null) {
+            throw new IllegalStateException("Gemini returned an empty report.");
+        }
+        int reportLength = content.strip().length();
+        if (reportLength < MIN_REPORT_LENGTH) {
             throw new IllegalStateException("Gemini returned a report that is too short.");
+        }
+        if (reportLength > MAX_REPORT_LENGTH) {
+            throw new IllegalStateException("Gemini returned a report that is too long.");
         }
         List<String> lines = content.lines()
                 .map(String::stripTrailing)
