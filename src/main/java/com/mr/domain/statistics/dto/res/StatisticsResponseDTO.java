@@ -7,8 +7,13 @@ import java.util.List;
 
 @Schema(description = "통계 화면 조회 응답")
 public record StatisticsResponseDTO(
+        @Schema(description = "이번 주 연주 요약")
         WeeklySummary weeklySummary,
+
+        @Schema(description = "영역별 성장 변화. SCALE, TENSION, PROGRESSION, VOICE_LEADING 순서 고정 4개")
         List<DomainGrowth> domainGrowth,
+
+        @Schema(description = "최근 4주 평균 점수 추이")
         WeeklyTrend weeklyTrend
 ) {
 
@@ -36,7 +41,7 @@ public record StatisticsResponseDTO(
 
     @Schema(description = "영역별 성장 변화")
     public record DomainGrowth(
-            @Schema(description = "영역 코드")
+            @Schema(description = "영역 코드", example = "SCALE")
             SkillType domain,
 
             @Schema(description = "화면 표시용 영역 이름", example = "스케일")
