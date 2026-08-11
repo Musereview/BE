@@ -15,12 +15,12 @@ import com.mr.global.file.s3.config.S3Properties;
 import com.mr.global.file.s3.dto.FileUploadCommand;
 import com.mr.global.file.s3.dto.PresignedUrlUpload;
 import com.mr.global.file.s3.dto.ValidatedFile;
+import com.mr.global.file.s3.enums.S3FileType;
 import com.mr.global.file.s3.exception.S3ErrorStatus;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -31,9 +31,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3Utilities;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetUrlRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -78,6 +76,8 @@ class S3FileServiceTest {
     private static final long FILE_SIZE = 1_024L;
     private static final long MAX_FILE_SIZE =
             30L * 1_024 * 1_024;
+
+    private static final S3FileType FILE_TYPE = S3FileType.RECORDING;
 
     @Mock
     private S3Client s3Client;
@@ -144,6 +144,7 @@ class S3FileServiceTest {
 
             when(objectKeyGenerator.generate(
                     OWNER_ID,
+                    FILE_TYPE,
                     command.originalFileName(),
                     CONTENT_TYPE
             )).thenReturn(OBJECT_KEY);
@@ -161,6 +162,7 @@ class S3FileServiceTest {
             PresignedUrlUpload response =
                     s3FileService.createPresignedUpload(
                             OWNER_ID,
+                            FILE_TYPE,
                             command
                     );
 
@@ -229,6 +231,7 @@ class S3FileServiceTest {
 
             when(objectKeyGenerator.generate(
                     OWNER_ID,
+                    FILE_TYPE,
                     command.originalFileName(),
                     NORMALIZED_WEBM_CONTENT_TYPE
             )).thenReturn(OBJECT_KEY);
@@ -246,6 +249,7 @@ class S3FileServiceTest {
             PresignedUrlUpload response =
                     s3FileService.createPresignedUpload(
                             OWNER_ID,
+                            FILE_TYPE,
                             command
                     );
 
@@ -261,6 +265,7 @@ class S3FileServiceTest {
             verify(objectKeyGenerator)
                     .generate(
                             OWNER_ID,
+                            FILE_TYPE,
                             command.originalFileName(),
                             NORMALIZED_WEBM_CONTENT_TYPE
                     );
@@ -295,6 +300,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.createPresignedUpload(
                             null,
+                            FILE_TYPE,
                             command
                     ),
                     S3ErrorStatus.INVALID_OBJECT_KEY
@@ -303,6 +309,7 @@ class S3FileServiceTest {
             verify(objectKeyGenerator, never())
                     .generate(
                             anyLong(),
+                            any(S3FileType.class),
                             anyString(),
                             anyString()
                     );
@@ -328,6 +335,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.createPresignedUpload(
                             0L,
+                            FILE_TYPE,
                             command
                     ),
                     S3ErrorStatus.INVALID_OBJECT_KEY
@@ -336,6 +344,7 @@ class S3FileServiceTest {
             verify(objectKeyGenerator, never())
                     .generate(
                             anyLong(),
+                            any(S3FileType.class),
                             anyString(),
                             anyString()
                     );
@@ -348,6 +357,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.createPresignedUpload(
                             OWNER_ID,
+                            FILE_TYPE,
                             null
                     ),
                     S3ErrorStatus.INVALID_FILE_SIZE
@@ -356,6 +366,7 @@ class S3FileServiceTest {
             verify(objectKeyGenerator, never())
                     .generate(
                             anyLong(),
+                            any(S3FileType.class),
                             anyString(),
                             anyString()
                     );
@@ -376,6 +387,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.createPresignedUpload(
                             OWNER_ID,
+                            FILE_TYPE,
                             command
                     ),
                     S3ErrorStatus.INVALID_FILE_SIZE
@@ -384,6 +396,7 @@ class S3FileServiceTest {
             verify(objectKeyGenerator, never())
                     .generate(
                             anyLong(),
+                            any(S3FileType.class),
                             anyString(),
                             anyString()
                     );
@@ -409,6 +422,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.createPresignedUpload(
                             OWNER_ID,
+                            FILE_TYPE,
                             command
                     ),
                     S3ErrorStatus.FILE_SIZE_EXCEEDED
@@ -417,6 +431,7 @@ class S3FileServiceTest {
             verify(objectKeyGenerator, never())
                     .generate(
                             anyLong(),
+                            any(S3FileType.class),
                             anyString(),
                             anyString()
                     );
@@ -442,6 +457,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.createPresignedUpload(
                             OWNER_ID,
+                            FILE_TYPE,
                             command
                     ),
                     S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE
@@ -450,6 +466,7 @@ class S3FileServiceTest {
             verify(objectKeyGenerator, never())
                     .generate(
                             anyLong(),
+                            any(S3FileType.class),
                             anyString(),
                             anyString()
                     );
@@ -473,6 +490,7 @@ class S3FileServiceTest {
 
             when(objectKeyGenerator.generate(
                     OWNER_ID,
+                    FILE_TYPE,
                     command.originalFileName(),
                     CONTENT_TYPE
             )).thenReturn(OBJECT_KEY);
@@ -489,6 +507,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.createPresignedUpload(
                             OWNER_ID,
+                            FILE_TYPE,
                             command
                     ),
                     S3ErrorStatus.PRESIGNED_URL_CREATE_FAILED
@@ -512,6 +531,7 @@ class S3FileServiceTest {
 
             when(objectKeyGenerator.belongsToOwner(
                     OWNER_ID,
+                    FILE_TYPE,
                     OBJECT_KEY
             )).thenReturn(true);
 
@@ -523,6 +543,7 @@ class S3FileServiceTest {
             ValidatedFile response =
                     s3FileService.validateUploadedFile(
                             OWNER_ID,
+                            FILE_TYPE,
                             OBJECT_KEY
                     );
 
@@ -556,6 +577,7 @@ class S3FileServiceTest {
             verify(objectKeyGenerator)
                     .belongsToOwner(
                             OWNER_ID,
+                            FILE_TYPE,
                             OBJECT_KEY
                     );
         }
@@ -575,6 +597,7 @@ class S3FileServiceTest {
 
             when(objectKeyGenerator.belongsToOwner(
                     OWNER_ID,
+                    FILE_TYPE,
                     OBJECT_KEY
             )).thenReturn(true);
 
@@ -586,6 +609,7 @@ class S3FileServiceTest {
             ValidatedFile response =
                     s3FileService.validateUploadedFile(
                             OWNER_ID,
+                            FILE_TYPE,
                             OBJECT_KEY
                     );
 
@@ -603,6 +627,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.validateUploadedFile(
                             null,
+                            FILE_TYPE,
                             OBJECT_KEY
                     ),
                     S3ErrorStatus.INVALID_OBJECT_KEY
@@ -611,6 +636,7 @@ class S3FileServiceTest {
             verify(objectKeyGenerator, never())
                     .belongsToOwner(
                             anyLong(),
+                            any(S3FileType.class),
                             anyString()
                     );
 
@@ -627,6 +653,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.validateUploadedFile(
                             OWNER_ID,
+                            FILE_TYPE,
                             null
                     ),
                     S3ErrorStatus.INVALID_OBJECT_KEY
@@ -635,6 +662,7 @@ class S3FileServiceTest {
             verify(objectKeyGenerator, never())
                     .belongsToOwner(
                             anyLong(),
+                            any(S3FileType.class),
                             anyString()
                     );
 
@@ -651,6 +679,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.validateUploadedFile(
                             OWNER_ID,
+                            FILE_TYPE,
                             " "
                     ),
                     S3ErrorStatus.INVALID_OBJECT_KEY
@@ -659,6 +688,7 @@ class S3FileServiceTest {
             verify(objectKeyGenerator, never())
                     .belongsToOwner(
                             anyLong(),
+                            any(S3FileType.class),
                             anyString()
                     );
         }
@@ -669,6 +699,7 @@ class S3FileServiceTest {
             // given
             when(objectKeyGenerator.belongsToOwner(
                     OWNER_ID,
+                    FILE_TYPE,
                     OTHER_OWNER_OBJECT_KEY
             )).thenReturn(false);
 
@@ -676,6 +707,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.validateUploadedFile(
                             OWNER_ID,
+                            FILE_TYPE,
                             OTHER_OWNER_OBJECT_KEY
                     ),
                     S3ErrorStatus.INVALID_OBJECT_KEY
@@ -699,6 +731,7 @@ class S3FileServiceTest {
 
             when(objectKeyGenerator.belongsToOwner(
                     OWNER_ID,
+                    FILE_TYPE,
                     OBJECT_KEY
             )).thenReturn(true);
 
@@ -710,6 +743,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.validateUploadedFile(
                             OWNER_ID,
+                            FILE_TYPE,
                             OBJECT_KEY
                     ),
                     S3ErrorStatus.OBJECT_NOT_FOUND
@@ -728,6 +762,7 @@ class S3FileServiceTest {
 
             when(objectKeyGenerator.belongsToOwner(
                     OWNER_ID,
+                    FILE_TYPE,
                     OBJECT_KEY
             )).thenReturn(true);
 
@@ -739,6 +774,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.validateUploadedFile(
                             OWNER_ID,
+                            FILE_TYPE,
                             OBJECT_KEY
                     ),
                     S3ErrorStatus.OBJECT_VALIDATION_FAILED
@@ -751,6 +787,7 @@ class S3FileServiceTest {
             // given
             when(objectKeyGenerator.belongsToOwner(
                     OWNER_ID,
+                    FILE_TYPE,
                     OBJECT_KEY
             )).thenReturn(true);
 
@@ -766,6 +803,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.validateUploadedFile(
                             OWNER_ID,
+                            FILE_TYPE,
                             OBJECT_KEY
                     ),
                     S3ErrorStatus.OBJECT_VALIDATION_FAILED
@@ -784,6 +822,7 @@ class S3FileServiceTest {
 
             when(objectKeyGenerator.belongsToOwner(
                     OWNER_ID,
+                    FILE_TYPE,
                     OBJECT_KEY
             )).thenReturn(true);
 
@@ -795,6 +834,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.validateUploadedFile(
                             OWNER_ID,
+                            FILE_TYPE,
                             OBJECT_KEY
                     ),
                     S3ErrorStatus.INVALID_FILE_SIZE
@@ -817,6 +857,7 @@ class S3FileServiceTest {
 
             when(objectKeyGenerator.belongsToOwner(
                     OWNER_ID,
+                    FILE_TYPE,
                     OBJECT_KEY
             )).thenReturn(true);
 
@@ -828,6 +869,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.validateUploadedFile(
                             OWNER_ID,
+                            FILE_TYPE,
                             OBJECT_KEY
                     ),
                     S3ErrorStatus.FILE_SIZE_EXCEEDED
@@ -848,6 +890,7 @@ class S3FileServiceTest {
 
             when(objectKeyGenerator.belongsToOwner(
                     OWNER_ID,
+                    FILE_TYPE,
                     OBJECT_KEY
             )).thenReturn(true);
 
@@ -859,6 +902,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.validateUploadedFile(
                             OWNER_ID,
+                            FILE_TYPE,
                             OBJECT_KEY
                     ),
                     S3ErrorStatus.UNSUPPORTED_CONTENT_TYPE
@@ -957,6 +1001,7 @@ class S3FileServiceTest {
 
             when(objectKeyGenerator.belongsToOwner(
                     OWNER_ID,
+                    FILE_TYPE,
                     OBJECT_KEY
             )).thenReturn(true);
 
@@ -973,6 +1018,7 @@ class S3FileServiceTest {
             String response =
                     s3FileService.createPresignedDownload(
                             OWNER_ID,
+                            FILE_TYPE,
                             OBJECT_KEY
                     );
 
@@ -1009,6 +1055,7 @@ class S3FileServiceTest {
             verify(objectKeyGenerator)
                     .belongsToOwner(
                             OWNER_ID,
+                            FILE_TYPE,
                             OBJECT_KEY
                     );
         }
@@ -1019,6 +1066,7 @@ class S3FileServiceTest {
             // given
             when(objectKeyGenerator.belongsToOwner(
                     OWNER_ID,
+                    FILE_TYPE,
                     OTHER_OWNER_OBJECT_KEY
             )).thenReturn(false);
 
@@ -1026,6 +1074,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.createPresignedDownload(
                             OWNER_ID,
+                            FILE_TYPE,
                             OTHER_OWNER_OBJECT_KEY
                     ),
                     S3ErrorStatus.INVALID_OBJECT_KEY
@@ -1043,6 +1092,7 @@ class S3FileServiceTest {
             // given
             when(objectKeyGenerator.belongsToOwner(
                     OWNER_ID,
+                    FILE_TYPE,
                     OBJECT_KEY
             )).thenReturn(true);
 
@@ -1058,6 +1108,7 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.createPresignedDownload(
                             OWNER_ID,
+                            FILE_TYPE,
                             OBJECT_KEY
                     ),
                     S3ErrorStatus.PRESIGNED_URL_CREATE_FAILED
