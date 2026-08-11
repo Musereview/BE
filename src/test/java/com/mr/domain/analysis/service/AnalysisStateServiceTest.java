@@ -330,6 +330,7 @@ class AnalysisStateServiceTest {
     ) {
         return new GeneratedAnalysisReport(
                 generationType,
+                "요약",
                 "리포트",
                 "gemini-3-flash-preview",
                 "analysis-report-v1",

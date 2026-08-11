@@ -44,8 +44,8 @@ public class AnalysisProcessingService {
             AiAnalysisRequest request = objectMapper.readValue(activeClaim.requestJson(), AiAnalysisRequest.class);
             JsonNode result = aiServerClient.requestAnalysis(request);
             analysisStateService.validateResult(result);
-            result = analysisResultEnricher.enrich(result);
             GeneratedAnalysisReport report = reportGenerationService.generate(result);
+            result = analysisResultEnricher.withSummary(result, report.summary());
             boolean completed = analysisStateService.complete(
                     analysisId,
                     activeClaim.processingStartedAt(),

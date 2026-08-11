@@ -133,6 +133,7 @@ class AnalysisProcessingServiceTest {
         JsonNode enrichedResult = new AnalysisResultEnricher().enrich(validResult);
         GeneratedAnalysisReport generatedReport = new GeneratedAnalysisReport(
                 ReportGenerationType.RULE_BASED,
+                enrichedResult.path("summary").asText(),
                 "리포트",
                 "gemini-3-flash-preview",
                 "analysis-report-v1",
@@ -158,7 +159,7 @@ class AnalysisProcessingServiceTest {
                 )));
         given(aiServerClient.requestAnalysis(org.mockito.ArgumentMatchers.any(AiAnalysisRequest.class)))
                 .willReturn(validResult);
-        given(reportGenerationService.generate(enrichedResult)).willReturn(generatedReport);
+        given(reportGenerationService.generate(validResult)).willReturn(generatedReport);
         given(analysisStateService.complete(
                 1L,
                 processingStartedAt,
@@ -174,7 +175,7 @@ class AnalysisProcessingServiceTest {
         service.process(1L);
 
         verify(analysisStateService).validateResult(validResult);
-        verify(reportGenerationService).generate(enrichedResult);
+        verify(reportGenerationService).generate(validResult);
         verify(analysisStateService).complete(
                 1L,
                 processingStartedAt,
