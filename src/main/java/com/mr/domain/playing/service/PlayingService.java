@@ -21,6 +21,7 @@ import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.PlayingCompletedEvent;
 import com.mr.global.file.s3.dto.ValidatedFile;
+import com.mr.global.file.s3.enums.S3FileType;
 import com.mr.global.file.s3.service.S3FileService;
 import com.mr.global.event.NotificationEvent;
 import lombok.RequiredArgsConstructor;
@@ -74,7 +75,20 @@ public class PlayingService {
         playing.start();
         Playing savedPlaying = playingRepository.save(playing);
 
-        return PlayingStartResponse.from(savedPlaying);
+        String backingTrackAudioFileUrl = null;
+
+        if (backingTrack.getAudioObjectKey() != null
+                && !backingTrack.getAudioObjectKey().isBlank()) {
+
+            backingTrackAudioFileUrl =
+                    s3FileService.createPresignedDownload(
+                            backingTrack.getUser().getUserId(),
+                            S3FileType.BACKING_TRACK,
+                            backingTrack.getAudioObjectKey()
+                    );
+        }
+
+        return PlayingStartResponse.from(savedPlaying, backingTrackAudioFileUrl);
 
     }
 
@@ -92,6 +106,7 @@ public class PlayingService {
 
         return RecordingUploadUrlResponse.from(s3FileService.createPresignedUpload(
                 userId,
+                S3FileType.RECORDING,
                 request.toCommand())
         );
     }
@@ -103,7 +118,7 @@ public class PlayingService {
 
         // S3 네트워크 통신은 DB 트랜잭션 밖에서 수행
         ValidatedFile recording =
-                s3FileService.validateUploadedFile(userId, request.recordingObjectKey());
+                s3FileService.validateUploadedFile(userId, S3FileType.RECORDING, request.recordingObjectKey());
 
         List<MidiEventData> midiEvents = request.events()
                 .stream()
@@ -154,6 +169,7 @@ public class PlayingService {
         String recordingFileUrl =
                 s3FileService.createPresignedDownload(
                         userId,
+                        S3FileType.RECORDING,
                         playing.getRecordingObjectKey()
                 );
 
@@ -176,11 +192,27 @@ public class PlayingService {
         String recordingFileUrl =
                 s3FileService.createPresignedDownload(
                         userId,
+                        S3FileType.RECORDING,
                         playing.getRecordingObjectKey()
                 );
 
+        BackingTrack backingTrack = playing.getBackingTrack();
+
+        String backingTrackAudioFileUrl = null;
+
+        if (backingTrack.getAudioObjectKey() != null
+                && !backingTrack.getAudioObjectKey().isBlank()) {
+
+            backingTrackAudioFileUrl =
+                    s3FileService.createPresignedDownload(
+                            backingTrack.getUser().getUserId(),
+                            S3FileType.BACKING_TRACK,
+                            backingTrack.getAudioObjectKey()
+                    );
+        }
+
         int totalBars = analysisBarCalculator.calculate(playing).totalBars();
-        return AnalysisContextResponse.from(playing, totalBars, recordingFileUrl);
+        return AnalysisContextResponse.from(playing, totalBars, recordingFileUrl, backingTrackAudioFileUrl);
     }
 
     @Transactional
