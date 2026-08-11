@@ -15,11 +15,8 @@ public record HomeResponseDTO(
         Streak streak,
         PracticeSummary practiceSummary,
 
-        @Schema(description = "진행 중인 학습. 학습 기록이 없거나 진행률이 0%/100%면 null")
+        @Schema(description = "진행 중인 학습(재도전 포함). 이어갈 단계가 없으면(진행 기록이 아예 없거나, 최근 패키지들이 전부 100% 완료) null")
         LearningSummary currentLearning,
-
-        @Schema(description = "가장 최근에 시도한 학습 단계(재도전 포함). currentLearning과 달리 진행률 0%(재도전만 있는 경우)에도 채워지지만, 이어갈 단계가 없으면(패키지 100% 완료) currentLearning과 동일하게 null")
-        RecentLearningActivity recentLearningActivity,
 
         @Schema(description = "추천 학습 목록")
         List<RecommendedLearning> recommendedLearnings,
@@ -114,7 +111,10 @@ public record HomeResponseDTO(
             @Schema(description = "패키지 난이도", example = "ADVANCED")
             String level,
 
-            @Schema(description = "패키지 진행률(%), 1~99", example = "10")
+            @Schema(description = "단계 상태. RETRY(재도전) 또는 COMPLETED(완료)", example = "RETRY")
+            String status,
+
+            @Schema(description = "패키지 진행률(%), 0~99", example = "10")
             int progressRate,
 
             @Schema(description = "[이어서 학습하기] 클릭 시 이동할 단계 ID", example = "13")
@@ -131,41 +131,9 @@ public record HomeResponseDTO(
                     currentLearning.title(),
                     currentLearning.stepTitle(),
                     currentLearning.difficulty(),
+                    currentLearning.status(),
                     currentLearning.progressRate(),
                     currentLearning.nextStepId()
-            );
-        }
-    }
-
-    @Schema(description = "가장 최근에 시도한 학습 단계(완료 여부 무관, 재도전도 포함)")
-    public record RecentLearningActivity(
-            @Schema(description = "패키지 ID", example = "1")
-            Long learningId,
-
-            @Schema(description = "마지막으로 시도한 단계 ID(표시용)", example = "12")
-            Long learningStepId,
-
-            @Schema(description = "마지막으로 시도한 단계의 제목", example = "11th 텐션 노트 활용하기")
-            String stepTitle,
-
-            @Schema(description = "단계 상태. RETRY(재도전) 또는 COMPLETED(완료)", example = "RETRY")
-            String status,
-
-            @Schema(description = "이동용 — 이어서 학습하기 클릭 시 이동할 단계 ID", example = "12")
-            Long nextStepId
-    ) {
-
-        public static RecentLearningActivity from(LearningHomeResponseDTO.RecentActivity recentActivity) {
-            if (recentActivity == null) {
-                return null;
-            }
-
-            return new RecentLearningActivity(
-                    recentActivity.learningId(),
-                    recentActivity.learningStepId(),
-                    recentActivity.stepTitle(),
-                    recentActivity.status(),
-                    recentActivity.nextStepId()
             );
         }
     }

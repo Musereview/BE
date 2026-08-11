@@ -243,24 +243,20 @@ class LearningControllerTest {
     @DisplayName("GET /api/learnings/home - 학습 홈 조회 성공")
     void getHome_success() throws Exception {
         LearningHomeResponseDTO.CurrentLearning currentLearning =
-                new LearningHomeResponseDTO.CurrentLearning(1L, "Tension Notes", "ADVANCED", "11th 텐션 노트 활용하기", 10, 13L);
-        LearningHomeResponseDTO.RecentActivity recentActivity =
-                new LearningHomeResponseDTO.RecentActivity(1L, 12L, "11th 텐션 노트 활용하기", "RETRY", 12L);
+                new LearningHomeResponseDTO.CurrentLearning(1L, "Tension Notes", "ADVANCED", "11th 텐션 노트 활용하기", "RETRY", 10, 13L);
         LearningHomeResponseDTO.TheoryPackageItem theoryItem =
                 new LearningHomeResponseDTO.TheoryPackageItem(2L, "Diatonic Chords", "BEGINNER", "요약");
         LearningAccompanimentListResponseDTO.AccompanimentItem accompanimentItem =
                 new LearningAccompanimentListResponseDTO.AccompanimentItem(5L, "Chapter 1", "설명", 10, 100);
 
         when(learningService.getHome(anyLong())).thenReturn(LearningHomeResponseDTO.HomeResultDTO.of(
-                currentLearning, recentActivity, List.of(theoryItem), List.of(accompanimentItem)));
+                currentLearning, List.of(theoryItem), List.of(accompanimentItem)));
 
         mockMvc.perform(get("/api/learnings/home"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.currentLearning.stepTitle").value("11th 텐션 노트 활용하기"))
+                .andExpect(jsonPath("$.data.currentLearning.status").value("RETRY"))
                 .andExpect(jsonPath("$.data.currentLearning.nextStepId").value(13))
-                .andExpect(jsonPath("$.data.recentActivity.learningStepId").value(12))
-                .andExpect(jsonPath("$.data.recentActivity.status").value("RETRY"))
-                .andExpect(jsonPath("$.data.recentActivity.nextStepId").value(12))
                 .andExpect(jsonPath("$.data.theoryPackages[0].title").value("Diatonic Chords"))
                 .andExpect(jsonPath("$.data.accompanimentPackages[0].progressRate").value(100));
     }
@@ -269,12 +265,11 @@ class LearningControllerTest {
     @DisplayName("GET /api/learnings/home - 학습 홈 조회 성공(최근 학습 없으면 currentLearning null)")
     void getHome_noRecentLearning_currentLearningIsNull() throws Exception {
         when(learningService.getHome(anyLong())).thenReturn(
-                LearningHomeResponseDTO.HomeResultDTO.of(null, null, List.of(), List.of()));
+                LearningHomeResponseDTO.HomeResultDTO.of(null, List.of(), List.of()));
 
         mockMvc.perform(get("/api/learnings/home"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.currentLearning").doesNotExist())
-                .andExpect(jsonPath("$.data.recentActivity").doesNotExist());
+                .andExpect(jsonPath("$.data.currentLearning").doesNotExist());
     }
 
     @Test

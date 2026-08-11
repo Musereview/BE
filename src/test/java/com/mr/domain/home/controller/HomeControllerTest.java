@@ -68,7 +68,6 @@ class HomeControllerTest {
                 new Streak(0, "오늘부터 연습을 시작해보세요!", List.of()),
                 new PracticeSummary(0, 0, "7월"),
                 null,
-                null,
                 List.of(),
                 List.of()
         );
@@ -79,7 +78,6 @@ class HomeControllerTest {
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.data.user.nickname").value("김뮤즈"))
                 .andExpect(jsonPath("$.data.currentLearning").isEmpty())
-                .andExpect(jsonPath("$.data.recentLearningActivity").isEmpty())
                 .andExpect(jsonPath("$.data.recommendedLearnings").isEmpty());
     }
 }

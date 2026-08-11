@@ -78,8 +78,7 @@ class HomeServiceTest {
         lenient().when(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).thenReturn(List.of());
         lenient().when(playingRepository.findPlayingsByUserAndStatus(anyLong(), any(), any()))
                 .thenReturn(new SliceImpl<>(List.of()));
-        lenient().when(learningService.getCurrentLearningAndRecentActivity(anyLong()))
-                .thenReturn(new LearningService.CurrentLearningAndRecentActivity(null, null));
+        lenient().when(learningService.getCurrentLearning(anyLong())).thenReturn(null);
     }
 
     private Playing mockPlaying(LocalDateTime endedAt, Integer durationSec) {
@@ -267,9 +266,8 @@ class HomeServiceTest {
         given(learning.getDifficulty()).willReturn(com.mr.domain.learning.entity.enums.LearningDifficulty.ADVANCED);
 
         LearningHomeResponseDTO.CurrentLearning currentLearning =
-                LearningHomeResponseDTO.CurrentLearning.of(learning, "11th 텐션 노트 활용하기", 10, 13L);
-        given(learningService.getCurrentLearningAndRecentActivity(1L))
-                .willReturn(new LearningService.CurrentLearningAndRecentActivity(currentLearning, null));
+                LearningHomeResponseDTO.CurrentLearning.of(learning, "11th 텐션 노트 활용하기", "RETRY", 10, 13L);
+        given(learningService.getCurrentLearning(1L)).willReturn(currentLearning);
 
         HomeResponseDTO response = homeService.getHome(1L);
 
@@ -277,6 +275,7 @@ class HomeServiceTest {
         assertThat(response.currentLearning().learningId()).isEqualTo(5L);
         assertThat(response.currentLearning().subtitle()).isEqualTo("11th 텐션 노트 활용하기");
         assertThat(response.currentLearning().level()).isEqualTo("ADVANCED");
+        assertThat(response.currentLearning().status()).isEqualTo("RETRY");
         assertThat(response.currentLearning().progressRate()).isEqualTo(10);
         assertThat(response.currentLearning().nextStepId()).isEqualTo(13L);
     }
@@ -289,37 +288,6 @@ class HomeServiceTest {
         HomeResponseDTO response = homeService.getHome(1L);
 
         assertThat(response.currentLearning()).isNull();
-    }
-
-    @Test
-    @DisplayName("getHome - LearningService에 최근 활동이 있으면 recentLearningActivity를 채운다(재도전으로 currentLearning이 null이어도)")
-    void getHome_hasRecentActivity_fillsRecentLearningActivity() {
-        stubBaseline(1L);
-
-        LearningHomeResponseDTO.RecentActivity recentActivity =
-                new LearningHomeResponseDTO.RecentActivity(5L, 12L, "11th 텐션 노트 활용하기", "RETRY", 12L);
-        given(learningService.getCurrentLearningAndRecentActivity(1L))
-                .willReturn(new LearningService.CurrentLearningAndRecentActivity(null, recentActivity));
-
-        HomeResponseDTO response = homeService.getHome(1L);
-
-        assertThat(response.currentLearning()).isNull();
-        assertThat(response.recentLearningActivity()).isNotNull();
-        assertThat(response.recentLearningActivity().learningId()).isEqualTo(5L);
-        assertThat(response.recentLearningActivity().learningStepId()).isEqualTo(12L);
-        assertThat(response.recentLearningActivity().stepTitle()).isEqualTo("11th 텐션 노트 활용하기");
-        assertThat(response.recentLearningActivity().status()).isEqualTo("RETRY");
-        assertThat(response.recentLearningActivity().nextStepId()).isEqualTo(12L);
-    }
-
-    @Test
-    @DisplayName("getHome - 최근 활동이 없으면 recentLearningActivity는 null이다")
-    void getHome_noRecentActivity_recentLearningActivityIsNull() {
-        stubBaseline(1L);
-
-        HomeResponseDTO response = homeService.getHome(1L);
-
-        assertThat(response.recentLearningActivity()).isNull();
     }
 
     @Test
@@ -350,9 +318,8 @@ class HomeServiceTest {
         given(learning.getDifficulty()).willReturn(com.mr.domain.learning.entity.enums.LearningDifficulty.ADVANCED);
 
         LearningHomeResponseDTO.CurrentLearning currentLearning =
-                LearningHomeResponseDTO.CurrentLearning.of(learning, "11th 텐션 노트 활용하기", 10, 13L);
-        given(learningService.getCurrentLearningAndRecentActivity(1L))
-                .willReturn(new LearningService.CurrentLearningAndRecentActivity(currentLearning, null));
+                LearningHomeResponseDTO.CurrentLearning.of(learning, "11th 텐션 노트 활용하기", "RETRY", 10, 13L);
+        given(learningService.getCurrentLearning(1L)).willReturn(currentLearning);
         given(learningService.getRecommendedLearnings(1L, 13L)).willReturn(List.of());
 
         homeService.getHome(1L);
