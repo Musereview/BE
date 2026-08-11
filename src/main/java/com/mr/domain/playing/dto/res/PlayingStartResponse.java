@@ -1,26 +1,32 @@
 package com.mr.domain.playing.dto.res;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.backingtrack.entity.ChordProgression;
 import com.mr.domain.backingtrack.entity.enums.ScaleType;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public record PlayingStartResponse(
         Long playingId,
         PlayingStatus status,
         BackingTrackResponse backingTrack,
-        LocalDateTime startedAt
+
+        @Schema(description = "시작 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+        Instant startedAt
 ) {
 
-    public static PlayingStartResponse from (Playing playing) {
+    public static PlayingStartResponse from (Playing playing, String backingTrackAudioFileUrl) {
         return new PlayingStartResponse(
                 playing.getId(),
                 playing.getStatus(),
-                BackingTrackResponse.from(playing.getBackingTrack()),
+                BackingTrackResponse.from(
+                        playing.getBackingTrack(), backingTrackAudioFileUrl),
                 playing.getStartedAt()
         );
     }
@@ -38,11 +44,11 @@ public record PlayingStartResponse(
             List<ChordProgressionResponse> chordProgression
 
     ) {
-        public static BackingTrackResponse from(BackingTrack backingTrack) {
+        public static BackingTrackResponse from(BackingTrack backingTrack, String audioFileUrl) {
             return new BackingTrackResponse(
                     backingTrack.getId(),
                     backingTrack.getTitle(),
-                    backingTrack.getAudioFileUrl(),
+                    audioFileUrl,
                     backingTrack.getGenre(),
                     backingTrack.getKeySignature(),
                     backingTrack.getScaleType(),

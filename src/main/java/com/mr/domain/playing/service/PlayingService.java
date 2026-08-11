@@ -21,6 +21,7 @@ import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.PlayingCompletedEvent;
 import com.mr.global.file.s3.dto.ValidatedFile;
+import com.mr.global.file.s3.enums.S3FileType;
 import com.mr.global.file.s3.service.S3FileService;
 import com.mr.global.event.NotificationEvent;
 import lombok.RequiredArgsConstructor;
@@ -31,8 +32,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import static com.mr.domain.backingtrack.entity.enums.AccessLevel.PUBLIC;
@@ -73,7 +75,20 @@ public class PlayingService {
         playing.start();
         Playing savedPlaying = playingRepository.save(playing);
 
-        return PlayingStartResponse.from(savedPlaying);
+        String backingTrackAudioFileUrl = null;
+
+        if (backingTrack.getAudioObjectKey() != null
+                && !backingTrack.getAudioObjectKey().isBlank()) {
+
+            backingTrackAudioFileUrl =
+                    s3FileService.createPresignedDownload(
+                            backingTrack.getUser().getUserId(),
+                            S3FileType.BACKING_TRACK,
+                            backingTrack.getAudioObjectKey()
+                    );
+        }
+
+        return PlayingStartResponse.from(savedPlaying, backingTrackAudioFileUrl);
 
     }
 
@@ -91,6 +106,7 @@ public class PlayingService {
 
         return RecordingUploadUrlResponse.from(s3FileService.createPresignedUpload(
                 userId,
+                S3FileType.RECORDING,
                 request.toCommand())
         );
     }
@@ -102,7 +118,7 @@ public class PlayingService {
 
         // S3 네트워크 통신은 DB 트랜잭션 밖에서 수행
         ValidatedFile recording =
-                s3FileService.validateUploadedFile(userId, request.recordingObjectKey());
+                s3FileService.validateUploadedFile(userId, S3FileType.RECORDING, request.recordingObjectKey());
 
         List<MidiEventData> midiEvents = request.events()
                 .stream()
@@ -153,6 +169,7 @@ public class PlayingService {
         String recordingFileUrl =
                 s3FileService.createPresignedDownload(
                         userId,
+                        S3FileType.RECORDING,
                         playing.getRecordingObjectKey()
                 );
 
@@ -175,11 +192,27 @@ public class PlayingService {
         String recordingFileUrl =
                 s3FileService.createPresignedDownload(
                         userId,
+                        S3FileType.RECORDING,
                         playing.getRecordingObjectKey()
                 );
 
+        BackingTrack backingTrack = playing.getBackingTrack();
+
+        String backingTrackAudioFileUrl = null;
+
+        if (backingTrack.getAudioObjectKey() != null
+                && !backingTrack.getAudioObjectKey().isBlank()) {
+
+            backingTrackAudioFileUrl =
+                    s3FileService.createPresignedDownload(
+                            backingTrack.getUser().getUserId(),
+                            S3FileType.BACKING_TRACK,
+                            backingTrack.getAudioObjectKey()
+                    );
+        }
+
         int totalBars = analysisBarCalculator.calculate(playing).totalBars();
-        return AnalysisContextResponse.from(playing, totalBars, recordingFileUrl);
+        return AnalysisContextResponse.from(playing, totalBars, recordingFileUrl, backingTrackAudioFileUrl);
     }
 
     @Transactional
@@ -229,7 +262,12 @@ public class PlayingService {
         int intervalHours = 10; // 10시간 단위로 알림
         int intervalSeconds = intervalHours * 3600;
 
-        LocalDateTime weekStart = LocalDate.now(clock).with(DayOfWeek.MONDAY).atStartOfDay();
+        // 한국 시간(KST) 기준으로 이번 주 월요일 자정을 구한 뒤 Instant로 변환
+        ZoneId kstZone = ZoneId.of("Asia/Seoul");
+        Instant weekStart = Instant.now(clock).atZone(kstZone).toLocalDate()
+                .with(DayOfWeek.MONDAY)
+                .atStartOfDay(kstZone)
+                .toInstant();
 
         // 방금 끝낸 연주를 제외한 이전 누적 시간
         Long previousWeeklySeconds = playingRepository.sumDurationSecExcludeCurrent(

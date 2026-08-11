@@ -2,11 +2,12 @@ package com.mr.global.file.s3.service;
 
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.file.s3.config.S3Properties;
+import com.mr.global.file.s3.enums.S3FileType;
 import com.mr.global.file.s3.exception.S3ErrorStatus;
 import com.mr.global.file.s3.util.ContentTypeUtils;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -17,10 +18,10 @@ public class S3ObjectKeyGenerator {
 
     private static final ZoneId KOREA_ZONE_ID = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter DATE_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(KOREA_ZONE_ID);
 
     private static final DateTimeFormatter TIME_FORMATTER =
-            DateTimeFormatter.ofPattern("HHmmss");
+            DateTimeFormatter.ofPattern("HHmmss").withZone(KOREA_ZONE_ID);
 
     private static final int UUID_LENGTH = 6;
 
@@ -31,40 +32,42 @@ public class S3ObjectKeyGenerator {
     }
 
     // 사용자별 S3 Object Key를 생성
-    // 생성 예시: recordings/1/2026-08-05/152310_a1b2c3.webm
+    // 생성 예시1 : recordings/1/2026-08-05/152310_a1b2c3.webm
+    // 생성 예시2 : backing-tracks/1/2026-08-05/152310_a1b2c3.webm
     public String generate(
             Long userId,
+            S3FileType fileType,
             String originalFileName,
             String contentType
     ) {
         String extension =
                 resolveExtension(originalFileName, contentType);
 
-        LocalDateTime now =
-                LocalDateTime.now(KOREA_ZONE_ID);
+        Instant now =
+                Instant.now();
 
 
         String generatedFileName =
                 "%s_%s.%s".formatted(
-                        now.format(TIME_FORMATTER),
+                        TIME_FORMATTER.format(now),
                         createShortUuid(),
                         extension
                 );
 
         return "%s/%d/%s/%s".formatted(
-                s3Properties.keyPrefix(),
+                fileType.getPrefix(),
                 userId,
-                now.format(DATE_FORMATTER),
+                DATE_FORMATTER.format(now),
                 generatedFileName
         );
     }
 
-    public boolean belongsToOwner(Long ownerId, String objectKey) {
+    public boolean belongsToOwner(Long ownerId, S3FileType fileType, String objectKey) {
         if (ownerId == null || objectKey == null) {
             return false;
         }
 
-        String expectedPrefix = s3Properties.keyPrefix() + "/" + ownerId + "/";
+        String expectedPrefix = fileType.getPrefix() + "/" + ownerId + "/";
 
         return objectKey.startsWith(expectedPrefix);
     }

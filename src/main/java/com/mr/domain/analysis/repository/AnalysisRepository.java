@@ -3,7 +3,8 @@ package com.mr.domain.analysis.repository;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import jakarta.persistence.LockModeType;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -28,7 +29,7 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
             """)
     List<Long> findIdsByStatusAndCreatedAtBefore(
             @Param("status") AnalysisStatus status,
-            @Param("cutoff") LocalDateTime cutoff,
+            @Param("cutoff") Instant cutoff,
             Pageable pageable
     );
 
@@ -39,7 +40,7 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
             """)
     List<Long> findIdsByStatusAndProcessingStartedAtBefore(
             @Param("status") AnalysisStatus status,
-            @Param("cutoff") LocalDateTime cutoff,
+            @Param("cutoff") Instant cutoff,
             Pageable pageable
     );
 
@@ -72,7 +73,7 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
     List<Analysis> findByUserAndStatusSince(
             @Param("userId") Long userId,
             @Param("status") AnalysisStatus status,
-            @Param("since") LocalDateTime since
+            @Param("since") Instant since
     );
 
     @Query("""

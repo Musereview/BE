@@ -2,6 +2,7 @@ package com.mr.domain.analysis.dto.res;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.Playing;
@@ -11,8 +12,10 @@ import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.ContentFormat;
 import com.mr.domain.analysis.entity.enums.LlmStatus;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Locale;
 
 public record AnalysisResultResponseDTO(
@@ -22,7 +25,11 @@ public record AnalysisResultResponseDTO(
         String genre,
         String key,
         Integer bpm,
-        LocalDateTime playedAt,
+
+        @Schema(description = "연주 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+        Instant playedAt,
+
         String recordingFileUrl,
         String backingTrackAudioFileUrl,
         AnalysisStatus status,
@@ -34,15 +41,22 @@ public record AnalysisResultResponseDTO(
         DomainScores domainScores,
         Report report,
         @JsonProperty("result") JsonNode rawResult,
-        LocalDateTime createdAt,
-        LocalDateTime completedAt
+
+        @Schema(description = "생성 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+        Instant createdAt,
+
+        @Schema(description = "완료 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+        Instant completedAt
 ) {
 
     public static AnalysisResultResponseDTO from(
             Analysis analysis,
             AnalysisReport analysisReport,
             JsonNode rawResult,
-            String recordingFileUrl
+            String recordingFileUrl,
+            String backingTrackAudioFileUrl
     ) {
         Playing playing = analysis.getPlaying();
         BackingTrack backingTrack = playing.getBackingTrack();
@@ -55,7 +69,7 @@ public record AnalysisResultResponseDTO(
                 playing.getBpm(),
                 playing.getEndedAt(),
                 recordingFileUrl,
-                backingTrack != null ? backingTrack.getAudioFileUrl() : null,
+                backingTrackAudioFileUrl,
                 analysis.getStatus(),
                 analysis.getStartBar(),
                 analysis.getEndBar(),
@@ -106,8 +120,14 @@ public record AnalysisResultResponseDTO(
             String content,
             String modelName,
             String promptVersion,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
+
+            @Schema(description = "리포트 생성 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+            Instant createdAt,
+
+            @Schema(description = "리포트 수정 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+            Instant updatedAt
     ) {
 
         private static Report fromNullable(AnalysisReport analysisReport) {

@@ -1,4 +1,4 @@
-package com.mr.domain.playing.dto.res;
+package com.mr.domain.backingtrack.dto.res;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mr.global.file.s3.dto.PresignedUrlUpload;
@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.Map;
 
-public record RecordingUploadUrlResponse(
+public record BackingTrackUploadUrlResponse(
         String objectKey,
         String uploadUrl,
 
@@ -17,10 +17,10 @@ public record RecordingUploadUrlResponse(
 
         Map<String, String> requiredHeaders
 ) {
-    public static RecordingUploadUrlResponse from(
+    public static BackingTrackUploadUrlResponse from(
             PresignedUrlUpload presignedUpload
     ) {
-        return new RecordingUploadUrlResponse(
+        return new BackingTrackUploadUrlResponse(
                 presignedUpload.objectKey(),
                 presignedUpload.uploadUrl(),
                 presignedUpload.expiresAt(),

@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
@@ -25,7 +25,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     boolean existsByUser_UserIdAndIsReadFalseAndDeletedAtIsNull(Long userId);
 
     // 중복 알림 방지용 쿼리 메서드
-    boolean existsByUser_UserIdAndTitleAndCreatedAtAfter(Long userId, String title, LocalDateTime time);
+    boolean existsByUser_UserIdAndTitleAndCreatedAtAfter(Long userId, String title, Instant time);
 
     @Modifying(clearAutomatically = true)
     @Query("delete from Notification n where n.user.userId = :userId")

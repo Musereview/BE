@@ -41,6 +41,9 @@ class GeminiClientTest {
                         + "/v1beta/models/gemini-3-flash-preview:generateContent"))
                 .andExpect(header("x-goog-api-key", "test-key"))
                 .andExpect(jsonPath("$.generationConfig.maxOutputTokens").value(4096))
+                .andExpect(jsonPath("$.generationConfig.responseMimeType").value("application/json"))
+                .andExpect(jsonPath("$.generationConfig.responseSchema.required[0]").value("summary"))
+                .andExpect(jsonPath("$.generationConfig.responseSchema.required[1]").value("report"))
                 .andRespond(withSuccess("""
                         {
                           "candidates": [{

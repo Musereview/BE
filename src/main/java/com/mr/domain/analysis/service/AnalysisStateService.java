@@ -21,7 +21,7 @@ import com.mr.global.event.AnalysisCompletedEvent;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 import com.mr.global.event.NotificationEvent;
@@ -58,12 +58,12 @@ public class AnalysisStateService {
         if (requestJson.isEmpty()) {
             return Optional.empty();
         }
-        LocalDateTime processingStartedAt = analysis.startProcessing(now());
+        Instant processingStartedAt = analysis.startProcessing(now());
         return Optional.of(new AnalysisProcessingClaim(requestJson.get(), processingStartedAt));
     }
 
     @Transactional
-    public Optional<AnalysisProcessingClaim> restartStaleProcessing(Long analysisId, LocalDateTime cutoff) {
+    public Optional<AnalysisProcessingClaim> restartStaleProcessing(Long analysisId, Instant cutoff) {
         Analysis analysis = analysisRepository.findByIdForUpdate(analysisId)
                 .orElseThrow(() -> new GeneralException(AnalysisErrorStatus.ANALYSIS_NOT_FOUND));
         if (analysis.getStatus() != AnalysisStatus.PROCESSING
@@ -75,14 +75,14 @@ public class AnalysisStateService {
         if (requestJson.isEmpty()) {
             return Optional.empty();
         }
-        LocalDateTime processingStartedAt = analysis.restartProcessing(now());
+        Instant processingStartedAt = analysis.restartProcessing(now());
         return Optional.of(new AnalysisProcessingClaim(requestJson.get(), processingStartedAt));
     }
 
     @Transactional
     public boolean complete(
             Long analysisId,
-            LocalDateTime expectedProcessingStartedAt,
+            Instant expectedProcessingStartedAt,
             JsonNode result,
             String rawResultJson,
             GeneratedAnalysisReport generatedReport
@@ -190,7 +190,7 @@ public class AnalysisStateService {
     }
 
     @Transactional
-    public boolean fail(Long analysisId, LocalDateTime expectedProcessingStartedAt, String reason) {
+    public boolean fail(Long analysisId, Instant expectedProcessingStartedAt, String reason) {
         Analysis analysis = getAnalysisForUpdate(analysisId);
         if (!analysis.isCurrentProcessing(expectedProcessingStartedAt)) {
             return false;
@@ -199,8 +199,8 @@ public class AnalysisStateService {
         return true;
     }
 
-    private LocalDateTime now() {
-        return LocalDateTime.now(clock);
+    private Instant now() {
+        return Instant.now(clock);
     }
 
     private Analysis getAnalysisForUpdate(Long analysisId) {

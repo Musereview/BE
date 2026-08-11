@@ -32,10 +32,11 @@ import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
+import com.mr.global.file.s3.enums.S3FileType;
 import com.mr.global.file.s3.service.S3FileService;
 import com.mr.global.client.ai.AiAnalysisRequest;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -54,6 +55,7 @@ class AnalysisServiceTest {
 
     private static final String RECORDING_OBJECT_KEY = "recordings/1/2026-08-06/120000_abcdef.webm";
     private static final String RECORDING_FILE_URL = "https://example.com/presigned-recording.webm";
+    private static final String BACKING_TRACK_OBJECT_KEY = "backing-tracks/1/2026-08-06/120000_abcdef.mp3";
 
     @Mock
     private AnalysisRepository analysisRepository;
@@ -100,10 +102,11 @@ class AnalysisServiceTest {
         lenient().when(backingTrack.getGenre()).thenReturn("jazz");
         lenient().when(backingTrack.getKeySignature()).thenReturn("C");
         lenient().when(backingTrack.getScaleType()).thenReturn(scaleType);
-        lenient().when(backingTrack.getAudioFileUrl()).thenReturn("https://example.com/backing-track.mp3");
+        lenient().when(backingTrack.getUser()).thenReturn(user);
+        lenient().when(backingTrack.getAudioObjectKey()).thenReturn(BACKING_TRACK_OBJECT_KEY);
 
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
-        LocalDateTime now = LocalDateTime.of(2026, 7, 31, 12, 0);
+        Instant now = Instant.parse("2026-07-31T12:00:00Z");
         analysis.startProcessing(now);
         analysis.complete(
                 85,
@@ -149,14 +152,15 @@ class AnalysisServiceTest {
         given(analysisRepository.findById(analysisId)).willReturn(Optional.of(analysis));
         given(analysisReportRepository.findFirstByAnalysisIdAndLlmStatusOrderByCreatedAtDesc(anyLong(), any()))
                 .willReturn(Optional.of(report));
-        given(s3FileService.createPresignedDownload(userId, RECORDING_OBJECT_KEY)).willReturn(RECORDING_FILE_URL);
+        given(s3FileService.createPresignedDownload(userId, S3FileType.RECORDING, RECORDING_OBJECT_KEY)).willReturn(RECORDING_FILE_URL);
+        given(s3FileService.createPresignedDownload(userId, S3FileType.BACKING_TRACK, BACKING_TRACK_OBJECT_KEY)).willReturn("https://example.com/backing-track.mp3");
 
         AnalysisResultResponseDTO response = analysisService.getAnalysisResult(userId, analysisId);
 
         ArgumentCaptor<LlmStatus> llmStatusCaptor = ArgumentCaptor.forClass(LlmStatus.class);
         verify(analysisReportRepository)
                 .findFirstByAnalysisIdAndLlmStatusOrderByCreatedAtDesc(eq(analysisId), llmStatusCaptor.capture());
-        verify(s3FileService).createPresignedDownload(userId, RECORDING_OBJECT_KEY);
+        verify(s3FileService).createPresignedDownload(userId, S3FileType.RECORDING, RECORDING_OBJECT_KEY);
         assertThat(llmStatusCaptor.getValue()).isEqualTo(LlmStatus.SUCCESS);
 
         assertThat(response.report()).isNotNull();
@@ -178,7 +182,7 @@ class AnalysisServiceTest {
         given(playing.getId()).willReturn(1L);
 
         Analysis analysis = Analysis.createPending(user, playing, 1, 8, "{}");
-        LocalDateTime now = LocalDateTime.of(2026, 7, 31, 12, 0);
+        Instant now = Instant.parse("2026-07-31T12:00:00Z");
         analysis.startProcessing(now);
         analysis.complete(85, AnalysisGrade.GOOD, "테스트 요약", null, null, null, null, null, now);
         given(analysisRepository.findById(1L)).willReturn(Optional.of(analysis));

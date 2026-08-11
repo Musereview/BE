@@ -29,7 +29,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -89,10 +89,10 @@ public class Playing extends BaseCreatedDeletedEntity {
 
     // 실제 연주가 시작된 시간
     @Column(name = "started_at")
-    private LocalDateTime startedAt;
+    private Instant startedAt;
 
     @Column(name = "ended_at")
-    private LocalDateTime endedAt;
+    private Instant endedAt;
 
     @Column(name = "recording_object_key", length = 255)
     private String recordingObjectKey;
@@ -194,7 +194,7 @@ public class Playing extends BaseCreatedDeletedEntity {
         validateCompletableStatus();
         validateMidiData(requestedMidiData);
 
-        LocalDateTime completedAt = LocalDateTime.now();
+        Instant completedAt = Instant.now();
         long savedDurationMs = calculateSavedDurationMs(completedAt);
 
         List<MidiEventData> normalizedMidiData = normalizeMidiData(requestedMidiData, savedDurationMs);
@@ -239,7 +239,7 @@ public class Playing extends BaseCreatedDeletedEntity {
         validateStartableStatus();
 
         this.status = PlayingStatus.IN_PROGRESS;
-        this.startedAt = LocalDateTime.now();
+        this.startedAt = Instant.now();
     }
 
     private void validateCompletableStatus() {
@@ -314,7 +314,7 @@ public class Playing extends BaseCreatedDeletedEntity {
     }
 
     private long calculateSavedDurationMs(
-            LocalDateTime completedAt
+            Instant completedAt
     ) {
         long actualDurationMs =
                 Duration.between(

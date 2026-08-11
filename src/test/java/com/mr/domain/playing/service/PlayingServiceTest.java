@@ -28,6 +28,7 @@ import com.mr.global.event.PlayingCompletedEvent;
 import com.mr.global.file.s3.dto.FileUploadCommand;
 import com.mr.global.file.s3.dto.ValidatedFile;
 import com.mr.global.file.s3.dto.PresignedUrlUpload;
+import com.mr.global.file.s3.enums.S3FileType;
 import com.mr.global.file.s3.service.S3FileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,7 +49,6 @@ import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +78,10 @@ class PlayingServiceTest {
     private static final String RECORDING_FILE_URL =
             "https://test-bucket.s3.ap-northeast-2.amazonaws.com/"
                     + RECORDING_OBJECT_KEY;
+    private static final String BACKING_TRACK_OBJECT_KEY =
+            "backing-tracks/1/2026-08-02/150000_a1b2c3.mp3";
+    private static final String BACKING_TRACK_FILE_URL =
+            "https://example.com/presigned-backing-track.mp3";
 
     @Mock
     private PlayingRepository playingRepository;
@@ -148,6 +152,7 @@ class PlayingServiceTest {
 
             when(s3FileService.validateUploadedFile(
                     userId,
+                    S3FileType.RECORDING,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
 
@@ -196,6 +201,7 @@ class PlayingServiceTest {
             verify(s3FileService)
                     .validateUploadedFile(
                             userId,
+                            S3FileType.RECORDING,
                             RECORDING_OBJECT_KEY
                     );
 
@@ -226,6 +232,7 @@ class PlayingServiceTest {
 
             when(s3FileService.validateUploadedFile(
                     userId,
+                    S3FileType.RECORDING,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
 
@@ -264,6 +271,7 @@ class PlayingServiceTest {
             verify(s3FileService)
                     .validateUploadedFile(
                             userId,
+                            S3FileType.RECORDING,
                             RECORDING_OBJECT_KEY
                     );
 
@@ -297,6 +305,7 @@ class PlayingServiceTest {
 
             when(s3FileService.validateUploadedFile(
                     userId,
+                    S3FileType.RECORDING,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
 
@@ -347,6 +356,7 @@ class PlayingServiceTest {
             verify(s3FileService)
                     .validateUploadedFile(
                             userId,
+                            S3FileType.RECORDING,
                             RECORDING_OBJECT_KEY
                     );
 
@@ -376,6 +386,7 @@ class PlayingServiceTest {
 
             when(s3FileService.validateUploadedFile(
                     userId,
+                    S3FileType.RECORDING,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
 
@@ -414,6 +425,7 @@ class PlayingServiceTest {
             verify(s3FileService)
                     .validateUploadedFile(
                             userId,
+                            S3FileType.RECORDING,
                             RECORDING_OBJECT_KEY
                     );
 
@@ -462,6 +474,7 @@ class PlayingServiceTest {
             verify(s3FileService, never())
                     .validateUploadedFile(
                             anyLong(),
+                            any(S3FileType.class),
                             anyString()
                     );
 
@@ -512,6 +525,7 @@ class PlayingServiceTest {
 
             when(s3FileService.validateUploadedFile(
                     userId,
+                    S3FileType.RECORDING,
                     RECORDING_OBJECT_KEY
             )).thenReturn(recordingResponse);
 
@@ -541,6 +555,7 @@ class PlayingServiceTest {
             verify(s3FileService)
                     .validateUploadedFile(
                             userId,
+                            S3FileType.RECORDING,
                             RECORDING_OBJECT_KEY
                     );
 
@@ -577,23 +592,25 @@ class PlayingServiceTest {
                     .atStartOfDay(zoneId)
                     .toInstant();
 
-            when(clock.instant())
+            // lenient() 를 붙여서 불필요한 스터빙 에러를 방지합니다.
+            org.mockito.Mockito.lenient().when(clock.instant())
                     .thenReturn(fixedInstant);
 
-            when(clock.getZone())
+            org.mockito.Mockito.lenient().when(clock.getZone())
                     .thenReturn(zoneId);
 
-            when(playing.getStatus())
+            org.mockito.Mockito.lenient().when(playing.getStatus())
                     .thenReturn(PlayingStatus.COMPLETED);
 
-            when(playing.getDurationSec())
+            org.mockito.Mockito.lenient().when(playing.getDurationSec())
                     .thenReturn(300);
 
-            LocalDateTime weekStart = fixedDate
+            Instant weekStart = fixedDate
                     .with(DayOfWeek.MONDAY)
-                    .atStartOfDay();
+                    .atStartOfDay(ZoneId.of("Asia/Seoul"))
+                    .toInstant();
 
-            when(playingRepository.sumDurationSecExcludeCurrent(
+            org.mockito.Mockito.lenient().when(playingRepository.sumDurationSecExcludeCurrent(
                     userId,
                     PlayingStatus.COMPLETED,
                     weekStart,
@@ -631,8 +648,20 @@ class PlayingServiceTest {
             given(backingTrack.getTitle())
                     .willReturn("테스트 백킹트랙");
 
-            given(backingTrack.getAudioFileUrl())
-                    .willReturn("https://example.com/backing-track.mp3");
+            given(backingTrack.getAudioObjectKey())
+                    .willReturn(BACKING_TRACK_OBJECT_KEY);
+
+            given(backingTrack.getUser())
+                    .willReturn(user);
+
+            given(user.getUserId())
+                    .willReturn(userId);
+
+            given(s3FileService.createPresignedDownload(
+                    userId,
+                    S3FileType.BACKING_TRACK,
+                    BACKING_TRACK_OBJECT_KEY
+            )).willReturn(BACKING_TRACK_FILE_URL);
 
             given(backingTrack.getChordProgressions())
                     .willReturn(List.of());
@@ -809,8 +838,20 @@ class PlayingServiceTest {
             given(backingTrack.getTitle())
                     .willReturn("Blues Backing Track");
 
-            given(backingTrack.getAudioFileUrl())
-                    .willReturn("https://example.com/backing-track.mp3");
+            given(backingTrack.getAudioObjectKey())
+                    .willReturn(BACKING_TRACK_OBJECT_KEY);
+
+            given(backingTrack.getUser())
+                    .willReturn(user);
+
+            given(user.getUserId())
+                    .willReturn(userId);
+
+            given(s3FileService.createPresignedDownload(
+                    userId,
+                    S3FileType.BACKING_TRACK,
+                    BACKING_TRACK_OBJECT_KEY
+            )).willReturn(BACKING_TRACK_FILE_URL);
 
             given(backingTrack.getGenre())
                     .willReturn("BLUES");
@@ -1045,8 +1086,8 @@ class PlayingServiceTest {
         @DisplayName("본인의 연주 기록을 삭제한다")
         void deletePlayingSuccess() {
             // given
-            LocalDateTime deletedAt =
-                    LocalDateTime.of(2026, 1, 1, 15, 30);
+            Instant deletedAt =
+                    Instant.parse("2026-01-01T15:30:00Z");
 
             when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
                     .thenReturn(Optional.of(playing));
@@ -1206,6 +1247,7 @@ class PlayingServiceTest {
 
             when(s3FileService.createPresignedUpload(
                     userId,
+                    S3FileType.RECORDING,
                     command
             )).thenReturn(presignedUpload);
 
@@ -1231,7 +1273,7 @@ class PlayingServiceTest {
                     .validateInProgress();
 
             verify(s3FileService)
-                    .createPresignedUpload(userId, command);
+                    .createPresignedUpload(userId, S3FileType.RECORDING, command);
         }
 
         @Test
@@ -1288,6 +1330,7 @@ class PlayingServiceTest {
             verify(s3FileService, never())
                     .createPresignedUpload(
                             anyLong(),
+                            any(S3FileType.class),
                             any(FileUploadCommand.class)
                     );
         }

@@ -32,7 +32,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -93,12 +93,12 @@ public class LearningService {
         UserLearningProgress progress = userLearningProgressRepository
                 .findByUser_UserIdAndLearningStep_Id(userId, request.learningStepId())
                 .map(p -> {
-                    p.updateProgress(request.score(), LocalDateTime.now());
+                    p.updateProgress(request.score(), Instant.now());
                     return p;
                 })
                 .orElseGet(() -> {
                     UserLearningProgress newProgress = UserLearningProgress.create(user, learning, learningStep);
-                    newProgress.updateProgress(request.score(), LocalDateTime.now());
+                    newProgress.updateProgress(request.score(), Instant.now());
                     return userLearningProgressRepository.save(newProgress);
                 });
 

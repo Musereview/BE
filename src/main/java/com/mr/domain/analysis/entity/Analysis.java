@@ -10,7 +10,7 @@ import com.mr.global.entity.BaseCreatedEntity;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import lombok.AccessLevel;
@@ -92,17 +92,17 @@ public class Analysis extends BaseCreatedEntity {
     private String failedReason;
 
     @Column(name = "processing_started_at")
-    private LocalDateTime processingStartedAt;
+    private Instant processingStartedAt;
 
     @Column(name = "completed_at")
-    private LocalDateTime completedAt;
+    private Instant completedAt;
 
     @Builder(access = AccessLevel.PRIVATE)
     private Analysis(User user, Playing playing, String analysisVersion, Integer startBar, Integer endBar,
                      AnalysisStatus status, Integer totalScore, AnalysisGrade grade, String summary,
                      String analysisRequestJson, BigDecimal scaleScore, BigDecimal tensionScore,
                      BigDecimal progressionScore, BigDecimal voiceLeadingScore, String rawResultJson,
-                     String failedReason, LocalDateTime completedAt) {
+                     String failedReason, Instant completedAt) {
         validateUser(user);
         validatePlaying(playing);
         validateOwnerConsistency(user, playing);
@@ -172,7 +172,7 @@ public class Analysis extends BaseCreatedEntity {
         }
     }
 
-    public LocalDateTime startProcessing(LocalDateTime now) {
+    public Instant startProcessing(Instant now) {
         if (this.status != AnalysisStatus.PENDING) {
             throw new IllegalStateException("PENDING 상태의 분석만 PROCESSING으로 변경할 수 있습니다.");
         }
@@ -181,7 +181,7 @@ public class Analysis extends BaseCreatedEntity {
         return this.processingStartedAt;
     }
 
-    public LocalDateTime restartProcessing(LocalDateTime now) {
+    public Instant restartProcessing(Instant now) {
         if (this.status != AnalysisStatus.PROCESSING) {
             throw new IllegalStateException("PROCESSING 상태의 분석만 다시 시작할 수 있습니다.");
         }
@@ -189,13 +189,13 @@ public class Analysis extends BaseCreatedEntity {
         return this.processingStartedAt;
     }
 
-    public boolean isCurrentProcessing(LocalDateTime expectedProcessingStartedAt) {
+    public boolean isCurrentProcessing(Instant expectedProcessingStartedAt) {
         return this.status == AnalysisStatus.PROCESSING
                 && Objects.equals(this.processingStartedAt, expectedProcessingStartedAt);
     }
 
-    private LocalDateTime nextProcessingStartedAt(LocalDateTime requestedAt) {
-        LocalDateTime next = Objects.requireNonNull(requestedAt).truncatedTo(ChronoUnit.MILLIS);
+    private Instant nextProcessingStartedAt(Instant requestedAt) {
+        Instant next = Objects.requireNonNull(requestedAt).truncatedTo(ChronoUnit.MILLIS);
         if (this.processingStartedAt != null && !next.isAfter(this.processingStartedAt)) {
             return this.processingStartedAt.plus(1, ChronoUnit.MILLIS);
         }
@@ -204,7 +204,7 @@ public class Analysis extends BaseCreatedEntity {
 
     public void complete(Integer totalScore, AnalysisGrade grade, String summary, BigDecimal scaleScore,
                          BigDecimal tensionScore, BigDecimal progressionScore, BigDecimal voiceLeadingScore,
-                         String rawResultJson, LocalDateTime completedAt) {
+                         String rawResultJson, Instant completedAt) {
         if (this.status != AnalysisStatus.PROCESSING) {
             throw new IllegalStateException("PROCESSING 상태의 분석만 완료 처리할 수 있습니다.");
         }
@@ -220,7 +220,7 @@ public class Analysis extends BaseCreatedEntity {
         this.completedAt = Objects.requireNonNull(completedAt);
     }
 
-    public void fail(String failedReason, LocalDateTime completedAt) {
+    public void fail(String failedReason, Instant completedAt) {
         if (this.status == AnalysisStatus.COMPLETED || this.status == AnalysisStatus.FAILED) {
             throw new IllegalStateException("이미 완료된 분석은 실패 처리할 수 없습니다.");
         }

@@ -17,7 +17,7 @@ import com.mr.domain.user.entity.enums.UserRole;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.security.principal.CustomUserDetails;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
@@ -89,11 +89,11 @@ class BackingTrackControllerTest {
         @Test
         @DisplayName("유효한 요청이면 백킹트랙을 생성한다")
         void createBackingTrack_success() throws Exception {
-            BackingTrackSaveRequestDTO.SaveDTO request = createValidSaveRequest();
+            BackingTrackSaveRequestDTO.CreateDTO request = createValidSaveRequest();
 
             BackingTrackCreateResponseDTO.CreateResultDTO response =
                     BackingTrackCreateResponseDTO.CreateResultDTO.of(
-                            BACKING_TRACK_ID, "테스트 트랙", LocalDateTime.now()
+                            BACKING_TRACK_ID, "테스트 트랙", Instant.now()
                     );
 
             given(backingTrackService.createBackingTrack(anyLong(), any()))
@@ -213,11 +213,11 @@ class BackingTrackControllerTest {
         @Test
         @DisplayName("유효한 요청이면 백킹트랙을 수정한다")
         void updateBackingTrack_success() throws Exception {
-            BackingTrackSaveRequestDTO.SaveDTO request = createValidSaveRequest();
+            BackingTrackSaveRequestDTO.UpdateDTO request = createValidUpdateRequest();
 
             BackingTrackUpdateResponseDTO.UpdateResultDTO response =
                     BackingTrackUpdateResponseDTO.UpdateResultDTO.of(
-                            BACKING_TRACK_ID, "테스트 트랙", LocalDateTime.now()
+                            BACKING_TRACK_ID, "테스트 트랙", Instant.now()
                     );
 
             given(backingTrackService.updateBackingTrack(anyLong(), anyLong(), any()))
@@ -236,7 +236,7 @@ class BackingTrackControllerTest {
         @Test
         @DisplayName("backingTrackId가 0 이하이면 요청에 실패한다")
         void updateBackingTrack_invalidId() throws Exception {
-            BackingTrackSaveRequestDTO.SaveDTO request = createValidSaveRequest();
+            BackingTrackSaveRequestDTO.UpdateDTO request = createValidUpdateRequest();
 
             mockMvc.perform(
                             put("/api/backing-tracks/{backingTrackId}", 0L)
@@ -252,7 +252,7 @@ class BackingTrackControllerTest {
         @Test
         @DisplayName("수정 권한이 없으면 403을 반환한다")
         void updateBackingTrack_forbidden() throws Exception {
-            BackingTrackSaveRequestDTO.SaveDTO request = createValidSaveRequest();
+            BackingTrackSaveRequestDTO.UpdateDTO request = createValidUpdateRequest();
 
             given(backingTrackService.updateBackingTrack(anyLong(), anyLong(), any()))
                     .willThrow(new GeneralException(BackingTrackErrorStatus.FORBIDDEN_UPDATE));
@@ -269,7 +269,7 @@ class BackingTrackControllerTest {
         @Test
         @DisplayName("존재하지 않는 트랙이면 404를 반환한다")
         void updateBackingTrack_notFound() throws Exception {
-            BackingTrackSaveRequestDTO.SaveDTO request = createValidSaveRequest();
+            BackingTrackSaveRequestDTO.UpdateDTO request = createValidUpdateRequest();
 
             given(backingTrackService.updateBackingTrack(anyLong(), anyLong(), any()))
                     .willThrow(new GeneralException(BackingTrackErrorStatus.BACKING_TRACK_NOT_FOUND));
@@ -529,8 +529,8 @@ class BackingTrackControllerTest {
         }
     }
 
-    private BackingTrackSaveRequestDTO.SaveDTO createValidSaveRequest() {
-        return new BackingTrackSaveRequestDTO.SaveDTO(
+    private BackingTrackSaveRequestDTO.CreateDTO createValidSaveRequest() {
+        return new BackingTrackSaveRequestDTO.CreateDTO(
                 "테스트 트랙",
                 "Jazz",
                 "C",
@@ -542,6 +542,27 @@ class BackingTrackControllerTest {
                 AccessLevel.PUBLIC,
                 Level.BASIC,
                 List.of(new BackingTrackSaveRequestDTO.ChordProgressionDTO(1, 1, "Cmaj7"))
+        );
+    }
+
+    private BackingTrackSaveRequestDTO.UpdateDTO createValidUpdateRequest() {
+        return new BackingTrackSaveRequestDTO.UpdateDTO(
+                "테스트 트랙",
+                "Jazz",
+                "C",
+                ScaleType.MAJOR,
+                "4/4",
+                120,
+                180,
+                AccessLevel.PUBLIC,
+                Level.BASIC,
+                List.of(
+                        new BackingTrackSaveRequestDTO.ChordProgressionDTO(
+                                1,
+                                1,
+                                "Cmaj7"
+                        )
+                )
         );
     }
 }
