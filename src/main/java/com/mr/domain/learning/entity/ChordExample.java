@@ -49,7 +49,7 @@ public class ChordExample extends BaseCreatedEntity {
             joinColumns = @JoinColumn(name = "chord_example_id")
     )
     @Column(name = "note_number", nullable = false)
-    private List<Integer> noteNumbers = new ArrayList<>();
+    private List<Integer> noteNumbers;
 
     // 설명
     @Column(name = "description", columnDefinition = "TEXT")
