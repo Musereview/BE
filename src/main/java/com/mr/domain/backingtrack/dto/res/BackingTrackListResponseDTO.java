@@ -21,15 +21,21 @@ public class BackingTrackListResponseDTO {
             String keySignature,
             String scaleType,
             String timeSignature,
-            List<String> chordProgression, // 피그마 UI: "Cmaj7 | Am7 | Dm7 | G7" 표기용
+            List<ChordInfo> chordProgression, // List<String> -> List<ChordInfo>로 변경
             Integer bpm,
             String level,
             Integer playtimeSec
     ) {
         public static TrackInfo of(Long backingTrackId, String title, String genre, String keySignature,
-                                   String scaleType, String timeSignature, List<String> chordProgression, Integer bpm,
+                                   String scaleType, String timeSignature, List<ChordInfo> chordProgression, Integer bpm,
                                    String level, Integer playtimeSec) {
             return new TrackInfo(backingTrackId, title, genre, keySignature, scaleType, timeSignature, chordProgression, bpm, level, playtimeSec);
         }
     }
+
+    public record ChordInfo(
+            Integer measureNo,
+            Integer sequenceNo,
+            String chordName
+    ) {}
 }
