@@ -16,7 +16,7 @@ public record HomeResponseDTO(
         Streak streak,
         PracticeSummary practiceSummary,
 
-        @Schema(description = "진행 중인 학습. 학습 기록이 없거나 진행률이 0%/100%면 null")
+        @Schema(description = "진행 중인 학습(재도전 포함). 이어갈 단계가 없으면(진행 기록이 아예 없거나, 최근 패키지들이 전부 100% 완료) null")
         LearningSummary currentLearning,
 
         @Schema(description = "추천 학습 목록")
@@ -112,7 +112,7 @@ public record HomeResponseDTO(
             @Schema(description = "패키지 난이도", example = "ADVANCED")
             String level,
 
-            @Schema(description = "패키지 진행률(%), 1~99", example = "10")
+            @Schema(description = "패키지 진행률(%), 0~99", example = "10")
             int progressRate,
 
             @Schema(description = "[이어서 학습하기] 클릭 시 이동할 단계 ID", example = "13")

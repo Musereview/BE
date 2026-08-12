@@ -40,7 +40,7 @@ public class LearningHomeResponseDTO {
             @Schema(description = "마지막으로 학습한 단계의 제목", example = "11th 텐션 노트 활용하기")
             String stepTitle,
 
-            @Schema(description = "패키지 진행률(%), 1~99 (0 또는 100이면 currentLearning 자체가 null)", example = "10")
+            @Schema(description = "패키지 진행률(%), 0~99 (100이면 currentLearning 자체가 null. 재도전만 있어서 0%인 경우도 이제 포함됨)", example = "10")
             Integer progressRate,
 
             @Schema(description = "[이어서 학습하기] 클릭 시 이동할 단계 ID", example = "13")
