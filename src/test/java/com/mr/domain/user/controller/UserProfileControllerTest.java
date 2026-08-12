@@ -18,7 +18,6 @@ import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.service.UserProfileService;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.apipayload.handler.GlobalExceptionHandler;
-import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +28,8 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import java.time.Instant;
 
 @ExtendWith(MockitoExtension.class)
 class UserProfileControllerTest {
@@ -181,7 +182,7 @@ class UserProfileControllerTest {
                 .userId(1L)
                 .nickname("새로운뮤즈")
                 .skillLevel(TheoryLevel.ADVANCED)
-                .updatedAt(LocalDateTime.of(2026, 7, 24, 1, 30))
+                .updatedAt(Instant.parse("2026-07-24T01:30:00Z"))
                 .build();
         given(userProfileService.updateProfile(any())).willReturn(response);
 

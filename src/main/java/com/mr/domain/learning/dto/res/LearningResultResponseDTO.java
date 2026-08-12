@@ -1,9 +1,10 @@
 package com.mr.domain.learning.dto.res;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mr.domain.learning.entity.UserLearningProgress;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public class LearningResultResponseDTO {
     @Schema(description = "학습 결과 저장 응답")
@@ -23,8 +24,9 @@ public class LearningResultResponseDTO {
             @Schema(description = "저장된 점수", example = "95")
             Integer score,
 
-            @Schema(description = "저장/갱신 시각", type = "string", example = "2026-07-07T15:30:00")
-            LocalDateTime completedAt
+            @Schema(description = "저장/갱신 시각 (KST 기준 응답)", type = "string", example = "2026-08-11T18:00:00")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+            Instant completedAt
     ) {
         public static SaveResultResultDTO from(UserLearningProgress progress) {
             return new SaveResultResultDTO(

@@ -28,6 +28,10 @@ public interface UserLearningProgressRepository extends JpaRepository<UserLearni
     // 패키지가 비활성화(is_active=false)됐으면 건너뛰고 그다음으로 최근인 활성 패키지를 찾음(동시각 충돌 방지용 id 2차 정렬)
     Optional<UserLearningProgress> findFirstByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(Long userId);
 
+    // 위와 동일 조건이지만 최근 N건을 가져옴 (recentActivity가 "가장 최근 패키지가 방금 100% 완료돼도
+    // 그 직전 다른 패키지의 재도전 기록까지" 훑어야 해서 1건으로는 부족함, PR #193 은우님 리뷰)
+    List<UserLearningProgress> findTop20ByUser_UserIdAndLearning_IsActiveTrueOrderByLastStudiedAtDescIdDesc(Long userId);
+
     // 여러 학습에 대한 완료(score>=90) 단계 수를 한 번에 집계 (목록 조회 시 N+1 방지용)
     @Query("SELECT ulp.learning.id as learningId, COUNT(ulp) as completedStepCount FROM UserLearningProgress ulp " +
             "WHERE ulp.user.userId = :userId AND ulp.learning.id IN :learningIds AND ulp.score >= 90 " +

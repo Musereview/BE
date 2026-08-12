@@ -19,7 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Slf4j
 @Component
@@ -42,7 +43,7 @@ public class NotificationEventListener {
     public void handleNotificationEvent(NotificationEvent event) {
 
         // 중복 알림 검증 로직 (1분 이내 동일 제목 알림 무시)
-        LocalDateTime oneMinuteAgo = LocalDateTime.now().minusMinutes(1);
+        Instant oneMinuteAgo = Instant.now().minus(1, ChronoUnit.MINUTES);
         if (notificationRepository.existsByUser_UserIdAndTitleAndCreatedAtAfter(
                 event.getUserId(), event.getTitle(), oneMinuteAgo)) {
             return; // 걸리면 바로 종료

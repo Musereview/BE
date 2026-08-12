@@ -12,6 +12,21 @@ import org.springframework.web.client.RestClient;
 @RequiredArgsConstructor
 public class GeminiClient {
 
+    private static final Map<String, Object> REPORT_RESPONSE_SCHEMA = Map.of(
+            "type", "OBJECT",
+            "properties", Map.of(
+                    "summary", Map.of(
+                            "type", "STRING",
+                            "description", "연주의 핵심 강점과 보완점을 담은 한 문장 요약"
+                    ),
+                    "report", Map.of(
+                            "type", "STRING",
+                            "description", "정해진 섹션 구조를 따르는 한국어 Markdown 리포트"
+                    )
+            ),
+            "required", List.of("summary", "report")
+    );
+
     private final RestClient geminiRestClient;
     private final GeminiProperties properties;
 
@@ -28,7 +43,9 @@ public class GeminiClient {
                 )),
                 "generationConfig", Map.of(
                         "temperature", 0.3,
-                        "maxOutputTokens", 4_096
+                        "maxOutputTokens", 4_096,
+                        "responseMimeType", "application/json",
+                        "responseSchema", REPORT_RESPONSE_SCHEMA
                 )
         );
 

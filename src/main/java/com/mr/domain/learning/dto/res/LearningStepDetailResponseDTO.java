@@ -100,7 +100,7 @@ public class LearningStepDetailResponseDTO {
             return new ChordExampleItem(
                     chordExample.getChordName(),
                     chordExample.getDescription(),
-                    chordExample.getNoteNumbers()
+                    List.copyOf(chordExample.getNoteNumbers())
             );
         }
     }

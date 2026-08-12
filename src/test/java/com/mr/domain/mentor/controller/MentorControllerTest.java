@@ -22,7 +22,8 @@ import com.mr.domain.user.entity.enums.UserRole;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.apipayload.handler.GlobalExceptionHandler;
 import com.mr.global.security.principal.CustomUserDetails;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -89,7 +90,7 @@ class MentorControllerTest {
                         MessageRole.ASSISTANT,
                         references,
                         "텐션음을 자주 사용했어요.",
-                        LocalDateTime.of(2026, 7, 1, 14, 35)
+                        Instant.parse("2026-07-01T14:35:00Z")
                 ))
         );
         given(mentorService.getMessageHistory(anyLong(), anyLong())).willReturn(response);

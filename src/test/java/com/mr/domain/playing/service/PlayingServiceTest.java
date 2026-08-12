@@ -49,7 +49,6 @@ import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -593,23 +592,25 @@ class PlayingServiceTest {
                     .atStartOfDay(zoneId)
                     .toInstant();
 
-            when(clock.instant())
+            // lenient() 를 붙여서 불필요한 스터빙 에러를 방지합니다.
+            org.mockito.Mockito.lenient().when(clock.instant())
                     .thenReturn(fixedInstant);
 
-            when(clock.getZone())
+            org.mockito.Mockito.lenient().when(clock.getZone())
                     .thenReturn(zoneId);
 
-            when(playing.getStatus())
+            org.mockito.Mockito.lenient().when(playing.getStatus())
                     .thenReturn(PlayingStatus.COMPLETED);
 
-            when(playing.getDurationSec())
+            org.mockito.Mockito.lenient().when(playing.getDurationSec())
                     .thenReturn(300);
 
-            LocalDateTime weekStart = fixedDate
+            Instant weekStart = fixedDate
                     .with(DayOfWeek.MONDAY)
-                    .atStartOfDay();
+                    .atStartOfDay(ZoneId.of("Asia/Seoul"))
+                    .toInstant();
 
-            when(playingRepository.sumDurationSecExcludeCurrent(
+            org.mockito.Mockito.lenient().when(playingRepository.sumDurationSecExcludeCurrent(
                     userId,
                     PlayingStatus.COMPLETED,
                     weekStart,
@@ -1085,8 +1086,8 @@ class PlayingServiceTest {
         @DisplayName("본인의 연주 기록을 삭제한다")
         void deletePlayingSuccess() {
             // given
-            LocalDateTime deletedAt =
-                    LocalDateTime.of(2026, 1, 1, 15, 30);
+            Instant deletedAt =
+                    Instant.parse("2026-01-01T15:30:00Z");
 
             when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
                     .thenReturn(Optional.of(playing));

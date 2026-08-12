@@ -2,6 +2,7 @@ package com.mr.domain.analysis.dto.res;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.Playing;
@@ -11,31 +12,75 @@ import com.mr.domain.analysis.entity.enums.AnalysisGrade;
 import com.mr.domain.analysis.entity.enums.ContentFormat;
 import com.mr.domain.analysis.entity.enums.LlmStatus;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Locale;
 
+@Schema(description = "분석 결과 조회 응답")
 public record AnalysisResultResponseDTO(
+        @Schema(description = "분석 ID", example = "342")
         Long analysisId,
+
+        @Schema(description = "분석 대상 연주 기록 ID", example = "128")
         Long playingId,
+
+        @Schema(description = "연주에 사용한 백킹트랙 제목", example = "Autumn Leaves")
         String title,
+
+        @Schema(description = "백킹트랙 장르", example = "JAZZ")
         String genre,
+
+        @Schema(description = "백킹트랙 조성 (조표 + 스케일). 조표나 스케일 정보가 없으면 null", example = "Bb Major")
         String key,
+
+        @Schema(description = "연주 BPM", example = "120")
         Integer bpm,
-        LocalDateTime playedAt,
+
+        @Schema(description = "연주 종료 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+        Instant playedAt,
+
+        @Schema(description = "녹음 파일 다운로드용 presigned URL")
         String recordingFileUrl,
+
+        @Schema(description = "백킹트랙 음원 다운로드용 presigned URL. 음원이 없으면 null")
         String backingTrackAudioFileUrl,
+
+        @Schema(description = "분석 진행 상태 (조회 성공 시 항상 COMPLETED)", example = "COMPLETED")
         AnalysisStatus status,
+
+        @Schema(description = "분석 구간 시작 마디", example = "1")
         Integer startBar,
+
+        @Schema(description = "분석 구간 종료 마디", example = "8")
         Integer endBar,
+
+        @Schema(description = "분석 종합 점수 (0~100)", example = "82")
         Integer totalScore,
+
+        @Schema(description = "종합 점수에 따른 등급", example = "GOOD")
         AnalysisGrade grade,
+
+        @Schema(description = "분석 한 줄 요약", example = "코드 전환은 안정적이나 8마디 이후 박자가 밀립니다.")
         String summary,
+
+        @Schema(description = "영역별 점수")
         DomainScores domainScores,
+
+        @Schema(description = "생성된 분석 리포트. 성공한 리포트가 없으면 null")
         Report report,
+
+        @Schema(description = "AI 서버가 돌려준 원본 분석 결과(JSON). 저장된 결과가 없으면 null")
         @JsonProperty("result") JsonNode rawResult,
-        LocalDateTime createdAt,
-        LocalDateTime completedAt
+
+        @Schema(description = "분석 요청 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+        Instant createdAt,
+
+        @Schema(description = "분석 완료 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+        Instant completedAt
 ) {
 
     public static AnalysisResultResponseDTO from(
@@ -82,10 +127,18 @@ public record AnalysisResultResponseDTO(
                 + scale.substring(1);
     }
 
+    @Schema(description = "영역별 분석 점수. 해당 영역이 채점되지 않았으면 null")
     public record DomainScores(
+            @Schema(description = "스케일 점수 (0~100)", example = "85.5")
             @JsonProperty("scale") BigDecimal scaleScore,
+
+            @Schema(description = "텐션 점수 (0~100)", example = "78.0")
             @JsonProperty("tension") BigDecimal tensionScore,
+
+            @Schema(description = "코드 진행 점수 (0~100)", example = "88.0")
             @JsonProperty("progression") BigDecimal progressionScore,
+
+            @Schema(description = "보이싱 연결 점수 (0~100)", example = "76.5")
             @JsonProperty("voiceLeading") BigDecimal voiceLeadingScore
     ) {
 
@@ -99,16 +152,36 @@ public record AnalysisResultResponseDTO(
         }
     }
 
+    @Schema(description = "생성된 분석 리포트")
     public record Report(
+            @Schema(description = "분석 리포트 ID", example = "91")
             Long analysisReportId,
+
+            @Schema(description = "리포트 생성 방식 (LLM: AI 생성, RULE_BASED: 규칙 기반 대체 생성)", example = "LLM")
             ReportGenerationType generationType,
+
+            @Schema(description = "LLM 호출 상태 (조회되는 리포트는 항상 SUCCESS)", example = "SUCCESS")
             LlmStatus llmStatus,
+
+            @Schema(description = "리포트 본문 포맷", example = "MARKDOWN")
             ContentFormat contentFormat,
+
+            @Schema(description = "리포트 본문", example = "## 총평\n8마디 구간에서 ...")
             String content,
+
+            @Schema(description = "리포트 생성에 사용한 모델명. 규칙 기반 생성이면 null", example = "gemini-2.5-flash")
             String modelName,
+
+            @Schema(description = "리포트 생성에 사용한 프롬프트 버전", example = "v1")
             String promptVersion,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
+
+            @Schema(description = "리포트 생성 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+            Instant createdAt,
+
+            @Schema(description = "리포트 최종 수정 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+            Instant updatedAt
     ) {
 
         private static Report fromNullable(AnalysisReport analysisReport) {

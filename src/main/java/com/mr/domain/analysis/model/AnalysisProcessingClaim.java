@@ -1,9 +1,9 @@
 package com.mr.domain.analysis.model;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record AnalysisProcessingClaim(
         String requestJson,
-        LocalDateTime processingStartedAt
+        Instant processingStartedAt
 ) {
 }
