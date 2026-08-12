@@ -1001,6 +1001,7 @@ class PlayingServiceTest {
                     .thenReturn(Optional.of(playing));
             when(playing.getBackingTrack()).thenReturn(backingTrack);
             when(playing.getId()).thenReturn(playingId);
+            when(backingTrack.getId()).thenReturn(backingTrackId);
             when(playing.getBpm()).thenReturn(BPM);
             when(playing.getMidiData()).thenReturn(List.of());
             when(backingTrack.getTimeSignature()).thenReturn("4/4");
@@ -1015,6 +1016,7 @@ class PlayingServiceTest {
                     playingService.getAnalysisContext(userId, playingId);
 
             assertThat(response.playingId()).isEqualTo(playingId);
+            assertThat(response.backingTrackId()).isEqualTo(backingTrackId);
             assertThat(response.totalBars()).isEqualTo(60);
             verify(playing).validatePlayingOwner(userId);
             verify(playing).validateCompleted();

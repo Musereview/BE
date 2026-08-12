@@ -30,8 +30,8 @@ public class ReportGenerationService {
 
     static final String PROMPT_VERSION = "analysis-report-v3";
     private static final BigDecimal TEMPERATURE = new BigDecimal("0.30");
-    private static final int MIN_REPORT_LENGTH = 700;
-    private static final int MAX_REPORT_LENGTH = 1_500;
+    private static final int MIN_REPORT_LENGTH = 300;
+    private static final int MAX_REPORT_LENGTH = 2_000;
     private static final int MIN_SUMMARY_LENGTH = 20;
     private static final int MAX_SUMMARY_LENGTH = 150;
     private static final Pattern SENTENCE_ENDING = Pattern.compile("[.!?。！？](?=\\s|$)");
@@ -61,12 +61,13 @@ public class ReportGenerationService {
             ## 점수 요약
 
             섹션별 작성 기준은 다음과 같습니다.
-            - 총평: summary를 그대로 반복하지 말고, 영역별 점수의 강점·약점·점수 차이와 harmonic_rules, timing_deviations, scale_appropriateness 등 실제 분석 근거를 종합하여 3~4문장, 최소 150자
-            - 잘한 점: 근거가 있는 범위에서 2~3개 항목, 각 항목은 최소 100자로 영역 점수나 구체적 분석 근거 포함
-            - 진행 맥락: 근거가 있는 범위에서 2~3개 항목, 각 항목은 최소 100자로 마디·코드 진행·음표 중 입력에 존재하는 근거 포함
-            - 개선 제안: 2~3개 항목, 각 항목은 최소 100자로 문제점·근거·실행 가능한 연습 방법 포함
+            - 총평: summary를 그대로 반복하지 말고, 영역별 점수의 강점·약점·점수 차이와 harmonic_rules, timing_deviations, scale_appropriateness 등 실제 분석 근거를 종합하여 2~4문장
+            - 잘한 점: 근거가 있는 범위에서 1~3개 항목으로 영역 점수나 구체적 분석 근거 포함
+            - 진행 맥락: 근거가 있는 범위에서 1~3개 항목으로 마디·코드 진행·음표 중 입력에 존재하는 근거 포함
+            - 개선 제안: 1~3개 항목으로 문제점·근거·실행 가능한 연습 방법 포함
             - 점수 요약: 종합 점수와 네 영역 점수를 입력값 그대로 표시
-            - 전체 본문: 700자 이상 1,500자 이하
+            - 전체 본문: 500자 이상 1,500자 이하로 간결하게 작성
+            - 각 항목은 핵심 근거와 연습 방법 중심으로 작성하고 같은 내용을 반복하지 말 것
 
             사용자를 비난하지 말고 구체적인 마디·코드·음표 근거를 우선 제시하세요.
             점수와 수치를 임의로 만들거나 변경하지 마세요.
@@ -84,13 +85,29 @@ public class ReportGenerationService {
         String input = analysisResult.toString();
         JsonNode promptSnapshot = promptSnapshot(analysisResult);
         String inputHash = sha256(PROMPT_VERSION + ":" + input);
+        GeminiGenerationResult result;
+
         try {
-            GeminiGenerationResult result = geminiClient.generateReport(SYSTEM_PROMPT, input);
+            result = geminiClient.generateReport(SYSTEM_PROMPT, input);
+        } catch (Exception exception) {
+            log.warn("Gemini report generation failed; using rule-based fallback.", exception);
+            return createFallbackReport(
+                    analysisResult,
+                    promptSnapshot,
+                    inputHash,
+                    startedAt,
+                    exception
+            );
+        }
+
+        try {
             JsonNode structuredResult = objectMapper.readTree(result.content());
             String summary = requiredText(structuredResult, "summary");
             String report = requiredText(structuredResult, "report");
+
             validateSummary(summary);
             validateMarkdownStructure(report);
+
             return new GeneratedAnalysisReport(
                     ReportGenerationType.LLM,
                     summary,
@@ -113,28 +130,13 @@ public class ReportGenerationService {
                     )
             );
         } catch (Exception exception) {
-            log.warn("Gemini report generation failed; using rule-based fallback.", exception);
-            JsonNode enrichedResult = analysisResultEnricher.regenerateSummary(analysisResult);
-            return new GeneratedAnalysisReport(
-                    ReportGenerationType.RULE_BASED,
-                    enrichedResult.path("summary").asText(),
-                    ruleBasedReportGenerator.generate(enrichedResult),
-                    null,
-                    PROMPT_VERSION,
-                    new LlmCallMetadata(
-                            isTimeout(exception) ? LlmCallStatus.TIMEOUT : LlmCallStatus.FAILED,
-                            properties.model(),
-                            PROMPT_VERSION,
-                            promptSnapshot,
-                            null,
-                            null,
-                            null,
-                            TEMPERATURE,
-                            elapsedMillis(startedAt),
-                            false,
-                            inputHash,
-                            exception.getMessage()
-                    )
+            log.warn("Gemini report validation failed; using rule-based fallback.", exception);
+            return createFallbackReport(
+                    analysisResult,
+                    promptSnapshot,
+                    inputHash,
+                    startedAt,
+                    exception
             );
         }
     }
@@ -163,10 +165,12 @@ public class ReportGenerationService {
         }
         int reportLength = content.strip().length();
         if (reportLength < MIN_REPORT_LENGTH) {
-            throw new IllegalStateException("Gemini returned a report that is too short.");
+            throw new IllegalStateException("Gemini returned a report that is too short: " +
+                    "length=" + reportLength + ", min=" + MIN_REPORT_LENGTH);
         }
         if (reportLength > MAX_REPORT_LENGTH) {
-            throw new IllegalStateException("Gemini returned a report that is too long.");
+            log.warn(
+                    "Gemini report exceeds recommended length. length={}, max={}", reportLength, MAX_REPORT_LENGTH);
         }
         List<String> lines = content.lines()
                 .map(String::stripTrailing)
@@ -213,5 +217,37 @@ public class ReportGenerationService {
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is not available.", exception);
         }
+    }
+
+    private GeneratedAnalysisReport createFallbackReport(
+            JsonNode analysisResult,
+            JsonNode promptSnapshot,
+            String inputHash,
+            long startedAt,
+            Exception exception
+    ) {
+        JsonNode enrichedResult = analysisResultEnricher.regenerateSummary(analysisResult);
+
+        return new GeneratedAnalysisReport(
+                ReportGenerationType.RULE_BASED,
+                enrichedResult.path("summary").asText(),
+                ruleBasedReportGenerator.generate(enrichedResult),
+                null,
+                PROMPT_VERSION,
+                new LlmCallMetadata(
+                        isTimeout(exception) ? LlmCallStatus.TIMEOUT : LlmCallStatus.FAILED,
+                        properties.model(),
+                        PROMPT_VERSION,
+                        promptSnapshot,
+                        null,
+                        null,
+                        null,
+                        TEMPERATURE,
+                        elapsedMillis(startedAt),
+                        false,
+                        inputHash,
+                        exception.getMessage()
+                )
+        );
     }
 }
