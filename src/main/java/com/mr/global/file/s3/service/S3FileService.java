@@ -158,13 +158,16 @@ public class S3FileService {
      * 사용자 소유자가 없는 공용 콘텐츠의 조회용 Presigned GET URL을 발급합니다.
      */
     public String createPresignedDownload(S3FileType fileType, String objectKey) {
+        if (fileType == null || fileType.isOwnerScoped()) {
+            throw new GeneralException(S3ErrorStatus.INVALID_OBJECT_KEY);
+        }
+
         validateObjectKey(fileType, objectKey);
 
         return presignDownload(objectKey);
     }
 
     private String presignDownload(String objectKey) {
-
         GetObjectRequest getObjectRequest =
                 GetObjectRequest.builder()
                         .bucket(s3Properties.bucket())

@@ -1064,7 +1064,7 @@ class S3FileServiceTest {
         }
 
         @Test
-        @DisplayName("공용 콘텐츠 Object Key이면 Presigned GET URL을 발급한다")
+        @DisplayName("createPresignedDownload - 공용 콘텐츠 Object Key이면 Presigned GET URL을 발급한다")
         void createPresignedDownload_sharedContent_success()
                 throws Exception {
             String downloadUrl =
@@ -1102,7 +1102,7 @@ class S3FileServiceTest {
         }
 
         @Test
-        @DisplayName("공용 콘텐츠 prefix와 다른 Object Key이면 Presigned GET URL을 발급하지 않는다")
+        @DisplayName("createPresignedDownload - 공용 콘텐츠 prefix와 다른 Object Key이면 Presigned GET URL을 발급하지 않는다")
         void createPresignedDownload_sharedContent_invalidPrefix() {
             when(objectKeyGenerator.belongsToFileType(
                     S3FileType.PLAYING_EXAMPLE,
@@ -1112,6 +1112,21 @@ class S3FileServiceTest {
             assertGeneralException(
                     () -> s3FileService.createPresignedDownload(
                             S3FileType.PLAYING_EXAMPLE,
+                            OBJECT_KEY
+                    ),
+                    S3ErrorStatus.INVALID_OBJECT_KEY
+            );
+
+            verify(s3Presigner, never())
+                    .presignGetObject(any(GetObjectPresignRequest.class));
+        }
+
+        @Test
+        @DisplayName("createPresignedDownload - 소유자 경로 파일 타입이면 Presigned GET URL을 발급하지 않는다")
+        void createPresignedDownload_ownerScopedFileType_throwsInvalidObjectKey() {
+            assertGeneralException(
+                    () -> s3FileService.createPresignedDownload(
+                            S3FileType.RECORDING,
                             OBJECT_KEY
                     ),
                     S3ErrorStatus.INVALID_OBJECT_KEY
