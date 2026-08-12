@@ -164,7 +164,7 @@ public class ReportGenerationService {
         }
         int reportLength = content.strip().length();
         if (reportLength < MIN_REPORT_LENGTH) {
-            throw new IllegalStateException("Gemini returned a report that is too short." +
+            throw new IllegalStateException("Gemini returned a report that is too short: " +
                     "length=" + reportLength + ", min=" + MIN_REPORT_LENGTH);
         }
         if (reportLength > MAX_REPORT_LENGTH) {
