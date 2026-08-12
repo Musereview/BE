@@ -177,7 +177,7 @@ class HomeServiceTest {
     void getHome_noPracticeToday_countsFromYesterday() {
         stubBaseline(1L);
 
-        LocalDate yesterday = LocalDate.now().minusDays(1);
+        LocalDate yesterday = LocalDate.now(ZoneId.of("Asia/Seoul")).minusDays(1);
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED))
                 .willReturn(List.of(toInstant(yesterday)));
 
@@ -191,7 +191,7 @@ class HomeServiceTest {
     void getHome_duplicateDateFromRepository_countsOnce() {
         stubBaseline(1L);
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED))
                 .willReturn(List.of(toInstant(today), toInstant(today), toInstant(today)));
 
@@ -212,7 +212,7 @@ class HomeServiceTest {
         assertThat(weeklyAttendance.get(0).dayOfWeek()).isEqualTo(DayOfWeekCode.MON);
         assertThat(weeklyAttendance.get(6).dayOfWeek()).isEqualTo(DayOfWeekCode.SUN);
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         LocalDate weekStart = today.with(DayOfWeek.MONDAY);
         for (int i = 0; i < weeklyAttendance.size(); i++) {
             LocalDate day = weekStart.plusDays(i);
