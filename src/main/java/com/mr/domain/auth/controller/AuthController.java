@@ -57,7 +57,7 @@ public class AuthController {
 
     @SecurityRequirements
     @Operation(
-            summary = "소셜 로그인 시작 (웹 브라우저) API",
+            summary = "소셜 로그인 시작 API",
             description = "웹 브라우저 환경에서 소셜 로그인(카카오/구글) 인증 페이지로 302 리다이렉트합니다."
     )
     @ApiResponses({
@@ -72,6 +72,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "COMMON_400_01",
+                                    summary = "잘못된 소셜 타입 파라미터",
                                     value = """
                                     {
                                       "isSuccess": false,
@@ -243,6 +244,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "COMMON_200",
+                                    summary = "토큰 발급 성공 예시",
                                     value = """
                                     {
                                       "isSuccess": true,
@@ -254,7 +256,7 @@ public class AuthController {
                                         "isNewUser": false,
                                         "isOnboardingCompleted": true,
                                         "tokenInfo": {
-                                          "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+                                          "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6IlJPTEVfU1RVREVOVCIsImV4cCI6MTY5...",
                                           "refreshToken": "d9f8e7c6-b5a4-3210-9876-fedcba098765",
                                           "accessTokenExpiresInSeconds": 1800
                                         }
@@ -272,6 +274,7 @@ public class AuthController {
                             examples = {
                                     @ExampleObject(
                                             name = "COMMON_400_01",
+                                            summary = "필수값 누락 (code 빈값)",
                                             value = """
                                             {
                                               "isSuccess": false,
@@ -283,6 +286,7 @@ public class AuthController {
                                     ),
                                     @ExampleObject(
                                             name = "AUTH_400_01",
+                                            summary = "유효하지 않거나 만료된 임시 코드",
                                             value = """
                                             {
                                               "isSuccess": false,
@@ -306,7 +310,7 @@ public class AuthController {
 
     @SecurityRequirements
     @Operation(
-            summary = "소셜 Access Token 로그인 / 회원가입 (REST / 모바일 SDK용) API",
+            summary = "소셜 Access Token 로그인 API",
             description = "소셜 Access Token을 전달받아 회원가입 및 로그인을 처리하고 JWT 토큰을 발급합니다."
     )
     @ApiResponses({
@@ -317,6 +321,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "COMMON_200",
+                                    summary = "로그인 성공 예시",
                                     value = """
                                     {
                                       "isSuccess": true,
@@ -328,7 +333,7 @@ public class AuthController {
                                         "isNewUser": true,
                                         "isOnboardingCompleted": false,
                                         "tokenInfo": {
-                                          "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+                                          "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6IlJPTEVfR1VFU1QiLCJleHAiOjE2OS...",
                                           "refreshToken": "d9f8e7c6-b5a4-3210-9876-fedcba098765",
                                           "accessTokenExpiresInSeconds": 1800
                                         }
@@ -345,6 +350,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "COMMON_400_01",
+                                    summary = "Access Token 누락",
                                     value = """
                                     {
                                       "isSuccess": false,
@@ -363,6 +369,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "AUTH_401_04",
+                                    summary = "유효하지 않은 소셜 Access Token",
                                     value = """
                                     {
                                       "isSuccess": false,
@@ -404,13 +411,14 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "COMMON_200",
+                                    summary = "재발급 성공 예시",
                                     value = """
                                     {
                                       "isSuccess": true,
                                       "code": "COMMON_200",
                                       "message": "요청에 성공하였습니다.",
                                       "data": {
-                                        "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+                                        "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6IlJPTEVfU1RVREVOVCIsImV4cCI6MTY5...",
                                         "refreshToken": "e8d7c6b5-a4b3-2109-8765-fedcba098765",
                                         "accessTokenExpiresInSeconds": 1800
                                       }
@@ -426,6 +434,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "COMMON_400_01",
+                                    summary = "Refresh Token 누락",
                                     value = """
                                     {
                                       "isSuccess": false,
@@ -445,6 +454,7 @@ public class AuthController {
                             examples = {
                                     @ExampleObject(
                                             name = "AUTH_401_01",
+                                            summary = "유효하지 않은 토큰",
                                             value = """
                                             {
                                               "isSuccess": false,
@@ -456,6 +466,7 @@ public class AuthController {
                                     ),
                                     @ExampleObject(
                                             name = "AUTH_401_02",
+                                            summary = "만료된 토큰",
                                             value = """
                                             {
                                               "isSuccess": false,
@@ -467,6 +478,7 @@ public class AuthController {
                                     ),
                                     @ExampleObject(
                                             name = "AUTH_401_03",
+                                            summary = "폐기/로그아웃된 토큰",
                                             value = """
                                             {
                                               "isSuccess": false,
@@ -500,13 +512,14 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "COMMON_200",
+                                    summary = "연동 성공 예시",
                                     value = """
                                     {
                                       "isSuccess": true,
                                       "code": "COMMON_200",
                                       "message": "요청에 성공하였습니다.",
                                       "data": {
-                                        "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+                                        "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6IlJPTEVfU1RVREVOVCIsImV4cCI6MTY5...",
                                         "refreshToken": "d9f8e7c6-b5a4-3210-9876-fedcba098765",
                                         "accessTokenExpiresInSeconds": 1800
                                       }
@@ -522,6 +535,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "COMMON_400_01",
+                                    summary = "Access Token 누락",
                                     value = """
                                     {
                                       "isSuccess": false,
@@ -541,6 +555,7 @@ public class AuthController {
                             examples = {
                                     @ExampleObject(
                                             name = "COMMON_401_01",
+                                            summary = "로그인 인증 토큰 누락/만료",
                                             value = """
                                             {
                                               "isSuccess": false,
@@ -552,6 +567,7 @@ public class AuthController {
                                     ),
                                     @ExampleObject(
                                             name = "AUTH_401_04",
+                                            summary = "유효하지 않은 소셜 Access Token",
                                             value = """
                                             {
                                               "isSuccess": false,
@@ -571,6 +587,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "AUTH_409_01",
+                                    summary = "이미 다른 계정에 연동된 소셜 계정",
                                     value = """
                                     {
                                       "isSuccess": false,
@@ -613,6 +630,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "COMMON_200",
+                                    summary = "로그아웃 성공 예시",
                                     value = """
                                     {
                                       "isSuccess": true,
@@ -631,6 +649,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "COMMON_400_01",
+                                    summary = "Refresh Token 누락",
                                     value = """
                                     {
                                       "isSuccess": false,
@@ -649,6 +668,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "COMMON_401_01",
+                                    summary = "인증 토큰 누락/만료",
                                     value = """
                                     {
                                       "isSuccess": false,
@@ -682,6 +702,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "COMMON_200",
+                                    summary = "회원 탈퇴 성공 예시",
                                     value = """
                                     {
                                       "isSuccess": true,
@@ -700,6 +721,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "COMMON_401_01",
+                                    summary = "인증 토큰 누락/만료",
                                     value = """
                                     {
                                       "isSuccess": false,
@@ -718,6 +740,7 @@ public class AuthController {
                             mediaType = "application/json",
                             examples = @ExampleObject(
                                     name = "AUTH_404_01",
+                                    summary = "소셜 인증 기록 없음",
                                     value = """
                                     {
                                       "isSuccess": false,
