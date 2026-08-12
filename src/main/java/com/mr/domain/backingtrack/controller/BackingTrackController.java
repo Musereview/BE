@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/backing-tracks")
-@Tag(name = "백킹트랙", description = "백킹트랙 생성, 수정 및 조회 API")
+@Tag(name = "백킹트랙", description = "백킹트랙 API")
 public class BackingTrackController {
 
     private final BackingTrackService backingTrackService;
