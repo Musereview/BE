@@ -270,6 +270,9 @@ class LearningServiceTest {
         assertThat(result.modelPerformance().durationSeconds()).isEqualTo(154);
         assertThat(result.chordExamples()).hasSize(1);
         assertThat(result.chordExamples().get(0).chordName()).isEqualTo("Cmaj7");
+        assertThat(result.chordExamples().get(0).noteNumbers()).containsExactly(60, 64, 67, 70, 77);
+        assertThatThrownBy(() -> result.chordExamples().get(0).noteNumbers().add(1))
+                .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
