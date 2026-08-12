@@ -70,7 +70,10 @@ public class LearningStepDetailResponseDTO {
             @Schema(description = "예시 설명", example = "프로 연주자의 응용 사례")
             String description,
 
-            @Schema(description = "화면에서 재생할 오디오 URL", example = "https://cdn.example.com/audio/11th-tension-example.mp3")
+            @Schema(
+                    description = "비공개 S3 모범 연주 재생용 Presigned GET URL. 현재 설정 기준 10분 후 만료",
+                    example = "https://example-bucket.s3.ap-northeast-2.amazonaws.com/playing_example/triads_step1.mp3?X-Amz-Expires=600&X-Amz-Signature=example"
+            )
             String audioUrl,
 
             @Schema(description = "재생 시간(초)", example = "154")
