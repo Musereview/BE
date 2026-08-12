@@ -45,7 +45,8 @@ public class LearningStepDetailResponseDTO {
             List<ChordExampleItem> chordExamples
     ) {
         public static StepDetailResultDTO of(Learning learning, LearningStep step,
-                                             PlayingExample playingExample, List<ChordExample> chordExamples) {
+                                             PlayingExample playingExample, String audioUrl,
+                                             List<ChordExample> chordExamples) {
             return new StepDetailResultDTO(
                     learning.getId(),
                     step.getId(),
@@ -55,7 +56,7 @@ public class LearningStepDetailResponseDTO {
                     step.getTitle(),
                     step.getContent(),
                     step.getPracticeTip(),
-                    playingExample != null ? ModelPerformance.from(playingExample) : null,
+                    playingExample != null ? ModelPerformance.from(playingExample, audioUrl) : null,
                     chordExamples.stream().map(ChordExampleItem::from).toList()
             );
         }
@@ -75,11 +76,11 @@ public class LearningStepDetailResponseDTO {
             @Schema(description = "재생 시간(초)", example = "154")
             Integer durationSeconds
     ) {
-        public static ModelPerformance from(PlayingExample playingExample) {
+        public static ModelPerformance from(PlayingExample playingExample, String audioUrl) {
             return new ModelPerformance(
                     playingExample.getTitle(),
                     playingExample.getDescription(),
-                    playingExample.getAudioFileUrl(),
+                    audioUrl,
                     playingExample.getPlayingSeconds() != null ? playingExample.getPlayingSeconds().intValue() : null
             );
         }

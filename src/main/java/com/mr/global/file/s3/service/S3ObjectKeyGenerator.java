@@ -72,6 +72,14 @@ public class S3ObjectKeyGenerator {
         return objectKey.startsWith(expectedPrefix);
     }
 
+    public boolean belongsToFileType(S3FileType fileType, String objectKey) {
+        if (fileType == null || objectKey == null) {
+            return false;
+        }
+
+        return objectKey.startsWith(fileType.getPrefix() + "/");
+    }
+
     private String createShortUuid() {
         return UUID.randomUUID()
                 .toString()

@@ -27,6 +27,8 @@ import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.NotificationEvent;
+import com.mr.global.file.s3.enums.S3FileType;
+import com.mr.global.file.s3.service.S3FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -60,6 +62,7 @@ public class LearningService {
     private final LearningRepository learningRepository;
     private final PlayingExampleRepository playingExampleRepository;
     private final ChordExampleRepository chordExampleRepository;
+    private final S3FileService s3FileService;
     // 임시 작명
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -214,7 +217,20 @@ public class LearningService {
         PlayingExample playingExample = playingExampleRepository.findByLearningStep_Id(learningStepId).orElse(null);
         List<ChordExample> chordExamples = chordExampleRepository.findByLearningStep_Id(learningStepId);
 
-        return LearningStepDetailResponseDTO.StepDetailResultDTO.of(learning, learningStep, playingExample, chordExamples);
+        String audioUrl = playingExample == null
+                ? null
+                : s3FileService.createPresignedDownload(
+                        S3FileType.PLAYING_EXAMPLE,
+                        playingExample.getAudioObjectKey()
+                );
+
+        return LearningStepDetailResponseDTO.StepDetailResultDTO.of(
+                learning,
+                learningStep,
+                playingExample,
+                audioUrl,
+                chordExamples
+        );
     }
 
     // 실전 반주법 패키지(ACCOMPANIMENT) 전체보기

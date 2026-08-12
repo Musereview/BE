@@ -151,6 +151,20 @@ public class S3FileService {
         validateOwnerId(ownerId);
         validateObjectKey(ownerId, fileType, objectKey);
 
+        return presignDownload(objectKey);
+    }
+
+    /**
+     * 사용자 소유자가 없는 공용 콘텐츠의 조회용 Presigned GET URL을 발급합니다.
+     */
+    public String createPresignedDownload(S3FileType fileType, String objectKey) {
+        validateObjectKey(fileType, objectKey);
+
+        return presignDownload(objectKey);
+    }
+
+    private String presignDownload(String objectKey) {
+
         GetObjectRequest getObjectRequest =
                 GetObjectRequest.builder()
                         .bucket(s3Properties.bucket())
@@ -177,8 +191,7 @@ public class S3FileService {
 
         } catch (SdkException exception) {
             log.error(
-                    "S3 Presigned GET URL 발급에 실패했습니다. ownerId={}, objectKey={}",
-                    ownerId,
+                    "S3 Presigned GET URL 발급에 실패했습니다. objectKey={}",
                     objectKey,
                     exception
             );
@@ -300,6 +313,16 @@ public class S3FileService {
         }
 
         if (!objectKeyGenerator.belongsToOwner(ownerId, fileType, objectKey)) {
+            throw new GeneralException(S3ErrorStatus.INVALID_OBJECT_KEY);
+        }
+    }
+
+    private void validateObjectKey(S3FileType fileType, String objectKey) {
+        if (objectKey == null || objectKey.isBlank()) {
+            throw new GeneralException(S3ErrorStatus.INVALID_OBJECT_KEY);
+        }
+
+        if (!objectKeyGenerator.belongsToFileType(fileType, objectKey)) {
             throw new GeneralException(S3ErrorStatus.INVALID_OBJECT_KEY);
         }
     }

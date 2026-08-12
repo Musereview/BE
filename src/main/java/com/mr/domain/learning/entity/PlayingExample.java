@@ -44,9 +44,8 @@ public class PlayingExample extends BaseCreatedEntity {
     @Column(name = "midi_data", nullable = false, columnDefinition = "JSON")
     private String midiData;
 
-    // 오디오 파일
-    @Column(name = "audio_file_url", nullable = false, length = 255)
-    private String audioFileUrl;
+    @Column(name = "audio_object_key", nullable = false, length = 255)
+    private String audioObjectKey;
 
     // bpm
     @Column(name = "bpm")
@@ -66,12 +65,12 @@ public class PlayingExample extends BaseCreatedEntity {
 
     @Builder(access = AccessLevel.PRIVATE)
     private PlayingExample(LearningStep learningStep, String title, String midiData,
-                           String audioFileUrl, Integer bpm, String keySignature,
+                           String audioObjectKey, Integer bpm, String keySignature,
                            String description, Long playingSeconds) {
         this.learningStep = learningStep;
         this.title = title;
         this.midiData = midiData;
-        this.audioFileUrl = audioFileUrl;
+        this.audioObjectKey = audioObjectKey;
         this.bpm = bpm;
         this.keySignature = keySignature;
         this.description = description;
@@ -79,13 +78,13 @@ public class PlayingExample extends BaseCreatedEntity {
     }
 
     public static PlayingExample create(LearningStep learningStep, String title, String midiData,
-                                        String audioFileUrl, Integer bpm, String keySignature,
+                                        String audioObjectKey, Integer bpm, String keySignature,
                                         String description, Long playingSeconds) {
         return PlayingExample.builder()
                 .learningStep(learningStep)
                 .title(title)
                 .midiData(midiData)
-                .audioFileUrl(audioFileUrl)
+                .audioObjectKey(audioObjectKey)
                 .bpm(bpm)
                 .keySignature(keySignature)
                 .description(description)
@@ -93,12 +92,12 @@ public class PlayingExample extends BaseCreatedEntity {
                 .build();
     }
 
-    public void updatePlayingExample(String title, String midiData, String audioFileUrl,
+    public void updatePlayingExample(String title, String midiData, String audioObjectKey,
                                      Integer bpm, String keySignature, String description,
                                      Long playingSeconds) {
         this.title = title;
         this.midiData = midiData;
-        this.audioFileUrl = audioFileUrl;
+        this.audioObjectKey = audioObjectKey;
         this.bpm = bpm;
         this.keySignature = keySignature;
         this.description = description;
