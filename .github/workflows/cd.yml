@@ -69,6 +69,7 @@ jobs:
           printf 'cidr=%s/32\n' "$RUNNER_IP" >> "$GITHUB_OUTPUT"
 
       - name: Allow runner SSH access
+        id: allow-runner-ssh
         env:
           RUNNER_CIDR: ${{ steps.runner-ip.outputs.cidr }}
           SECURITY_GROUP_ID: ${{ secrets.EC2_SECURITY_GROUP_ID }}
@@ -78,7 +79,6 @@ jobs:
             --protocol tcp \
             --port 22 \
             --cidr "$RUNNER_CIDR"
-
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.0
@@ -125,7 +125,7 @@ jobs:
             docker image prune -f
 
       - name: Revoke runner SSH access
-        if: always()
+        if: always() && steps.allow-runner-ssh.outcome == 'success'
         env:
           RUNNER_CIDR: ${{ steps.runner-ip.outputs.cidr }}
           SECURITY_GROUP_ID: ${{ secrets.EC2_SECURITY_GROUP_ID }}
@@ -134,5 +134,4 @@ jobs:
             --group-id "$SECURITY_GROUP_ID" \
             --protocol tcp \
             --port 22 \
-            --cidr "$RUNNER_CIDR" \
-          || true
+            --cidr "$RUNNER_CIDR"
