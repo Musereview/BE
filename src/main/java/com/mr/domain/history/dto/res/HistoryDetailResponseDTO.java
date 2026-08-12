@@ -1,5 +1,6 @@
 package com.mr.domain.history.dto.res;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
@@ -10,7 +11,7 @@ import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.MidiType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Schema(description = "연주 히스토리 상세 조회 응답")
@@ -33,8 +34,9 @@ public record HistoryDetailResponseDTO(
         @Schema(description = "백킹트랙 박자", example = "4/4")
         String timeSignature,
 
-        @Schema(description = "연주 종료 시각", example = "2026-08-10T21:14:32")
-        LocalDateTime playedAt,
+        @Schema(description = "연주 종료 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+        Instant playedAt,
 
         @Schema(description = "연주 길이 (분 단위, 초 단위를 60으로 나눈 몫)", example = "3")
         Integer durationMinutes,
@@ -143,8 +145,9 @@ public record HistoryDetailResponseDTO(
             @Schema(description = "분석 구간의 재생 길이 (초). 백킹트랙 정보가 불완전하면 null", example = "16")
             Integer estimatedSeconds,
 
-            @Schema(description = "분석 요청 시각", example = "2026-08-10T21:20:05")
-            LocalDateTime createdAt
+            @Schema(description = "분석 요청 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+            Instant createdAt
     ) {
 
         public static AnalysisSummary from(Analysis analysis, BarMetrics barMetrics) {

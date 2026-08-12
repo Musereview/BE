@@ -2,6 +2,7 @@ package com.mr.domain.analysis.dto.res;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.Playing;
@@ -13,7 +14,7 @@ import com.mr.domain.analysis.entity.enums.LlmStatus;
 import com.mr.domain.analysis.entity.enums.ReportGenerationType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Locale;
 
 @Schema(description = "분석 결과 조회 응답")
@@ -36,8 +37,9 @@ public record AnalysisResultResponseDTO(
         @Schema(description = "연주 BPM", example = "120")
         Integer bpm,
 
-        @Schema(description = "연주 종료 시각", example = "2026-08-10T21:14:32")
-        LocalDateTime playedAt,
+        @Schema(description = "연주 종료 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+        Instant playedAt,
 
         @Schema(description = "녹음 파일 다운로드용 presigned URL")
         String recordingFileUrl,
@@ -72,11 +74,13 @@ public record AnalysisResultResponseDTO(
         @Schema(description = "AI 서버가 돌려준 원본 분석 결과(JSON). 저장된 결과가 없으면 null")
         @JsonProperty("result") JsonNode rawResult,
 
-        @Schema(description = "분석 요청 시각", example = "2026-08-10T21:20:05")
-        LocalDateTime createdAt,
+        @Schema(description = "분석 요청 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+        Instant createdAt,
 
-        @Schema(description = "분석 완료 시각", example = "2026-08-10T21:21:40")
-        LocalDateTime completedAt
+        @Schema(description = "분석 완료 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+        Instant completedAt
 ) {
 
     public static AnalysisResultResponseDTO from(
@@ -171,11 +175,13 @@ public record AnalysisResultResponseDTO(
             @Schema(description = "리포트 생성에 사용한 프롬프트 버전", example = "v1")
             String promptVersion,
 
-            @Schema(description = "리포트 생성 시각", example = "2026-08-10T21:21:40")
-            LocalDateTime createdAt,
+            @Schema(description = "리포트 생성 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+            Instant createdAt,
 
-            @Schema(description = "리포트 최종 수정 시각", example = "2026-08-10T21:21:40")
-            LocalDateTime updatedAt
+            @Schema(description = "리포트 최종 수정 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+            Instant updatedAt
     ) {
 
         private static Report fromNullable(AnalysisReport analysisReport) {

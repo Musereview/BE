@@ -19,7 +19,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Objects;
 
 @Entity
@@ -62,16 +62,16 @@ public class UserLearningProgress extends BaseTimeEntity {
 
     // 마지막 학습일
     @Column(name = "last_studied_at")
-    private LocalDateTime lastStudiedAt;
+    private Instant lastStudiedAt;
 
     @Builder(access = AccessLevel.PRIVATE)
     private UserLearningProgress(User user, Learning learning, LearningStep learningStep,
-                                 Integer score, LocalDateTime lastStudiedAt) {
+                                 Integer score, Instant lastStudiedAt) {
         this.user = user;
         this.learning = learning;
         this.learningStep = learningStep;
         this.score = score;
-        this.lastStudiedAt = lastStudiedAt != null ? lastStudiedAt : LocalDateTime.now();
+        this.lastStudiedAt = lastStudiedAt != null ? lastStudiedAt : Instant.now();
     }
 
     public static UserLearningProgress create(User user, Learning learning, LearningStep learningStep) {
@@ -81,7 +81,7 @@ public class UserLearningProgress extends BaseTimeEntity {
                 .user(user)
                 .learning(learning)
                 .learningStep(learningStep)
-                .lastStudiedAt(LocalDateTime.now())
+                .lastStudiedAt(Instant.now())
                 .build();
     }
 
@@ -96,9 +96,9 @@ public class UserLearningProgress extends BaseTimeEntity {
     }
 
     // 학습 시간 및 점수 업데이트
-    public void updateProgress(Integer score, LocalDateTime lastStudiedAt) {
+    public void updateProgress(Integer score, Instant lastStudiedAt) {
         this.score = score;
-        this.lastStudiedAt = lastStudiedAt != null ? lastStudiedAt : LocalDateTime.now();
+        this.lastStudiedAt = lastStudiedAt != null ? lastStudiedAt : Instant.now();
     }
 
     // 점수 기준 학습 진행 상태 파악

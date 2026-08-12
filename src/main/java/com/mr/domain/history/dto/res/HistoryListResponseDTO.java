@@ -1,11 +1,12 @@
 package com.mr.domain.history.dto.res;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.playing.entity.Playing;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Schema(description = "연주 히스토리 목록 조회 응답")
@@ -51,8 +52,9 @@ public record HistoryListResponseDTO(
             @Schema(description = "연주 길이 (초 단위)", example = "215")
             Integer durationSec,
 
-            @Schema(description = "연주 종료 시각", example = "2026-08-10T21:14:32")
-            LocalDateTime playedAt,
+            @Schema(description = "연주 종료 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+            Instant playedAt,
 
             @Schema(description = "연주 종료일 상대 표기 (오늘/어제/M월 d일)", example = "어제")
             String relativeDate

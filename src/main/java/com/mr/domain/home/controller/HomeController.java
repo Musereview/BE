@@ -24,8 +24,8 @@ public class HomeController {
 
     @Operation(
             summary = "홈 화면 요약 조회 API",
-            description = "현재 로그인한 사용자의 프로필 요약, 연속 출석 현황, 주/월간 연습 시간, 진행 중인 학습, 추천 학습, "
-                    + "최근 완료한 연습 목록을 한 번에 조회합니다."
+            description = "현재 로그인한 사용자의 프로필 요약, 연속 출석 현황, 주/월간 연습 시간, 진행 중인 학습(재도전 포함), "
+                    + "추천 학습, 최근 완료한 연습 목록을 한 번에 조회합니다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

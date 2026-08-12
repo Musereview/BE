@@ -22,7 +22,8 @@ import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.apipayload.handler.GlobalExceptionHandler;
 import com.mr.global.security.principal.CustomUserDetails;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -75,7 +76,7 @@ class AnalysisControllerTest {
                 AnalysisStatus.PROCESSING,
                 null,
                 "연습 결과를 분석 중입니다.",
-                LocalDateTime.of(2026, 7, 24, 10, 0),
+                Instant.parse("2026-07-24T10:00:00Z"),
                 null
         );
         given(analysisService.getAnalysisStatus(anyLong(), anyLong())).willReturn(response);
@@ -121,7 +122,7 @@ class AnalysisControllerTest {
                 "jazz",
                 "C Major",
                 120,
-                LocalDateTime.of(2026, 7, 24, 9, 0),
+                Instant.parse("2026-07-24T09:00:00Z"),
                 "https://example.com/recording.webm",
                 "https://example.com/backing-track.mp3",
                 AnalysisStatus.COMPLETED,
@@ -144,12 +145,12 @@ class AnalysisControllerTest {
                         "리포트 본문",
                         "gpt-4",
                         "v1",
-                        LocalDateTime.of(2026, 7, 24, 10, 0),
-                        LocalDateTime.of(2026, 7, 24, 10, 0)
+                        Instant.parse("2026-07-24T10:00:00Z"),
+                        Instant.parse("2026-07-24T10:00:00Z")
                 ),
                 null,
-                LocalDateTime.of(2026, 7, 24, 9, 0),
-                LocalDateTime.of(2026, 7, 24, 10, 0)
+                Instant.parse("2026-07-24T09:00:00Z"),
+                Instant.parse("2026-07-24T10:00:00Z")
         );
         given(analysisService.getAnalysisResult(anyLong(), anyLong())).willReturn(response);
 

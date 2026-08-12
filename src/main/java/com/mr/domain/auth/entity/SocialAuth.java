@@ -6,11 +6,12 @@ import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.entity.BaseCreatedEntity;
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.Instant;
 
 @Getter
 @Entity
@@ -43,14 +44,14 @@ public class SocialAuth extends BaseCreatedEntity {
     private String refreshTokenHash;
 
     @Column(name = "expired_at")
-    private LocalDateTime expiredAt;
+    private Instant expiredAt;
 
     @Column(name = "device_info", length = 255)
     private String deviceInfo;
 
     @Builder(access = AccessLevel.PRIVATE)
     private SocialAuth(User user, SocialType socialType, String socialId,
-                       String refreshTokenHash, LocalDateTime expiredAt, String deviceInfo) {
+                       String refreshTokenHash, Instant expiredAt, String deviceInfo) {
 
         validateUser(user);
         validateSocialType(socialType);
@@ -73,7 +74,7 @@ public class SocialAuth extends BaseCreatedEntity {
     }
 
     public static SocialAuth create(User user, SocialType socialType, String socialId,
-                                    String tokenHash, LocalDateTime expiredAt, String deviceInfo) {
+                                    String tokenHash, Instant expiredAt, String deviceInfo) {
 
         validateTokenValue(tokenHash);
         validateExpiryTime(expiredAt);
@@ -112,13 +113,13 @@ public class SocialAuth extends BaseCreatedEntity {
         }
     }
 
-    private static void validateExpiryTime(LocalDateTime expiredAt) {
-        if (expiredAt == null || !expiredAt.isAfter(LocalDateTime.now())) {
+    private static void validateExpiryTime(Instant expiredAt) {
+        if (expiredAt == null || !expiredAt.isAfter(Instant.now())) {
             throw new GeneralException(AuthErrorStatus.INVALID_TOKEN_EXPIRY);
         }
     }
 
-    public void updateRefreshToken(String tokenHash, LocalDateTime newExpiredAt, String deviceInfo) {
+    public void updateRefreshToken(String tokenHash, Instant newExpiredAt, String deviceInfo) {
         validateTokenValue(tokenHash);
         validateExpiryTime(newExpiredAt);
 
@@ -130,10 +131,10 @@ public class SocialAuth extends BaseCreatedEntity {
     public void expireToken() {
         this.refreshTokenHash = null;
         this.deviceInfo = null;
-        this.expiredAt = LocalDateTime.now();
+        this.expiredAt = Instant.now();
     }
 
     public boolean isExpired() {
-        return this.expiredAt == null || !this.expiredAt.isAfter(LocalDateTime.now());
+        return this.expiredAt == null || !this.expiredAt.isAfter(Instant.now());
     }
 }

@@ -1,12 +1,13 @@
 package com.mr.domain.home.dto.res;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.learning.dto.res.LearningHomeResponseDTO;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.user.entity.enums.TheoryLevel;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.DayOfWeek;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Schema(description = "홈 화면 요약 조회 응답")
@@ -20,7 +21,7 @@ public record HomeResponseDTO(
         @Schema(description = "주/월간 연습 시간 요약")
         PracticeSummary practiceSummary,
 
-        @Schema(description = "진행 중인 학습. 학습 기록이 없거나 진행률이 0%/100%면 null")
+        @Schema(description = "진행 중인 학습(재도전 포함). 이어갈 단계가 없으면(진행 기록이 아예 없거나, 최근 패키지들이 전부 100% 완료) null")
         LearningSummary currentLearning,
 
         @Schema(description = "추천 학습 목록")
@@ -116,7 +117,7 @@ public record HomeResponseDTO(
             @Schema(description = "패키지 난이도", example = "ADVANCED")
             String level,
 
-            @Schema(description = "패키지 진행률(%), 1~99", example = "10")
+            @Schema(description = "패키지 진행률(%), 0~99", example = "10")
             int progressRate,
 
             @Schema(description = "[이어서 학습하기] 클릭 시 이동할 단계 ID", example = "13")
@@ -185,8 +186,9 @@ public record HomeResponseDTO(
             @Schema(description = "BPM", example = "120")
             Integer bpm,
 
-            @Schema(description = "연습 종료 시각", example = "2026-05-04T14:32:00")
-            LocalDateTime playedAt,
+            @Schema(description = "연습 종료 시각 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+            Instant playedAt,
 
             @Schema(description = "상대 시간 표기", example = "오늘")
             String relativeTime,

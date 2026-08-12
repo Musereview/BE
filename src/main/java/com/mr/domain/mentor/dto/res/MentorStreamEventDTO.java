@@ -1,10 +1,11 @@
 package com.mr.domain.mentor.dto.res;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mr.domain.mentor.entity.MentorMessage;
 import com.mr.domain.mentor.entity.enums.MessageRole;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public final class MentorStreamEventDTO {
 
@@ -62,8 +63,9 @@ public final class MentorStreamEventDTO {
             @Schema(description = "메시지 본문", example = "8마디 이후에 박자가 밀리는 이유가 뭔가요?")
             String content,
 
-            @Schema(description = "메시지 생성 시각", example = "2026-08-10T21:30:12")
-            LocalDateTime createdAt
+            @Schema(description = "메시지 생성 일시 (KST 기준 응답)", example = "2026-08-11T18:00:00", type = "string")
+            @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss", timezone = "Asia/Seoul")
+            Instant createdAt
     ) {
 
         public static Message user(MentorMessage message) {
