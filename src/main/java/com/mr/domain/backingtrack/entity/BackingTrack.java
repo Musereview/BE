@@ -25,6 +25,7 @@ import jakarta.persistence.Table;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -109,6 +110,7 @@ public class BackingTrack extends BaseTimeDeletedEntity {
     private Level level;
 
     // 양방향 매핑 추가, 영속성 전이랑 고아 객체 제거
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "backingTrack", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ChordProgression> chordProgressions = new ArrayList<>();
 

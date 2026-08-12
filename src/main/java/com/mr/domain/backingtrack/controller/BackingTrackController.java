@@ -35,13 +35,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/backing-tracks")
-@Tag(name = "백킹트랙(BackinTrack)", description = "백킹트랙 생성, 수정 및 조회 api")
+@Tag(name = "백킹트랙", description = "백킹트랙 API")
 public class BackingTrackController {
 
     private final BackingTrackService backingTrackService;
 
     @Operation(
-            summary = "백킹트랙 생성",
+            summary = "백킹트랙 생성 API",
             description = "트랙명, 장르, Key, 조성, BPM, 트랙 유형, 공개 범위, 난이도 등의 정보를 입력받아 저장"
     )
     @PostMapping
@@ -56,7 +56,7 @@ public class BackingTrackController {
     }
 
     @Operation(
-            summary = "백킹트랙 오디오 파일 업로드 URL 발급",
+            summary = "백킹트랙 오디오 파일 업로드 URL 발급 API",
             description = """
                 백킹트랙 생성 시 첨부할 오디오 파일을 S3에 직접 업로드하기 위한
                 Presigned PUT URL을 발급합니다.
@@ -79,7 +79,7 @@ public class BackingTrackController {
     }
 
     @Operation(
-            summary = "백킹트랙 수정",
+            summary = "백킹트랙 수정 API",
             description = "트랙의 생성자가 본인일 때, 트랙의 정보를 수정"
     )
     @PutMapping("/{backingTrackId}")
@@ -95,7 +95,7 @@ public class BackingTrackController {
     }
 
     @Operation(
-            summary = "백킹트랙 재생 수 증가",
+            summary = "백킹트랙 재생 수 증가 API",
             description = "백킹트랙 기반 연주 후 AI 분석 응답 생성이 완료된 경우, 해당 백킹트랙의 재생 수를 1 증가"
     )
     @PatchMapping("/{backingTrackId}/play-count")
@@ -110,7 +110,7 @@ public class BackingTrackController {
     }
 
     @Operation(
-            summary = "백킹트랙 목록 조회",
+            summary = "백킹트랙 목록 조회 API",
             description = "사용자가 연주 가능한 백킹트랙 목록을 카드뷰 형태로 조회하는 API\n" +
                     "공개 범위와 사용자를 고려하여 필터 후 커서 기반 페이징"
     )
@@ -125,7 +125,7 @@ public class BackingTrackController {
     }
 
     @Operation(
-            summary = "백킹트랙 상세 조회",
+            summary = "백킹트랙 상세 조회 API",
             description = "사용자가 선택한 백킹트랙의 상세 정보를 조회"
     )
     @GetMapping("/{backingTrackId}")
@@ -139,7 +139,7 @@ public class BackingTrackController {
     }
 
     @Operation(
-            summary = "추천 백킹크랙 조회",
+            summary = "추천 백킹트랙 조회 API",
             description = "최근 1주일 기준으로 AI 분석이 완료(COMPLETED)된 백킹트랙 중 playCount가 높은 TOP3 백킹트랙을 조회\n" +
                     "playCount 내림차순으로 정렬"
     )
