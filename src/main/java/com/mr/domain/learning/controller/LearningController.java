@@ -114,7 +114,7 @@ public class LearningController {
     }
 
     @Operation(
-            summary = "학습 주제(THEORY) 전체보기 API",
+            summary = "학습 주제 전체보기 API",
             description = "난이도(difficulty) 탭별로 학습 주제 목록을 조회합니다. difficulty는 필수입니다."
     )
     @GetMapping("/theory")
@@ -128,7 +128,7 @@ public class LearningController {
     }
 
     @Operation(
-            summary = "실전 반주법 패키지(ACCOMPANIMENT) 전체보기 API",
+            summary = "실전 반주법 패키지 전체보기 API",
             description = "난이도 구분 없이 전체 목록을 제목 기준 이름순으로 조회합니다. 각 항목의 progressRate는 진행률(%)만 반환합니다."
     )
     @GetMapping("/accompaniment")
