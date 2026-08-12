@@ -96,8 +96,12 @@ public class UserLearningProgress extends BaseTimeEntity {
     }
 
     // 학습 시간 및 점수 업데이트
-    public void updateProgress(Integer score, Instant lastStudiedAt) {
-        this.score = score;
+    public void updateProgress(Integer newScore, Instant lastStudiedAt) {
+        if (newScore != null) {
+            if (this.score == null || newScore > this.score) {  // 기존 점수가 아예 없거나(null), 새로운 점수가 기존 점수보다 높을 때만 갱신 (최고 점수 유지)
+                this.score = newScore;
+            }
+        }
         this.lastStudiedAt = lastStudiedAt != null ? lastStudiedAt : Instant.now();
     }
 
