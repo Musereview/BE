@@ -158,6 +158,7 @@ class PlayingControllerTest {
         void getAnalysisContextSuccess() throws Exception {
             AnalysisContextResponse response = new AnalysisContextResponse(
                     PLAYING_ID,
+                    11L,
                     "Jazz Standard",
                     "JAZZ",
                     "C",
@@ -182,6 +183,7 @@ class PlayingControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.isSuccess").value(true))
                     .andExpect(jsonPath("$.data.playingId").value(PLAYING_ID))
+                    .andExpect(jsonPath("$.data.backingTrackId").value(11L))
                     .andExpect(jsonPath("$.data.recordingFileUrl")
                             .value("https://example.com/recording.webm"))
                     .andExpect(jsonPath("$.data.backingTrackAudioFileUrl")

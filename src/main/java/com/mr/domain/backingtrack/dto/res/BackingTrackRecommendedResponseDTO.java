@@ -19,17 +19,23 @@ public class BackingTrackRecommendedResponseDTO {
             String keySignature,
             String scaleType,
             String timeSignature,
-            List<String> chordProgression,
+            List<ChordInfo> chordProgression,
             Integer bpm,
             String level,
             Integer playtimeSec,
             Integer playCount
     ) {
         public static TrackInfo of(Long backingTrackId, String title, String genre, String keySignature,
-                                   String scaleType, String timeSignature, List<String> chordProgression,
+                                   String scaleType, String timeSignature, List<ChordInfo> chordProgression,
                                    Integer bpm, String level, Integer playtimeSec, Integer playCount) {
             return new TrackInfo(backingTrackId, title, genre, keySignature, scaleType, timeSignature,
                     chordProgression, bpm, level, playtimeSec, playCount);
         }
     }
+
+    public record ChordInfo(
+            Integer measureNo,
+            Integer sequenceNo,
+            String chordName
+    ) {}
 }

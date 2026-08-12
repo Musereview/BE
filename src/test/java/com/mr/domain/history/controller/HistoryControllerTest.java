@@ -68,13 +68,17 @@ class HistoryControllerTest {
     @Test
     @DisplayName("GET /api/histories - 목록 조회 성공")
     void getHistories_success() throws Exception {
-        HistoryListResponseDTO response = HistoryListResponseDTO.of(0, 10, false, List.of());
+        HistoryListResponseDTO.Item item = new HistoryListResponseDTO.Item(
+                1L, 11L, null, "제목", null, null, 5, 300, null, "오늘"
+        );
+        HistoryListResponseDTO response = HistoryListResponseDTO.of(0, 10, false, List.of(item));
         given(historyService.getHistories(anyLong(), anyInt(), anyInt(), any())).willReturn(response);
 
         mockMvc.perform(get("/api/histories").param("page", "0").param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.data.hasNext").value(false));
+                .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.items[0].backingTrackId").value(11L));
     }
 
     @Test
@@ -119,7 +123,7 @@ class HistoryControllerTest {
     @DisplayName("GET /api/histories/{id} - 상세 조회 성공")
     void getHistoryDetail_success() throws Exception {
         HistoryDetailResponseDTO response = new HistoryDetailResponseDTO(
-                1L, "제목", "장르", "C Major", 120, "4/4",
+                1L, 11L, "제목", "장르", "C Major", 120, "4/4",
                 Instant.parse("2026-07-24T10:00:00Z"), 5, 300,
                 "https://example.com/recording.webm", "https://example.com/backing-track.mp3",
                 List.of(), null, null, List.of()
@@ -129,6 +133,7 @@ class HistoryControllerTest {
         mockMvc.perform(get("/api/histories/{playingId}", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.playingId").value(1L))
+                .andExpect(jsonPath("$.data.backingTrackId").value(11L))
                 .andExpect(jsonPath("$.data.title").value("제목"))
                 .andExpect(jsonPath("$.data.recordingFileUrl").value("https://example.com/recording.webm"))
                 .andExpect(jsonPath("$.data.backingTrackAudioFileUrl")

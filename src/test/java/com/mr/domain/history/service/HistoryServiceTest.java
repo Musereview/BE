@@ -110,6 +110,9 @@ class HistoryServiceTest {
     @DisplayName("getHistories - 최신 COMPLETED 분석이 없는 Playing은 latestAnalysisId가 null이다")
     void getHistories_noCompletedAnalysis_latestAnalysisIdIsNull() {
         Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, Instant.now());
+        BackingTrack backingTrack = mock(BackingTrack.class);
+        given(playing.getBackingTrack()).willReturn(backingTrack);
+        given(backingTrack.getId()).willReturn(11L);
         given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(new SliceImpl<>(List.of(playing), PageRequest.of(0, 10), false));
         given(analysisRepository.findByPlayingIdInAndStatusOrderByCreatedAtDescIdDesc(
@@ -119,6 +122,7 @@ class HistoryServiceTest {
         HistoryListResponseDTO response = historyService.getHistories(1L, 0, 10, null);
 
         assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).backingTrackId()).isEqualTo(11L);
         assertThat(response.items().get(0).latestAnalysisId()).isNull();
         assertThat(response.items().get(0).scoreChange()).isNull();
     }
@@ -141,6 +145,7 @@ class HistoryServiceTest {
 
         assertThat(response.items().get(0).scoreChange()).isEqualTo(10);
         assertThat(response.items().get(1).scoreChange()).isNull();
+        assertThat(response.items().get(0).backingTrackId()).isNull();
         verify(playingRepository, never()).findNextPlayingId(any(), any(), any(), any(), any());
         verify(playingRepository, never()).findNextPlayingIdSince(any(), any(), any(), any(), any(), any());
     }
@@ -288,6 +293,7 @@ class HistoryServiceTest {
         given(playing.getRecordingObjectKey()).willReturn(recordingObjectKey);
         given(s3FileService.createPresignedDownload(1L, S3FileType.RECORDING, recordingObjectKey)).willReturn(recordingFileUrl);
         given(playing.getBackingTrack()).willReturn(backingTrack);
+        given(backingTrack.getId()).willReturn(11L);
         given(backingTrack.getUser()).willReturn(backingTrackOwner);
         given(backingTrackOwner.getUserId()).willReturn(2L);
         given(backingTrack.getAudioObjectKey()).willReturn(backingTrackObjectKey);
@@ -310,6 +316,7 @@ class HistoryServiceTest {
         verify(s3FileService).createPresignedDownload(1L, S3FileType.RECORDING, recordingObjectKey);
 
         assertThat(response.recordingFileUrl()).isEqualTo(recordingFileUrl);
+        assertThat(response.backingTrackId()).isEqualTo(11L);
         assertThat(response.backingTrackAudioFileUrl()).isEqualTo(backingTrackAudioFileUrl);
         assertThat(response.analyses()).hasSize(2);
         assertThat(response.analyses().get(1).status()).isEqualTo(AnalysisStatus.PENDING);
