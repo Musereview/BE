@@ -33,7 +33,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 
