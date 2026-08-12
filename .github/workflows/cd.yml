@@ -60,19 +60,24 @@ jobs:
       - name: Get GitHub Actions runner public IP
         id: runner-ip
         run: |
-          RUNNER_IP=$(curl -sS https://checkip.amazonaws.com)
-          echo "ip=${RUNNER_IP}" >> "$GITHUB_OUTPUT"
-          echo "Runner IP: ${RUNNER_IP}"
-          
-          echo "ip=$(curl -s https://checkip.amazonaws.com)/32" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          RUNNER_IP="$(curl --fail --silent --show-error --max-time 10 https://checkip.amazonaws.com | tr -d '\r\n')"
+          [[ "$RUNNER_IP" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || {
+            echo "Invalid runner IP address" >&2
+            exit 1
+          }
+          printf 'cidr=%s/32\n' "$RUNNER_IP" >> "$GITHUB_OUTPUT"
 
       - name: Allow runner SSH access
+        env:
+          RUNNER_CIDR: ${{ steps.runner-ip.outputs.cidr }}
+          SECURITY_GROUP_ID: ${{ secrets.EC2_SECURITY_GROUP_ID }}
         run: |
           aws ec2 authorize-security-group-ingress \
-            --group-id "${{ secrets.EC2_SECURITY_GROUP_ID }}" \
+            --group-id "$SECURITY_GROUP_ID" \
             --protocol tcp \
             --port 22 \
-            --cidr "${{ steps.runner-ip.outputs.ip }}/32"
+            --cidr "$RUNNER_CIDR"
 
 
       - name: Deploy to EC2
@@ -121,10 +126,13 @@ jobs:
 
       - name: Revoke runner SSH access
         if: always()
+        env:
+          RUNNER_CIDR: ${{ steps.runner-ip.outputs.cidr }}
+          SECURITY_GROUP_ID: ${{ secrets.EC2_SECURITY_GROUP_ID }}
         run: |
           aws ec2 revoke-security-group-ingress \
-            --group-id "${{ secrets.EC2_SECURITY_GROUP_ID }}" \
+            --group-id "$SECURITY_GROUP_ID" \
             --protocol tcp \
             --port 22 \
-            --cidr "${{ steps.runner-ip.outputs.ip }}/32" \
+            --cidr "$RUNNER_CIDR" \
           || true
