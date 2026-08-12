@@ -48,6 +48,7 @@ public class S3FileService {
     ){
 
         validateOwnerId(ownerId);
+        validateOwnerScopedFileType(fileType);
         validateUploadCommand(command);
 
         String normalizedContentType = ContentTypeUtils.normalize(command.contentType());
@@ -119,6 +120,7 @@ public class S3FileService {
     public ValidatedFile validateUploadedFile(Long ownerId, S3FileType fileType, String objectKey
     ) {
         validateOwnerId(ownerId);
+        validateOwnerScopedFileType(fileType);
         validateObjectKey(ownerId, fileType, objectKey);
 
         HeadObjectResponse headObject = getHeadObject(objectKey);
@@ -148,6 +150,7 @@ public class S3FileService {
     public String createPresignedDownload(Long ownerId, S3FileType fileType, String objectKey
     ) {
         validateOwnerId(ownerId);
+        validateOwnerScopedFileType(fileType);
         validateObjectKey(ownerId, fileType, objectKey);
 
         return presignDownload(objectKey);
@@ -254,6 +257,12 @@ public class S3FileService {
             throw new GeneralException(
                     S3ErrorStatus.INVALID_OBJECT_KEY
             );
+        }
+    }
+
+    private void validateOwnerScopedFileType(S3FileType fileType) {
+        if (fileType == null || !fileType.isOwnerScoped()) {
+            throw new GeneralException(S3ErrorStatus.INVALID_OBJECT_KEY);
         }
     }
 

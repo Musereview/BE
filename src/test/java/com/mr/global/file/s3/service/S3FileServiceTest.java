@@ -354,6 +354,37 @@ class S3FileServiceTest {
         }
 
         @Test
+        @DisplayName("공용 콘텐츠 파일 타입이면 사용자 소유 경로의 Presigned PUT URL을 발급하지 않는다")
+        void createPresignedUpload_sharedContentFileType() {
+            FileUploadCommand command =
+                    new FileUploadCommand(
+                            "triads_step1.mp3",
+                            CONTENT_TYPE,
+                            FILE_SIZE
+                    );
+
+            assertGeneralException(
+                    () -> s3FileService.createPresignedUpload(
+                            OWNER_ID,
+                            S3FileType.PLAYING_EXAMPLE,
+                            command
+                    ),
+                    S3ErrorStatus.INVALID_OBJECT_KEY
+            );
+
+            verify(objectKeyGenerator, never())
+                    .generate(
+                            anyLong(),
+                            any(S3FileType.class),
+                            anyString(),
+                            anyString()
+                    );
+
+            verify(s3Presigner, never())
+                    .presignPutObject(any(PutObjectPresignRequest.class));
+        }
+
+        @Test
         @DisplayName("업로드 명령이 null이면 예외가 발생한다")
         void createPresignedUpload_nullCommand() {
             // when & then
@@ -647,6 +678,29 @@ class S3FileServiceTest {
                     .headObject(
                             any(HeadObjectRequest.class)
                     );
+        }
+
+        @Test
+        @DisplayName("공용 콘텐츠 파일 타입이면 사용자 소유 경로에서 업로드 객체를 검증하지 않는다")
+        void validateUploadedFile_sharedContentFileType() {
+            assertGeneralException(
+                    () -> s3FileService.validateUploadedFile(
+                            OWNER_ID,
+                            S3FileType.PLAYING_EXAMPLE,
+                            PLAYING_EXAMPLE_OBJECT_KEY
+                    ),
+                    S3ErrorStatus.INVALID_OBJECT_KEY
+            );
+
+            verify(objectKeyGenerator, never())
+                    .belongsToOwner(
+                            anyLong(),
+                            any(S3FileType.class),
+                            anyString()
+                    );
+
+            verify(s3Client, never())
+                    .headObject(any(HeadObjectRequest.class));
         }
 
         @Test
@@ -1131,6 +1185,29 @@ class S3FileServiceTest {
                     ),
                     S3ErrorStatus.INVALID_OBJECT_KEY
             );
+
+            verify(s3Presigner, never())
+                    .presignGetObject(any(GetObjectPresignRequest.class));
+        }
+
+        @Test
+        @DisplayName("createPresignedDownload - 공용 콘텐츠 파일 타입이면 사용자 소유 경로에서 Presigned GET URL을 발급하지 않는다")
+        void createPresignedDownload_sharedContentFileType_ownerPath() {
+            assertGeneralException(
+                    () -> s3FileService.createPresignedDownload(
+                            OWNER_ID,
+                            S3FileType.PLAYING_EXAMPLE,
+                            PLAYING_EXAMPLE_OBJECT_KEY
+                    ),
+                    S3ErrorStatus.INVALID_OBJECT_KEY
+            );
+
+            verify(objectKeyGenerator, never())
+                    .belongsToOwner(
+                            anyLong(),
+                            any(S3FileType.class),
+                            anyString()
+                    );
 
             verify(s3Presigner, never())
                     .presignGetObject(any(GetObjectPresignRequest.class));
