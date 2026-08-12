@@ -7,22 +7,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.mr.domain.auth.dto.res.MasterAuthResponse;
 import com.mr.domain.auth.service.MasterAuthService;
-import com.mr.global.security.jwt.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest(
-        classes = MasterAuthSecurityIntegrationTestConfig.class,
-        properties = {
-                "master-auth.enabled=true",
-                "master-auth.user-id=27"
-        }
-)
+@SpringBootTest(properties = {
+        "master-auth.enabled=true",
+        "master-auth.user-id=27"
+})
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
 class MasterAuthSecurityEnabledIntegrationTest {
 
@@ -31,9 +29,6 @@ class MasterAuthSecurityEnabledIntegrationTest {
 
     @MockBean
     private MasterAuthService masterAuthService;
-
-    @MockBean
-    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("마스터 인증이 활성화되면 인증 없이 설정된 사용자의 Access Token을 발급한다")
