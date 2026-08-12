@@ -5,6 +5,7 @@ import com.mr.domain.auth.service.MasterAuthService;
 import com.mr.global.apipayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/auth")
 @ConditionalOnProperty(prefix = "master-auth", name = "enabled", havingValue = "true")
+@Tag(name = "인증", description = "인증 API")
 public class MasterAuthController {
 
     private final MasterAuthService masterAuthService;
@@ -31,8 +33,10 @@ public class MasterAuthController {
     }
 
     @SecurityRequirements
-    @Operation(summary = "마스터 JWT 발급",
-            description = "API 테스트용으로 설정된 사용자의 Access Token을 발급합니다. MASTER_AUTH_ENABLED=true일 때만 사용할 수 있습니다.")
+    @Operation(
+            summary = "마스터 JWT 발급 API",
+            description = "API 테스트용으로 설정된 사용자의 JWT Access Token을 발급합니다."
+    )
     @PostMapping("/master-token")
     public ApiResponse<MasterAuthResponse> issueAccessToken() {
         return ApiResponse.onSuccess(masterAuthService.issueAccessToken(masterAuthUserId));
