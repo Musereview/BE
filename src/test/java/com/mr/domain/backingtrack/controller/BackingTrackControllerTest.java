@@ -381,10 +381,14 @@ class BackingTrackControllerTest {
         @Test
         @DisplayName("커서 없이 요청하면 첫 페이지를 조회한다")
         void getBackingTracks_firstPage() throws Exception {
+            // 💡 수정됨: String 리스트 대신 ChordInfo 객체 리스트 사용
             BackingTrackListResponseDTO.TrackInfo trackInfo =
                     BackingTrackListResponseDTO.TrackInfo.of(
                             1L, "테스트 트랙", "Jazz", "C", "MAJOR", "4/4",
-                            List.of("Cmaj7", "Am7"), 120, "BASIC", 180
+                            List.of(
+                                    new BackingTrackListResponseDTO.ChordInfo(1, 1, "Cmaj7"),
+                                    new BackingTrackListResponseDTO.ChordInfo(1, 2, "Am7")
+                            ), 120, "BASIC", 180
                     );
 
             BackingTrackListResponseDTO.ListResponseDTO response =
@@ -498,10 +502,14 @@ class BackingTrackControllerTest {
         @Test
         @DisplayName("추천 트랙 목록을 반환한다")
         void getRecommendedTracks_success() throws Exception {
+            // 💡 수정됨: String 리스트 대신 ChordInfo 객체 리스트 사용
             BackingTrackRecommendedResponseDTO.TrackInfo trackInfo =
                     BackingTrackRecommendedResponseDTO.TrackInfo.of(
                             1L, "테스트 트랙", "Jazz", "C", "MAJOR", "4/4",
-                            List.of("Cmaj7", "Am7"), 120, "BASIC", 180, 15
+                            List.of(
+                                    new BackingTrackRecommendedResponseDTO.ChordInfo(1, 1, "Cmaj7"),
+                                    new BackingTrackRecommendedResponseDTO.ChordInfo(1, 2, "Am7")
+                            ), 120, "BASIC", 180, 15
                     );
 
             BackingTrackRecommendedResponseDTO.RecommendedResponseDTO response =
