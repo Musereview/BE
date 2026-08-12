@@ -33,6 +33,9 @@ public record HistoryListResponseDTO(
             @Schema(description = "연주 기록 ID", example = "128")
             Long playingId,
 
+            @Schema(description = "연주에 사용한 백킹트랙 ID. 백킹트랙이 없으면 null", example = "11")
+            Long backingTrackId,
+
             @Schema(description = "가장 최근 완료된 분석 ID. 완료된 분석이 없으면 null", example = "342")
             Long latestAnalysisId,
 
@@ -65,6 +68,7 @@ public record HistoryListResponseDTO(
 
             return new Item(
                     playing.getId(),
+                    backingTrack != null ? backingTrack.getId() : null,
                     latestAnalysis != null ? latestAnalysis.getId() : null,
                     backingTrack != null ? backingTrack.getTitle() : null,
                     latestAnalysis != null ? latestAnalysis.getSummary() : null,

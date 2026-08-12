@@ -52,6 +52,7 @@ public class HistoryController {
                                         "items": [
                                           {
                                             "playingId": 128,
+                                            "backingTrackId": 11,
                                             "latestAnalysisId": 342,
                                             "title": "Autumn Leaves",
                                             "summary": "코드 전환은 안정적이나 8마디 이후 박자가 밀립니다.",
@@ -159,6 +160,7 @@ public class HistoryController {
                                       "message": "요청에 성공하였습니다.",
                                       "data": {
                                         "playingId": 128,
+                                        "backingTrackId": 11,
                                         "title": "Autumn Leaves",
                                         "genre": "JAZZ",
                                         "key": "Bb",
