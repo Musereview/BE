@@ -60,6 +60,9 @@ class S3FileServiceTest {
     private static final String OTHER_OWNER_OBJECT_KEY =
             "recordings/2/2026-08-05/174500_test.mp3";
 
+    private static final String PLAYING_EXAMPLE_OBJECT_KEY =
+            "playing_example/triads_step1.mp3";
+
     private static final String FILE_URL =
             "https://"
                     + BUCKET
@@ -1058,6 +1061,64 @@ class S3FileServiceTest {
                             FILE_TYPE,
                             OBJECT_KEY
                     );
+        }
+
+        @Test
+        @DisplayName("공용 콘텐츠 Object Key이면 Presigned GET URL을 발급한다")
+        void createPresignedDownload_sharedContent_success()
+                throws Exception {
+            String downloadUrl =
+                    "https://example.com/triads_step1.mp3?X-Amz-Signature=test";
+
+            when(objectKeyGenerator.belongsToFileType(
+                    S3FileType.PLAYING_EXAMPLE,
+                    PLAYING_EXAMPLE_OBJECT_KEY
+            )).thenReturn(true);
+
+            when(s3Presigner.presignGetObject(
+                    any(GetObjectPresignRequest.class)
+            )).thenReturn(presignedGetObjectRequest);
+
+            when(presignedGetObjectRequest.url())
+                    .thenReturn(URI.create(downloadUrl).toURL());
+
+            String response = s3FileService.createPresignedDownload(
+                    S3FileType.PLAYING_EXAMPLE,
+                    PLAYING_EXAMPLE_OBJECT_KEY
+            );
+
+            assertThat(response).isEqualTo(downloadUrl);
+
+            ArgumentCaptor<GetObjectPresignRequest> captor =
+                    ArgumentCaptor.forClass(GetObjectPresignRequest.class);
+
+            verify(s3Presigner).presignGetObject(captor.capture());
+            assertThat(captor.getValue().getObjectRequest().key())
+                    .isEqualTo(PLAYING_EXAMPLE_OBJECT_KEY);
+            verify(objectKeyGenerator).belongsToFileType(
+                    S3FileType.PLAYING_EXAMPLE,
+                    PLAYING_EXAMPLE_OBJECT_KEY
+            );
+        }
+
+        @Test
+        @DisplayName("공용 콘텐츠 prefix와 다른 Object Key이면 Presigned GET URL을 발급하지 않는다")
+        void createPresignedDownload_sharedContent_invalidPrefix() {
+            when(objectKeyGenerator.belongsToFileType(
+                    S3FileType.PLAYING_EXAMPLE,
+                    OBJECT_KEY
+            )).thenReturn(false);
+
+            assertGeneralException(
+                    () -> s3FileService.createPresignedDownload(
+                            S3FileType.PLAYING_EXAMPLE,
+                            OBJECT_KEY
+                    ),
+                    S3ErrorStatus.INVALID_OBJECT_KEY
+            );
+
+            verify(s3Presigner, never())
+                    .presignGetObject(any(GetObjectPresignRequest.class));
         }
 
         @Test

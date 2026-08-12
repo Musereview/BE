@@ -24,6 +24,8 @@ import com.mr.domain.user.repository.UserRepository;
 import com.mr.domain.learning.dto.req.LearningResultSaveRequestDTO;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.NotificationEvent;
+import com.mr.global.file.s3.enums.S3FileType;
+import com.mr.global.file.s3.service.S3FileService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -62,6 +65,8 @@ class LearningServiceTest {
     private PlayingExampleRepository playingExampleRepository;
     @Mock
     private ChordExampleRepository chordExampleRepository;
+    @Mock
+    private S3FileService s3FileService;
     @Mock
     private UserRepository userRepository;
     @Mock
@@ -247,10 +252,14 @@ class LearningServiceTest {
         when(step.getPracticeTip()).thenReturn("연습 팁");
 
         PlayingExample playingExample = mock(PlayingExample.class);
+        String audioObjectKey = "playing_example/11th.mp3";
+        String presignedAudioUrl = "https://example.com/11th.mp3?X-Amz-Signature=test";
         when(playingExample.getTitle()).thenReturn("11th Tension Notes Practice");
         when(playingExample.getDescription()).thenReturn("프로 연주자의 응용 사례");
-        when(playingExample.getAudioFileUrl()).thenReturn("https://cdn.example.com/audio/11th.mp3");
+        when(playingExample.getAudioObjectKey()).thenReturn(audioObjectKey);
         when(playingExample.getPlayingSeconds()).thenReturn(154L);
+        when(s3FileService.createPresignedDownload(S3FileType.PLAYING_EXAMPLE, audioObjectKey))
+                .thenReturn(presignedAudioUrl);
 
         ChordExample chordExample = mock(ChordExample.class);
         when(chordExample.getChordName()).thenReturn("Cmaj7");
@@ -267,12 +276,14 @@ class LearningServiceTest {
 
         assertThat(result.stepTitle()).isEqualTo("11th 텐션 노트 활용하기");
         assertThat(result.modelPerformance()).isNotNull();
+        assertThat(result.modelPerformance().audioUrl()).isEqualTo(presignedAudioUrl);
         assertThat(result.modelPerformance().durationSeconds()).isEqualTo(154);
         assertThat(result.chordExamples()).hasSize(1);
         assertThat(result.chordExamples().get(0).chordName()).isEqualTo("Cmaj7");
         assertThat(result.chordExamples().get(0).noteNumbers()).containsExactly(60, 64, 67, 70, 77);
         assertThatThrownBy(() -> result.chordExamples().get(0).noteNumbers().add(1))
                 .isInstanceOf(UnsupportedOperationException.class);
+        verify(s3FileService).createPresignedDownload(S3FileType.PLAYING_EXAMPLE, audioObjectKey);
     }
 
     @Test
@@ -299,6 +310,10 @@ class LearningServiceTest {
 
         assertThat(result.modelPerformance()).isNull();
         assertThat(result.chordExamples()).isEmpty();
+        verify(s3FileService, never()).createPresignedDownload(
+                any(S3FileType.class),
+                anyString()
+        );
     }
 
     @Test

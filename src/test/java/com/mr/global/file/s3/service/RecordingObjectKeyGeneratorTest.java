@@ -328,4 +328,31 @@ class RecordingObjectKeyGeneratorTest {
                     .isFalse();
         }
     }
+
+    @Nested
+    @DisplayName("Object Key 파일 타입 검증")
+    class ValidateObjectKeyFileType {
+
+        @Test
+        @DisplayName("파일 타입 prefix와 일치하면 true를 반환한다")
+        void belongsToFileType() {
+            boolean result = objectKeyGenerator.belongsToFileType(
+                    S3FileType.PLAYING_EXAMPLE,
+                    "playing_example/triads_step1.mp3"
+            );
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("파일 타입 prefix와 일치하지 않으면 false를 반환한다")
+        void doesNotBelongToFileType() {
+            boolean result = objectKeyGenerator.belongsToFileType(
+                    S3FileType.PLAYING_EXAMPLE,
+                    "backing-tracks/1/triads_step1.mp3"
+            );
+
+            assertThat(result).isFalse();
+        }
+    }
 }
