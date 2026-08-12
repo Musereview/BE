@@ -35,11 +35,9 @@ public class PlayingExample extends BaseCreatedEntity {
     @JoinColumn(name = "learning_step_id", nullable = false, unique = true)
     private LearningStep learningStep;
 
-    // 제목
     @Column(name = "title", nullable = false, length = 100)
     private String title;
 
-    // 미디 파일 데이터
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "midi_data", nullable = false, columnDefinition = "JSON")
     private String midiData;
@@ -47,19 +45,15 @@ public class PlayingExample extends BaseCreatedEntity {
     @Column(name = "audio_object_key", nullable = false, length = 255)
     private String audioObjectKey;
 
-    // bpm
     @Column(name = "bpm")
     private Integer bpm;
 
-    // key
     @Column(name = "key_signature", length = 20)
     private String keySignature;
 
-    // 설명
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    // 재생 시간 (초 단위 저장)
     @Column(name = "playing_seconds")
     private Long playingSeconds;
 

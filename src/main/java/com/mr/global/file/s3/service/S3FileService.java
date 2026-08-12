@@ -145,7 +145,6 @@ public class S3FileService {
         );
     }
 
-    // 파일 조회용 Presigned GET URL을 발급
     public String createPresignedDownload(Long ownerId, S3FileType fileType, String objectKey
     ) {
         validateOwnerId(ownerId);
