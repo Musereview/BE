@@ -254,10 +254,14 @@ public class BackingTrackService {
 
         List<BackingTrackListResponseDTO.TrackInfo> trackInfos = pageTracks.stream()
                 .map(track -> {
-                    List<String> chordNames = track.getChordProgressions().stream()
+                    List<BackingTrackListResponseDTO.ChordInfo> chordInfos = track.getChordProgressions().stream()
                             .sorted(Comparator.comparing(ChordProgression::getMeasureNo)
                                     .thenComparing(ChordProgression::getSequenceNo))
-                            .map(ChordProgression::getChordName)
+                            .map(cp -> new BackingTrackListResponseDTO.ChordInfo(
+                                    cp.getMeasureNo(),
+                                    cp.getSequenceNo(),
+                                    cp.getChordName()
+                            ))
                             .toList();
 
                     return BackingTrackListResponseDTO.TrackInfo.of(
@@ -267,7 +271,7 @@ public class BackingTrackService {
                             track.getKeySignature(),
                             track.getScaleType().name(),
                             track.getTimeSignature(),
-                            chordNames,
+                            chordInfos,
                             track.getBpm(),
                             track.getLevel().name(),
                             track.getPlaytimeSec()
@@ -337,10 +341,14 @@ public class BackingTrackService {
         List<BackingTrackRecommendedResponseDTO.TrackInfo> trackInfos = topTracks.stream()
                 .map(track -> {
                     // 코드 진행 정렬 및 추출
-                    List<String> chordNames = track.getChordProgressions().stream()
+                    List<BackingTrackRecommendedResponseDTO.ChordInfo> chordInfos = track.getChordProgressions().stream()
                             .sorted(Comparator.comparing(ChordProgression::getMeasureNo)
                                     .thenComparing(ChordProgression::getSequenceNo))
-                            .map(ChordProgression::getChordName)
+                            .map(cp -> new BackingTrackRecommendedResponseDTO.ChordInfo(
+                                    cp.getMeasureNo(),
+                                    cp.getSequenceNo(),
+                                    cp.getChordName()
+                            ))
                             .toList();
 
                     // DTO 정적 팩토리 메서드(of) 매핑
@@ -351,7 +359,7 @@ public class BackingTrackService {
                             track.getKeySignature(),
                             track.getScaleType().name(),
                             track.getTimeSignature(),
-                            chordNames,
+                            chordInfos,
                             track.getBpm(),
                             track.getLevel().name(),
                             track.getPlaytimeSec(),

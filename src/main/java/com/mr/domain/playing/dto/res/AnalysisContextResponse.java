@@ -13,6 +13,7 @@ import java.util.List;
 
 public record AnalysisContextResponse(
         Long playingId,
+        @Schema(description = "재연주에 사용할 백킹트랙 ID", example = "11") Long backingTrackId,
         String title,
         String genre,
         String key,
@@ -39,6 +40,7 @@ public record AnalysisContextResponse(
 
         return new AnalysisContextResponse(
                 playing.getId(),
+                backingTrack.getId(),
                 backingTrack.getTitle(),
                 backingTrack.getGenre(),
                 backingTrack.getKeySignature(),
