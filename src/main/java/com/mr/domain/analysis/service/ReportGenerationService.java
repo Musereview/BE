@@ -85,13 +85,29 @@ public class ReportGenerationService {
         String input = analysisResult.toString();
         JsonNode promptSnapshot = promptSnapshot(analysisResult);
         String inputHash = sha256(PROMPT_VERSION + ":" + input);
+        GeminiGenerationResult result;
+
         try {
-            GeminiGenerationResult result = geminiClient.generateReport(SYSTEM_PROMPT, input);
+            result = geminiClient.generateReport(SYSTEM_PROMPT, input);
+        } catch (Exception exception) {
+            log.warn("Gemini report generation failed; using rule-based fallback.", exception);
+            return createFallbackReport(
+                    analysisResult,
+                    promptSnapshot,
+                    inputHash,
+                    startedAt,
+                    exception
+            );
+        }
+
+        try {
             JsonNode structuredResult = objectMapper.readTree(result.content());
             String summary = requiredText(structuredResult, "summary");
             String report = requiredText(structuredResult, "report");
+
             validateSummary(summary);
             validateMarkdownStructure(report);
+
             return new GeneratedAnalysisReport(
                     ReportGenerationType.LLM,
                     summary,
@@ -114,28 +130,13 @@ public class ReportGenerationService {
                     )
             );
         } catch (Exception exception) {
-            log.warn("\"LLM report generation or validation failed; using rule-based fallback.", exception);
-            JsonNode enrichedResult = analysisResultEnricher.regenerateSummary(analysisResult);
-            return new GeneratedAnalysisReport(
-                    ReportGenerationType.RULE_BASED,
-                    enrichedResult.path("summary").asText(),
-                    ruleBasedReportGenerator.generate(enrichedResult),
-                    null,
-                    PROMPT_VERSION,
-                    new LlmCallMetadata(
-                            isTimeout(exception) ? LlmCallStatus.TIMEOUT : LlmCallStatus.FAILED,
-                            properties.model(),
-                            PROMPT_VERSION,
-                            promptSnapshot,
-                            null,
-                            null,
-                            null,
-                            TEMPERATURE,
-                            elapsedMillis(startedAt),
-                            false,
-                            inputHash,
-                            exception.getMessage()
-                    )
+            log.warn("Gemini report validation failed; using rule-based fallback.", exception);
+            return createFallbackReport(
+                    analysisResult,
+                    promptSnapshot,
+                    inputHash,
+                    startedAt,
+                    exception
             );
         }
     }
@@ -216,5 +217,37 @@ public class ReportGenerationService {
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is not available.", exception);
         }
+    }
+
+    private GeneratedAnalysisReport createFallbackReport(
+            JsonNode analysisResult,
+            JsonNode promptSnapshot,
+            String inputHash,
+            long startedAt,
+            Exception exception
+    ) {
+        JsonNode enrichedResult = analysisResultEnricher.regenerateSummary(analysisResult);
+
+        return new GeneratedAnalysisReport(
+                ReportGenerationType.RULE_BASED,
+                enrichedResult.path("summary").asText(),
+                ruleBasedReportGenerator.generate(enrichedResult),
+                null,
+                PROMPT_VERSION,
+                new LlmCallMetadata(
+                        isTimeout(exception) ? LlmCallStatus.TIMEOUT : LlmCallStatus.FAILED,
+                        properties.model(),
+                        PROMPT_VERSION,
+                        promptSnapshot,
+                        null,
+                        null,
+                        null,
+                        TEMPERATURE,
+                        elapsedMillis(startedAt),
+                        false,
+                        inputHash,
+                        exception.getMessage()
+                )
+        );
     }
 }
