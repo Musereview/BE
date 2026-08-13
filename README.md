@@ -6,8 +6,6 @@
 
 ---
 
-<br/>
-
 ## 🛠 Tech Stack
 
 <div align="center">
@@ -36,7 +34,6 @@
 </div>
 
 <br/>
-<br/>
 
 ---
 
@@ -45,11 +42,9 @@
 
 <div align="center">
 
-<img
-width="100%"
-alt="MuseReview Backend Architecture"
-src="https://github.com/user-attachments/assets/b0bd351a-c94c-4e6b-973b-f30b2c72f68e"
-/>
+<img width="100%"
+alt="MuseReview Backend Architecture" src="https://github.com/user-attachments/assets/941fdffb-b9d7-4d43-8ff9-bf2e0cfaa136" />
+
 
 </div>
 
@@ -72,8 +67,6 @@ src="https://github.com/user-attachments/assets/b0bd351a-c94c-4e6b-973b-f30b2c72
 <br/>
 
 ---
-
-<br/>
 
 ## 👥 Backend Team
 
@@ -154,8 +147,6 @@ src="https://github.com/user-attachments/assets/b0bd351a-c94c-4e6b-973b-f30b2c72
 
 ---
 
-<br/>
-
 ## 📚 Convention
 
 ### 🌿 1. Branch Strategy
@@ -198,7 +189,6 @@ chore/#1-setting-base
 
 ---
 
-<br/>
 
 ### 📝 2. Commit Convention
 
@@ -224,7 +214,6 @@ PR은 활발한 코드 리뷰와 안정적인 병합을 위해 **최소 2명 이
 
 ---
 
-<br/>
 
 ### 🛠️ 3. Development Convention
 
