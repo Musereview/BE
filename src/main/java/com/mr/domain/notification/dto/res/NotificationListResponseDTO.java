@@ -1,6 +1,7 @@
 package com.mr.domain.notification.dto.res;
 
 import com.mr.domain.notification.entity.Notification;
+import com.mr.domain.notification.exception.NotificationErrorStatus;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.NotificationEvent;
 import lombok.extern.slf4j.Slf4j;
@@ -19,13 +20,17 @@ public record NotificationListResponseDTO (
 ){
 
     public static NotificationListResponseDTO of(Slice<Notification> notificationSlice) {
-        if (notificationSlice == null || !notificationSlice.hasContent()) {
+        if (notificationSlice == null) {
+            throw new GeneralException(NotificationErrorStatus.INVALID_NOTIFICATION_FORMAT);
+        }
+
+        if (!notificationSlice.hasContent()) {
             return new NotificationListResponseDTO(
                     java.util.Collections.emptyList(),
                     0,
-                    false,
-                    true,
-                    true
+                    notificationSlice.hasNext(),
+                    notificationSlice.isFirst(),
+                    notificationSlice.isLast()
             );
         }
 
