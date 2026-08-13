@@ -40,7 +40,6 @@
 
 ---
 
-<br/>
 
 ## 🏗 Architecture
 
@@ -56,12 +55,19 @@ src="https://github.com/user-attachments/assets/b0bd351a-c94c-4e6b-973b-f30b2c72
 
 <br/>
 
-**MuseReview**는 안정적인 서비스 운영과 각 구성요소의 역할 분리를 고려하여 다음과 같이 인프라를 구성했습니다.
+**MuseReview**는 안정적인 서비스 운영과 각 구성요소의 역할 분리를 고려하여 위와 같이 **Production 환경**의 인프라를 구성했습니다.
 
-* 하나의 **AWS EC2**에서 Docker Compose를 이용해 Backend, Redis, Analysis 서비스를 각각 독립된 컨테이너로 운영하며, **Nginx**를 Reverse Proxy로 사용합니다.
-* 영구 데이터와 파일 데이터는 각각 **AWS RDS(PostgreSQL)와 AWS S3**로 분리하여 관리합니다.
-* **GitHub Actions**와 **Docker Hub**를 활용하여 빌드 및 배포 과정을 자동화했습니다.
-* OAuth 기반 소셜 로그인과 Gemini API 기반 AI 기능을 외부 서비스로 연동하여 **운영 편의성, 데이터 안정성, 서비스 간 역할 분리 및 확장성**을 고려했습니다.
+#### 저장소에서 관리하는 구성
+
+* `docker-compose.yml`에서 Backend, Redis, Analysis 서비스를 각각 독립된 컨테이너로 정의하고, 하나의 **AWS EC2** 인스턴스에서 함께 운영합니다.
+* `.github/workflows/cd.yml`에서 **GitHub Actions**로 이미지를 빌드해 **Docker Hub**에 푸시한 뒤, EC2에서 Docker Compose로 배포하는 과정을 자동화했습니다.
+* `application-prod.yml`에서 외부 PostgreSQL, **AWS S3**, OAuth Redirect URI 등 운영 환경 연동 설정을 관리합니다.
+
+#### 저장소 외부에서 관리하는 인프라
+
+* **Nginx**: EC2에 직접 설치되어 Reverse Proxy 역할을 담당합니다. (설정 파일은 본 저장소에 포함되지 않습니다.)
+* **AWS RDS(PostgreSQL) · AWS S3**: 영구 데이터와 파일 데이터를 분리해 저장하며, AWS 콘솔에서 프로비저닝합니다. 접속 정보는 환경 변수로 주입합니다.
+* **OAuth 소셜 로그인 · Gemini API**: 외부 서비스로 연동하여 **운영 편의성, 데이터 안정성, 서비스 간 역할 분리 및 확장성**을 확보했습니다.
 
 <br/>
 
@@ -262,21 +268,49 @@ DB Password, JWT Secret, OAuth Key 등의 민감 정보는 저장소에 직접 �
 3. 공유된 `application.example.yml`을 해당 디렉터리에 복사합니다.
 4. 파일명을 `application.yml`로 변경합니다.
 5. 로컬 DB 비밀번호와 필요한 API Key를 입력합니다.
-6. 애플리케이션을 실행합니다.
+6. 아래 실행 명령으로 애플리케이션을 구동합니다.
 
 <br/>
 
-#### 🚀 Build
+#### ▶️ Run
+
+Spring Boot Gradle Plugin이 제공하는 `bootRun` 태스크로 애플리케이션을 실행합니다.
 
 **Windows PowerShell**
 
 ```shell
-./gradlew.bat build -x test
+./gradlew.bat bootRun
 ```
 
 **Git Bash / macOS**
 
 ```shell
+./gradlew bootRun
+```
+
+<br/>
+
+#### 🚀 Build
+
+기본 빌드는 컴파일과 테스트를 모두 수행합니다.
+
+```shell
+# Windows PowerShell
+./gradlew.bat build
+
+# Git Bash / macOS
+./gradlew build
+```
+
+<br/>
+
+테스트를 건너뛰고 빠르게 패키징만 확인하고 싶을 때는 `-x test`로 `test` 태스크를 제외합니다. 단, PR 전에는 반드시 테스트를 포함한 기본 빌드로 검증합니다.
+
+```shell
+# Windows PowerShell
+./gradlew.bat build -x test
+
+# Git Bash / macOS
 ./gradlew build -x test
 ```
 
