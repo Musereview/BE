@@ -7,8 +7,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum S3FileType {
 
-    RECORDING("recordings"),
-    BACKING_TRACK("backing-tracks");
+    RECORDING("recordings", true),
+    BACKING_TRACK("backing-tracks", true),
+    PLAYING_EXAMPLE("playing_example", false);
 
     private final String prefix;
+    private final boolean ownerScoped;
 }
