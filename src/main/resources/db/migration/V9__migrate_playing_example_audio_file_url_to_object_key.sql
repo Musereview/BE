@@ -4,11 +4,14 @@ ALTER TABLE playing_example
 
 -- 2. 기존 URL 값에서 S3 Object Key만 추출
 UPDATE playing_example
-SET audio_object_key = regexp_replace(
-        audio_object_key,
-        '^(https?://[^/]+/)?([^?#]*).*$',
-        '\2'
-                       )
+SET audio_object_key = ltrim(
+        regexp_replace(
+                audio_object_key,
+                '^(https?://[^/]+/)?([^?#]*).*$',
+                '\2'
+        ),
+        '/'
+)
 WHERE audio_object_key IS NOT NULL
   AND btrim(audio_object_key) <> '';
 
