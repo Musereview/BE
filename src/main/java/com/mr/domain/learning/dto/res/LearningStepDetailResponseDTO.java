@@ -71,7 +71,7 @@ public class LearningStepDetailResponseDTO {
             String description,
 
             @Schema(
-                    description = "비공개 S3 모범 연주 재생용 Presigned GET URL. 현재 설정 기준 10분 후 만료",
+                    description = "비공개 S3 모범 연주 재생용 Presigned GET URL. 일정 시간 후 만료",
                     example = "https://example-bucket.s3.ap-northeast-2.amazonaws.com/playing_example/triads_step1.mp3?X-Amz-Expires=600&X-Amz-Signature=example"
             )
             String audioUrl,
