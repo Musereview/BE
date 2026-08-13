@@ -36,7 +36,6 @@ import com.mr.domain.statistics.repository.UserStatisticsRepository;
 import com.mr.domain.subscriptions.repository.SubscriptionRepository;
 import com.mr.domain.user.repository.StudentInstrumentRepository;
 import com.mr.domain.user.repository.StudentRepository;
-import com.mr.domain.user.repository.UsageLimitRepository;
 import com.mr.domain.weakness.repository.WeaknessNoteRepository;
 
 @Service
@@ -50,7 +49,6 @@ public class AuthService {
     private final OAuthClientService oAuthClientService;
     private final AuthTransactionService authTransactionService;
     private final OAuthTempCodeStore tempCodeStore;
-
     private final StudentInstrumentRepository studentInstrumentRepository;
     private final StudentRepository studentRepository;
     private final UserLearningProgressRepository userLearningProgressRepository;
@@ -68,7 +66,6 @@ public class AuthService {
     private final UserStatisticsRepository userStatisticsRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final WeaknessNoteRepository weaknessNoteRepository;
-    private final UsageLimitRepository usageLimitRepository;
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthResponseDTO.LoginResponse socialLogin(SocialType socialType, String accessToken, String deviceInfo) {
@@ -161,7 +158,6 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorStatus.USER_NOT_FOUND));
 
-        // 1. 연관된 모든 자식 엔티티 데이터 선삭제 (FK 제약조건 예방)
         studentInstrumentRepository.deleteAllByUserId(userId);
         studentRepository.deleteAllByUserId(userId);
 
@@ -187,22 +183,16 @@ public class AuthService {
         userStatisticsRepository.deleteAllByUserId(userId);
 
         subscriptionRepository.deleteAllByUserId(userId);
-        usageLimitRepository.deleteAllByUserId(userId);
 
-        // 2. SocialAuth 삭제
         List<SocialAuth> socialAuths = socialAuthRepository.findAllByUser_UserId(userId);
         if (!socialAuths.isEmpty()) {
             socialAuths.forEach(SocialAuth::expireToken);
             socialAuthRepository.deleteAll(socialAuths);
         }
 
-        // 3. User 엔티티 최종 삭제
         userRepository.delete(user);
     }
 
-    // ⚠️ 이 어노테이션을 지우면 클래스 레벨 @Transactional(readOnly=true)를 그대로 상속받아
-    // SocialAuth INSERT/UPDATE가 read-only 트랜잭션에서 실패한다 (#94 배포 서버 503 원인).
-    // AuthServiceTest는 클래스 전체가 @Transactional로 감싸져 있어 이 회귀를 못 잡으니 주의.
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthResponseDTO.LoginResponse exchangeTempCode(String tempCode) {
         if (tempCode == null || tempCode.isBlank()) {
