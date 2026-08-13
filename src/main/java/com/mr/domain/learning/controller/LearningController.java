@@ -87,7 +87,7 @@ public class LearningController {
 
     @Operation(
             summary = "학습 단계별 조회 API",
-            description = "단계별 이론 설명, 연습 팁, 모범 연주 예시(있으면), 코드 예시를 조회합니다."
+            description = "단계별 이론 설명, 연습 팁, 모범 연주 예시(있으면 Presigned GET URL 포함), 코드 예시를 조회합니다."
     )
     @GetMapping("/{learningId}/steps/{learningStepId}")
     public ApiResponse<LearningStepDetailResponseDTO.StepDetailResultDTO> getStepDetail(

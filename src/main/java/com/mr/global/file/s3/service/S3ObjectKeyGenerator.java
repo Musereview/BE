@@ -46,7 +46,6 @@ public class S3ObjectKeyGenerator {
         Instant now =
                 Instant.now();
 
-
         String generatedFileName =
                 "%s_%s.%s".formatted(
                         TIME_FORMATTER.format(now),
@@ -72,6 +71,14 @@ public class S3ObjectKeyGenerator {
         return objectKey.startsWith(expectedPrefix);
     }
 
+    public boolean belongsToFileType(S3FileType fileType, String objectKey) {
+        if (fileType == null || objectKey == null) {
+            return false;
+        }
+
+        return objectKey.startsWith(fileType.getPrefix() + "/");
+    }
+
     private String createShortUuid() {
         return UUID.randomUUID()
                 .toString()
@@ -84,16 +91,14 @@ public class S3ObjectKeyGenerator {
             String contentType
     ) {
 
-        // contentType 정규화 및 대표 확장자 추출
         String extensionByContentType = resolveExtensionByContentType(contentType);
 
-        // originalFileName에 확장자가 있는 경우, contentType 기준 확장자와 일치하는지 검증 (선택적)
+        // 파일명 확장자와 Content-Type이 서로 다른 요청을 거부해 메타데이터 불일치를 막는다.
         String fileExtension = extractExtension(originalFileName);
         if (fileExtension != null && !fileExtension.equalsIgnoreCase(extensionByContentType)) {
             throw new GeneralException(S3ErrorStatus.UNSUPPORTED_FILE_EXTENSION);
         }
 
-        // 최종적으로 contentType 기반의 올바른 대표 확장자 반환
         return extensionByContentType;
     }
 

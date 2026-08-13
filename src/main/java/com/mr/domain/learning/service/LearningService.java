@@ -27,6 +27,8 @@ import com.mr.domain.user.exception.UserErrorStatus;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.NotificationEvent;
+import com.mr.global.file.s3.enums.S3FileType;
+import com.mr.global.file.s3.service.S3FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -50,7 +52,6 @@ import java.util.stream.Stream;
 @Transactional(readOnly = true)
 public class LearningService {
 
-    // 추천 학습 카드 최대 개수
     private static final int RECOMMENDED_LEARNING_LIMIT = 2;
     private static final List<LearningDifficulty> RECOMMENDATION_DIFFICULTY_ORDER =
             List.of(LearningDifficulty.BEGINNER, LearningDifficulty.INTERMEDIATE, LearningDifficulty.ADVANCED);
@@ -60,11 +61,10 @@ public class LearningService {
     private final LearningRepository learningRepository;
     private final PlayingExampleRepository playingExampleRepository;
     private final ChordExampleRepository chordExampleRepository;
-    // 임시 작명
+    private final S3FileService s3FileService;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    // 학습 결과 저장
     @Transactional
     public LearningResultResponseDTO.SaveResultResultDTO saveResult(
             Long userId,
@@ -147,7 +147,6 @@ public class LearningService {
         return LearningProgressResponseDTO.ProgressResultDTO.of(learningId, progressRate);
     }
 
-    // 학습 단계별 연습 실행 정보 조회
     public LearningPracticeDataResponseDTO.PracticeDataResultDTO getPracticeData(
             Long learningId,
             Long learningStepId
@@ -161,7 +160,6 @@ public class LearningService {
         return LearningPracticeDataResponseDTO.PracticeDataResultDTO.from(playingExample);
     }
 
-    // 학습 주제(THEORY) 전체보기
     public LearningTheoryListResponseDTO.TheoryListResultDTO getTheoryList(Long userId, String difficulty) {
         LearningDifficulty parsedDifficulty = parseDifficulty(difficulty);
         ensureUserExists(userId);
@@ -172,7 +170,6 @@ public class LearningService {
         return LearningTheoryListResponseDTO.TheoryListResultDTO.from(learnings);
     }
 
-    // 학습 커리큘럼 조회
     public LearningCurriculumResponseDTO.CurriculumResultDTO getCurriculum(Long userId, Long learningId) {
         ensureUserExists(userId);
 
@@ -206,7 +203,6 @@ public class LearningService {
         return LearningCurriculumResponseDTO.StepItem.of(step, status, score);
     }
 
-    // 학습 단계별 조회
     public LearningStepDetailResponseDTO.StepDetailResultDTO getStepDetail(Long learningId, Long learningStepId) {
         Learning learning = getActiveLearningOrThrow(learningId);
         LearningStep learningStep = getLearningStepOrThrow(learning, learningStepId);
@@ -214,10 +210,22 @@ public class LearningService {
         PlayingExample playingExample = playingExampleRepository.findByLearningStep_Id(learningStepId).orElse(null);
         List<ChordExample> chordExamples = chordExampleRepository.findByLearningStep_Id(learningStepId);
 
-        return LearningStepDetailResponseDTO.StepDetailResultDTO.of(learning, learningStep, playingExample, chordExamples);
+        String audioUrl = playingExample == null
+                ? null
+                : s3FileService.createPresignedDownload(
+                        S3FileType.PLAYING_EXAMPLE,
+                        playingExample.getAudioObjectKey()
+                );
+
+        return LearningStepDetailResponseDTO.StepDetailResultDTO.of(
+                learning,
+                learningStep,
+                playingExample,
+                audioUrl,
+                chordExamples
+        );
     }
 
-    // 실전 반주법 패키지(ACCOMPANIMENT) 전체보기
     public LearningAccompanimentListResponseDTO.AccompanimentListResultDTO getAccompanimentList(Long userId) {
         ensureUserExists(userId);
 
@@ -229,7 +237,6 @@ public class LearningService {
         return LearningAccompanimentListResponseDTO.AccompanimentListResultDTO.of(items);
     }
 
-    // 학습 홈 조회
     public LearningHomeResponseDTO.HomeResultDTO getHome(Long userId) {
         ensureUserExists(userId);
 
