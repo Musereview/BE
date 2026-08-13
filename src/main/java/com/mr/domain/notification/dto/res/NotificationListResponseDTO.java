@@ -19,6 +19,16 @@ public record NotificationListResponseDTO (
 ){
 
     public static NotificationListResponseDTO of(Slice<Notification> notificationSlice) {
+        if (notificationSlice == null || !notificationSlice.hasContent()) {
+            return new NotificationListResponseDTO(
+                    java.util.Collections.emptyList(),
+                    0,
+                    false,
+                    true,
+                    true
+            );
+        }
+
         List<NotificationResponseDTO> notificationDTOList = notificationSlice.getContent().stream()
                 .map(notification -> {
                     try {
