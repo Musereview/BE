@@ -57,13 +57,13 @@ src="https://github.com/user-attachments/assets/b0bd351a-c94c-4e6b-973b-f30b2c72
 
 **MuseReview**는 안정적인 서비스 운영과 각 구성요소의 역할 분리를 고려하여 위와 같이 **Production 환경**의 인프라를 구성했습니다.
 
-#### 저장소에서 관리하는 구성
+### 저장소에서 관리하는 구성
 
 * `docker-compose.yml`에서 Backend, Redis, Analysis 서비스를 각각 독립된 컨테이너로 정의하고, 하나의 **AWS EC2** 인스턴스에서 함께 운영합니다.
 * `.github/workflows/cd.yml`에서 **GitHub Actions**로 이미지를 빌드해 **Docker Hub**에 푸시한 뒤, EC2에서 Docker Compose로 배포하는 과정을 자동화했습니다.
 * `application-prod.yml`에서 외부 PostgreSQL, **AWS S3**, OAuth Redirect URI 등 운영 환경 연동 설정을 관리합니다.
 
-#### 저장소 외부에서 관리하는 인프라
+### 저장소 외부에서 관리하는 인프라
 
 * **Nginx**: EC2에 직접 설치되어 Reverse Proxy 역할을 담당합니다. (설정 파일은 본 저장소에 포함되지 않습니다.)
 * **AWS RDS(PostgreSQL) · AWS S3**: 영구 데이터와 파일 데이터를 분리해 저장하며, AWS 콘솔에서 프로비저닝합니다. 접속 정보는 환경 변수로 주입합니다.
