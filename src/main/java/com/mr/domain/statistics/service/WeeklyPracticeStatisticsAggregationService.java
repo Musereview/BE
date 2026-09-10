@@ -3,7 +3,6 @@ package com.mr.domain.statistics.service;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
-import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.statistics.entity.PracticeStatistics;
@@ -44,7 +43,7 @@ public class WeeklyPracticeStatisticsAggregationService {
         LocalDate weekEnd = weekStart.plusDays(6);
         Instant aggregationStart = weekStart.atStartOfDay(KOREA_ZONE_ID).toInstant();
 
-        List<Playing> playings = playingRepository.findByUserAndStatusSince(
+        PlayingRepository.WeeklyPracticeTotals practiceTotals = playingRepository.aggregateTotalsByUserAndStatusSince(
                 userId, PlayingStatus.COMPLETED, aggregationStart);
         List<Analysis> analyses = analysisRepository.findByUserAndStatusSince(
                 userId, AnalysisStatus.COMPLETED, aggregationStart);
@@ -54,15 +53,9 @@ public class WeeklyPracticeStatisticsAggregationService {
                 .orElseGet(() -> practiceStatisticsRepository.save(
                         PracticeStatistics.create(getUser(userId), PeriodType.WEEKLY, weekStart, weekEnd)));
         statistics.update(
-                minutesFromSeconds(sumDurationSec(playings)),
-                playings.size(),
+                minutesFromSeconds(practiceTotals.getTotalDurationSec()),
+                practiceTotals.getSessionCount().intValue(),
                 averageTotalScore(analyses));
-    }
-
-    private long sumDurationSec(List<Playing> playings) {
-        return playings.stream()
-                .mapToLong(playing -> playing.getDurationSec() != null ? playing.getDurationSec() : 0)
-                .sum();
     }
 
     private BigDecimal averageTotalScore(List<Analysis> analyses) {

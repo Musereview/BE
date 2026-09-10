@@ -15,7 +15,6 @@ import static org.mockito.Mockito.verify;
 import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
-import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.statistics.entity.PracticeStatistics;
@@ -92,7 +91,9 @@ class StatisticsAggregationServiceTest {
     private void stubBaseline() {
         User user = mock(User.class);
         lenient().when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        lenient().when(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).thenReturn(List.of());
+        PlayingRepository.WeeklyPracticeTotals weeklyPracticeTotals = mockWeeklyPracticeTotals(0L, 0L);
+        lenient().when(playingRepository.aggregateTotalsByUserAndStatusSince(anyLong(), any(), any()))
+                .thenReturn(weeklyPracticeTotals);
         lenient().when(analysisRepository.findByUserAndStatusSince(anyLong(), any(), any())).thenReturn(List.of());
         lenient().when(practiceStatisticsRepository
                         .findByUser_UserIdAndPeriodTypeAndPeriodStart(anyLong(), any(), any()))
@@ -122,10 +123,12 @@ class StatisticsAggregationServiceTest {
         return totals;
     }
 
-    private Playing mockPlaying(Integer durationSec) {
-        Playing playing = mock(Playing.class);
-        lenient().when(playing.getDurationSec()).thenReturn(durationSec);
-        return playing;
+    private PlayingRepository.WeeklyPracticeTotals mockWeeklyPracticeTotals(
+            long sessionCount, long totalDurationSec) {
+        PlayingRepository.WeeklyPracticeTotals totals = mock(PlayingRepository.WeeklyPracticeTotals.class);
+        lenient().when(totals.getSessionCount()).thenReturn(sessionCount);
+        lenient().when(totals.getTotalDurationSec()).thenReturn(totalDurationSec);
+        return totals;
     }
 
     private Analysis mockAnalysis(Integer totalScore, BigDecimal scaleScore, BigDecimal tensionScore,
@@ -214,9 +217,10 @@ class StatisticsAggregationServiceTest {
                 .willReturn(emptyPracticeTotals);
         given(userStatisticsRepository.findByUser_UserId(userId))
                 .willReturn(Optional.of(UserStatistics.createForUser(mock(User.class))));
-        List<Playing> weeklyPlayings = List.of(mockPlaying(600), mockPlaying(1200));
-        given(playingRepository.findByUserAndStatusSince(userId, PlayingStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
-                .willReturn(weeklyPlayings);
+        PlayingRepository.WeeklyPracticeTotals weeklyPracticeTotals = mockWeeklyPracticeTotals(2L, 1800L);
+        given(playingRepository.aggregateTotalsByUserAndStatusSince(
+                userId, PlayingStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
+                .willReturn(weeklyPracticeTotals);
         List<Analysis> weeklyAnalyses = List.of(
                 mockAnalysis(90, null, null, null, null), mockAnalysis(80, null, null, null, null));
         given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
@@ -264,9 +268,10 @@ class StatisticsAggregationServiceTest {
         PracticeStatistics existing = PracticeStatistics.create(mock(User.class), PeriodType.WEEKLY, weekStart, weekEnd);
         given(practiceStatisticsRepository.findByUser_UserIdAndPeriodTypeAndPeriodStart(userId, PeriodType.WEEKLY, weekStart))
                 .willReturn(Optional.of(existing));
-        List<Playing> weeklyPlayings = List.of(mockPlaying(300));
-        given(playingRepository.findByUserAndStatusSince(userId, PlayingStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
-                .willReturn(weeklyPlayings);
+        PlayingRepository.WeeklyPracticeTotals weeklyPracticeTotals = mockWeeklyPracticeTotals(1L, 300L);
+        given(playingRepository.aggregateTotalsByUserAndStatusSince(
+                userId, PlayingStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
+                .willReturn(weeklyPracticeTotals);
 
         service.onPlayingCompleted(userId);
 
