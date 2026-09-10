@@ -74,9 +74,19 @@ class StatisticsAggregationServiceTest {
 
     @BeforeEach
     void setUp() {
+        UserStatisticsAggregationService userStatisticsAggregationService =
+                new UserStatisticsAggregationService(
+                        userRepository, userStatisticsRepository, playingRepository, analysisRepository);
+        WeeklyPracticeStatisticsAggregationService weeklyPracticeStatisticsAggregationService =
+                new WeeklyPracticeStatisticsAggregationService(
+                        userRepository, practiceStatisticsRepository, playingRepository, analysisRepository, FIXED_CLOCK);
+        WeeklySkillStatisticsAggregationService weeklySkillStatisticsAggregationService =
+                new WeeklySkillStatisticsAggregationService(
+                        userRepository, skillStatisticsRepository, analysisRepository, FIXED_CLOCK);
         service = new StatisticsAggregationService(
-                userRepository, userStatisticsRepository, practiceStatisticsRepository,
-                skillStatisticsRepository, playingRepository, analysisRepository, FIXED_CLOCK);
+                userStatisticsAggregationService,
+                weeklyPracticeStatisticsAggregationService,
+                weeklySkillStatisticsAggregationService);
     }
 
     private void stubBaseline() {
