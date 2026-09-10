@@ -12,7 +12,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
@@ -33,7 +32,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -96,7 +94,10 @@ class StatisticsAggregationServiceTest {
                 .thenReturn(weeklyPracticeTotals);
         lenient().when(analysisRepository.aggregateAverageTotalScoreByUserAndStatusSince(anyLong(), any(), any()))
                 .thenReturn(null);
-        lenient().when(analysisRepository.findByUserAndStatusSince(anyLong(), any(), any())).thenReturn(List.of());
+        AnalysisRepository.WeeklySkillAverages weeklySkillAverages =
+                mockWeeklySkillAverages(null, null, null, null);
+        lenient().when(analysisRepository.aggregateWeeklySkillAveragesByUserAndStatusSince(anyLong(), any(), any()))
+                .thenReturn(weeklySkillAverages);
         lenient().when(practiceStatisticsRepository
                         .findByUser_UserIdAndPeriodTypeAndPeriodStart(anyLong(), any(), any()))
                 .thenReturn(Optional.empty());
@@ -133,15 +134,14 @@ class StatisticsAggregationServiceTest {
         return totals;
     }
 
-    private Analysis mockAnalysis(Integer totalScore, BigDecimal scaleScore, BigDecimal tensionScore,
-            BigDecimal progressionScore, BigDecimal voiceLeadingScore) {
-        Analysis analysis = mock(Analysis.class);
-        lenient().when(analysis.getTotalScore()).thenReturn(totalScore);
-        lenient().when(analysis.getScaleScore()).thenReturn(scaleScore);
-        lenient().when(analysis.getTensionScore()).thenReturn(tensionScore);
-        lenient().when(analysis.getProgressionScore()).thenReturn(progressionScore);
-        lenient().when(analysis.getVoiceLeadingScore()).thenReturn(voiceLeadingScore);
-        return analysis;
+    private AnalysisRepository.WeeklySkillAverages mockWeeklySkillAverages(
+            Double scaleScore, Double tensionScore, Double progressionScore, Double voiceLeadingScore) {
+        AnalysisRepository.WeeklySkillAverages averages = mock(AnalysisRepository.WeeklySkillAverages.class);
+        lenient().when(averages.getScaleScore()).thenReturn(scaleScore);
+        lenient().when(averages.getTensionScore()).thenReturn(tensionScore);
+        lenient().when(averages.getProgressionScore()).thenReturn(progressionScore);
+        lenient().when(averages.getVoiceLeadingScore()).thenReturn(voiceLeadingScore);
+        return averages;
     }
 
     private UserStatistics captureSavedUserStatistics() {
@@ -290,10 +290,11 @@ class StatisticsAggregationServiceTest {
                 .willReturn(emptyAnalysisTotals);
         given(userStatisticsRepository.findByUser_UserId(userId))
                 .willReturn(Optional.of(UserStatistics.createForUser(mock(User.class))));
-        List<Analysis> weeklyAnalyses = List.of(mockAnalysis(null,
-                new BigDecimal("90.0"), new BigDecimal("70.0"), new BigDecimal("88.0"), new BigDecimal("60.0")));
-        given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
-                .willReturn(weeklyAnalyses);
+        AnalysisRepository.WeeklySkillAverages averages =
+                mockWeeklySkillAverages(90.0, 70.0, 88.0, 60.0);
+        given(analysisRepository.aggregateWeeklySkillAveragesByUserAndStatusSince(
+                userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
+                .willReturn(averages);
 
         SkillStatistics lastWeekScale = SkillStatistics.create(
                 mock(User.class), PeriodType.WEEKLY, lastWeekStart, weekStart.minusDays(1),
@@ -339,10 +340,11 @@ class StatisticsAggregationServiceTest {
                 .willReturn(emptyAnalysisTotals);
         given(userStatisticsRepository.findByUser_UserId(userId))
                 .willReturn(Optional.of(UserStatistics.createForUser(mock(User.class))));
-        List<Analysis> weeklyAnalyses = List.of(mockAnalysis(null,
-                new BigDecimal("90.0"), new BigDecimal("91.0"), new BigDecimal("92.0"), new BigDecimal("93.0")));
-        given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
-                .willReturn(weeklyAnalyses);
+        AnalysisRepository.WeeklySkillAverages averages =
+                mockWeeklySkillAverages(90.0, 91.0, 92.0, 93.0);
+        given(analysisRepository.aggregateWeeklySkillAveragesByUserAndStatusSince(
+                userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
+                .willReturn(averages);
 
         SkillStatistics existingScale = SkillStatistics.createWithPreviousScore(
                 mock(User.class), PeriodType.WEEKLY, weekStart, weekEnd, SkillType.SCALE,
@@ -388,10 +390,11 @@ class StatisticsAggregationServiceTest {
                 .willReturn(emptyAnalysisTotals);
         given(userStatisticsRepository.findByUser_UserId(userId))
                 .willReturn(Optional.of(UserStatistics.createForUser(mock(User.class))));
-        List<Analysis> weeklyAnalyses = List.of(mockAnalysis(null,
-                null, new BigDecimal("70.0"), new BigDecimal("80.0"), new BigDecimal("90.0")));
-        given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
-                .willReturn(weeklyAnalyses);
+        AnalysisRepository.WeeklySkillAverages averages =
+                mockWeeklySkillAverages(null, 70.0, 80.0, 90.0);
+        given(analysisRepository.aggregateWeeklySkillAveragesByUserAndStatusSince(
+                userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
+                .willReturn(averages);
 
         service.onAnalysisCompleted(userId);
 
