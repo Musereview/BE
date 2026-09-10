@@ -77,6 +77,19 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
     );
 
     @Query("""
+            select avg(a.totalScore)
+            from Analysis a
+            where a.user.userId = :userId
+              and a.status = :status
+              and a.completedAt >= :since
+            """)
+    Double aggregateAverageTotalScoreByUserAndStatusSince(
+            @Param("userId") Long userId,
+            @Param("status") AnalysisStatus status,
+            @Param("since") Instant since
+    );
+
+    @Query("""
             select count(a) as analysisCount, avg(a.totalScore) as averageTotalScore
             from Analysis a
             where a.user.userId = :userId

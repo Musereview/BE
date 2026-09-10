@@ -94,6 +94,8 @@ class StatisticsAggregationServiceTest {
         PlayingRepository.WeeklyPracticeTotals weeklyPracticeTotals = mockWeeklyPracticeTotals(0L, 0L);
         lenient().when(playingRepository.aggregateTotalsByUserAndStatusSince(anyLong(), any(), any()))
                 .thenReturn(weeklyPracticeTotals);
+        lenient().when(analysisRepository.aggregateAverageTotalScoreByUserAndStatusSince(anyLong(), any(), any()))
+                .thenReturn(null);
         lenient().when(analysisRepository.findByUserAndStatusSince(anyLong(), any(), any())).thenReturn(List.of());
         lenient().when(practiceStatisticsRepository
                         .findByUser_UserIdAndPeriodTypeAndPeriodStart(anyLong(), any(), any()))
@@ -221,10 +223,9 @@ class StatisticsAggregationServiceTest {
         given(playingRepository.aggregateTotalsByUserAndStatusSince(
                 userId, PlayingStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
                 .willReturn(weeklyPracticeTotals);
-        List<Analysis> weeklyAnalyses = List.of(
-                mockAnalysis(90, null, null, null, null), mockAnalysis(80, null, null, null, null));
-        given(analysisRepository.findByUserAndStatusSince(userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
-                .willReturn(weeklyAnalyses);
+        given(analysisRepository.aggregateAverageTotalScoreByUserAndStatusSince(
+                userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(SERVICE_ZONE_ID).toInstant()))
+                .willReturn(85.0);
 
         service.onPlayingCompleted(userId);
 

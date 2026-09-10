@@ -1,6 +1,5 @@
 package com.mr.domain.statistics.service;
 
-import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
@@ -19,8 +18,6 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.List;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -45,7 +42,7 @@ public class WeeklyPracticeStatisticsAggregationService {
 
         PlayingRepository.WeeklyPracticeTotals practiceTotals = playingRepository.aggregateTotalsByUserAndStatusSince(
                 userId, PlayingStatus.COMPLETED, aggregationStart);
-        List<Analysis> analyses = analysisRepository.findByUserAndStatusSince(
+        Double averageTotalScore = analysisRepository.aggregateAverageTotalScoreByUserAndStatusSince(
                 userId, AnalysisStatus.COMPLETED, aggregationStart);
 
         PracticeStatistics statistics = practiceStatisticsRepository
@@ -55,28 +52,17 @@ public class WeeklyPracticeStatisticsAggregationService {
         statistics.update(
                 minutesFromSeconds(practiceTotals.getTotalDurationSec()),
                 practiceTotals.getSessionCount().intValue(),
-                averageTotalScore(analyses));
-    }
-
-    private BigDecimal averageTotalScore(List<Analysis> analyses) {
-        List<BigDecimal> scores = analyses.stream()
-                .map(Analysis::getTotalScore)
-                .filter(Objects::nonNull)
-                .map(BigDecimal::valueOf)
-                .toList();
-        return average(scores);
-    }
-
-    private BigDecimal average(List<BigDecimal> scores) {
-        if (scores.isEmpty()) {
-            return null;
-        }
-        BigDecimal sum = scores.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-        return sum.divide(BigDecimal.valueOf(scores.size()), SCORE_SCALE, RoundingMode.HALF_UP);
+                toScoreScale(averageTotalScore));
     }
 
     private int minutesFromSeconds(Long totalSeconds) {
         return (int) ((totalSeconds != null ? totalSeconds : 0L) / SECONDS_PER_MINUTE);
+    }
+
+    private BigDecimal toScoreScale(Double average) {
+        return average == null
+                ? null
+                : BigDecimal.valueOf(average).setScale(SCORE_SCALE, RoundingMode.HALF_UP);
     }
 
     private User getUser(Long userId) {
