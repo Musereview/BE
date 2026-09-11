@@ -4,6 +4,7 @@ import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import jakarta.persistence.LockModeType;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -122,10 +123,10 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
     }
 
     interface WeeklySkillAverages {
-        Double getScaleScore();
-        Double getTensionScore();
-        Double getProgressionScore();
-        Double getVoiceLeadingScore();
+        BigDecimal getScaleScore();
+        BigDecimal getTensionScore();
+        BigDecimal getProgressionScore();
+        BigDecimal getVoiceLeadingScore();
     }
 
     @Modifying(clearAutomatically = true)

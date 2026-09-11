@@ -72,7 +72,7 @@ public class WeeklySkillStatisticsAggregationService {
     }
 
     private BigDecimal resolveScore(AnalysisRepository.WeeklySkillAverages averages, SkillType skillType) {
-        Double average = switch (skillType) {
+        BigDecimal average = switch (skillType) {
             case SCALE -> averages.getScaleScore();
             case TENSION -> averages.getTensionScore();
             case PROGRESSION -> averages.getProgressionScore();
@@ -80,7 +80,7 @@ public class WeeklySkillStatisticsAggregationService {
         };
         return average == null
                 ? null
-                : BigDecimal.valueOf(average).setScale(SCORE_SCALE, RoundingMode.HALF_UP);
+                : average.setScale(SCORE_SCALE, RoundingMode.HALF_UP);
     }
 
     private User getUser(Long userId) {
