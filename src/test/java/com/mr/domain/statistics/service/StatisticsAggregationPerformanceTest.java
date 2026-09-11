@@ -53,6 +53,7 @@ class StatisticsAggregationPerformanceTest {
 
     private static final int WARM_UP_COUNT = 3;
     private static final int MEASUREMENT_COUNT = 10;
+    private static final long MAX_ENTITY_LOAD_COUNT = 6L;
     private static final ZoneId KOREA_ZONE_ID = ZoneId.of("Asia/Seoul");
     private static final Instant FIXED_INSTANT = Instant.parse("2026-09-10T00:00:00Z");
     private static final BigDecimal EXPECTED_SCORE = new BigDecimal("80.0");
@@ -200,6 +201,11 @@ class StatisticsAggregationPerformanceTest {
         assertThat(measurements)
                 .extracting(Measurement::entityLoadCount)
                 .containsOnly(measurements.get(0).entityLoadCount());
+        assertThat(measurements)
+                .extracting(Measurement::entityLoadCount)
+                .allSatisfy(entityLoadCount -> assertThat(entityLoadCount)
+                        .as("Aggregate 집계 경로의 Entity Load 상한")
+                        .isLessThanOrEqualTo(MAX_ENTITY_LOAD_COUNT));
     }
 
     private void printBaseline(int analysisCount, List<Measurement> measurements) {
