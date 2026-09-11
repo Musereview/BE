@@ -4,6 +4,7 @@ import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import jakarta.persistence.LockModeType;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -77,6 +78,35 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
     );
 
     @Query("""
+            select avg(a.totalScore)
+            from Analysis a
+            where a.user.userId = :userId
+              and a.status = :status
+              and a.completedAt >= :since
+            """)
+    Double aggregateAverageTotalScoreByUserAndStatusSince(
+            @Param("userId") Long userId,
+            @Param("status") AnalysisStatus status,
+            @Param("since") Instant since
+    );
+
+    @Query("""
+            select avg(a.scaleScore) as scaleScore,
+                   avg(a.tensionScore) as tensionScore,
+                   avg(a.progressionScore) as progressionScore,
+                   avg(a.voiceLeadingScore) as voiceLeadingScore
+            from Analysis a
+            where a.user.userId = :userId
+              and a.status = :status
+              and a.completedAt >= :since
+            """)
+    WeeklySkillAverages aggregateWeeklySkillAveragesByUserAndStatusSince(
+            @Param("userId") Long userId,
+            @Param("status") AnalysisStatus status,
+            @Param("since") Instant since
+    );
+
+    @Query("""
             select count(a) as analysisCount, avg(a.totalScore) as averageTotalScore
             from Analysis a
             where a.user.userId = :userId
@@ -90,6 +120,13 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
     interface AnalysisTotals {
         Long getAnalysisCount();
         Double getAverageTotalScore();
+    }
+
+    interface WeeklySkillAverages {
+        BigDecimal getScaleScore();
+        BigDecimal getTensionScore();
+        BigDecimal getProgressionScore();
+        BigDecimal getVoiceLeadingScore();
     }
 
     @Modifying(clearAutomatically = true)

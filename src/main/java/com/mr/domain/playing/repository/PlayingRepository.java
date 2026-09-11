@@ -113,6 +113,21 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
     );
 
     @Query("""
+            select count(p) as sessionCount,
+                   coalesce(sum(p.durationSec), 0) as totalDurationSec
+            from Playing p
+            where p.user.userId = :userId
+              and p.status = :status
+              and p.deletedAt is null
+              and p.endedAt >= :since
+            """)
+    WeeklyPracticeTotals aggregateTotalsByUserAndStatusSince(
+            @Param("userId") Long userId,
+            @Param("status") PlayingStatus status,
+            @Param("since") Instant since
+    );
+
+    @Query("""
             select p.endedAt from Playing p
             where p.user.userId = :userId
               and p.status = :status
@@ -142,6 +157,11 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
         Long getSessionCount();
         Long getTotalDurationSec();
         Instant getLastEndedAt();
+    }
+
+    interface WeeklyPracticeTotals {
+        Long getSessionCount();
+        Long getTotalDurationSec();
     }
 
     Optional<Playing> findByIdAndDeletedAtIsNull(Long playingId);

@@ -1,6 +1,5 @@
 package com.mr.domain.statistics.service;
 
-import com.mr.domain.analysis.entity.Analysis;
 import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.statistics.entity.SkillStatistics;
@@ -18,8 +17,6 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.List;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -40,17 +37,17 @@ public class WeeklySkillStatisticsAggregationService {
         LocalDate weekEnd = weekStart.plusDays(6);
         LocalDate lastWeekStart = weekStart.minusWeeks(1);
 
-        List<Analysis> analyses = analysisRepository.findByUserAndStatusSince(
+        AnalysisRepository.WeeklySkillAverages averages = analysisRepository.aggregateWeeklySkillAveragesByUserAndStatusSince(
                 userId, AnalysisStatus.COMPLETED, weekStart.atStartOfDay(KOREA_ZONE_ID).toInstant());
 
         for (SkillType skillType : SkillType.values()) {
-            upsert(userId, skillType, weekStart, weekEnd, lastWeekStart, analyses);
+            upsert(userId, skillType, weekStart, weekEnd, lastWeekStart, averages);
         }
     }
 
     private void upsert(Long userId, SkillType skillType, LocalDate weekStart,
-            LocalDate weekEnd, LocalDate lastWeekStart, List<Analysis> analyses) {
-        BigDecimal score = averageSkillScore(analyses, skillType);
+            LocalDate weekEnd, LocalDate lastWeekStart, AnalysisRepository.WeeklySkillAverages averages) {
+        BigDecimal score = resolveScore(averages, skillType);
         if (score == null) {
             return;
         }
@@ -74,20 +71,16 @@ public class WeeklySkillStatisticsAggregationService {
                 getUser(userId), PeriodType.WEEKLY, weekStart, weekEnd, skillType, score, previousScore));
     }
 
-    private BigDecimal averageSkillScore(List<Analysis> analyses, SkillType skillType) {
-        List<BigDecimal> scores = analyses.stream()
-                .map(analysis -> AnalysisSkillScoreResolver.resolve(analysis, skillType))
-                .filter(Objects::nonNull)
-                .toList();
-        return average(scores);
-    }
-
-    private BigDecimal average(List<BigDecimal> scores) {
-        if (scores.isEmpty()) {
-            return null;
-        }
-        BigDecimal sum = scores.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-        return sum.divide(BigDecimal.valueOf(scores.size()), SCORE_SCALE, RoundingMode.HALF_UP);
+    private BigDecimal resolveScore(AnalysisRepository.WeeklySkillAverages averages, SkillType skillType) {
+        BigDecimal average = switch (skillType) {
+            case SCALE -> averages.getScaleScore();
+            case TENSION -> averages.getTensionScore();
+            case PROGRESSION -> averages.getProgressionScore();
+            case VOICE_LEADING -> averages.getVoiceLeadingScore();
+        };
+        return average == null
+                ? null
+                : average.setScale(SCORE_SCALE, RoundingMode.HALF_UP);
     }
 
     private User getUser(Long userId) {
