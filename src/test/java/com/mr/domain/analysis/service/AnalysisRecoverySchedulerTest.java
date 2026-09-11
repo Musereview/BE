@@ -1,11 +1,9 @@
 package com.mr.domain.analysis.service;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
-import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import java.time.Clock;
 import java.time.Duration;
@@ -37,11 +35,11 @@ class AnalysisRecoverySchedulerTest {
 
     @Test
     void recoverPendingAnalyses_submitsPersistedPendingWork() {
-        given(analysisRepository.findIdsByStatusAndCreatedAtBefore(
-                eq(AnalysisStatus.PENDING), any(), any(Pageable.class)
+        given(analysisRepository.findPendingIdsByCreatedAtBefore(
+                any(), any(Pageable.class)
         )).willReturn(List.of(11L, 12L));
-        given(analysisRepository.findIdsByStatusAndProcessingStartedAtBefore(
-                eq(AnalysisStatus.PROCESSING), any(), any(Pageable.class)
+        given(analysisRepository.findProcessingIdsByProcessingStartedAtBefore(
+                any(), any(Pageable.class)
         )).willReturn(List.of());
         AnalysisRecoveryScheduler scheduler = new AnalysisRecoveryScheduler(
                 analysisRepository,
@@ -61,11 +59,11 @@ class AnalysisRecoverySchedulerTest {
 
     @Test
     void recoverPendingAnalyses_resubmitsOnlyPersistedStaleProcessingWork() {
-        given(analysisRepository.findIdsByStatusAndCreatedAtBefore(
-                eq(AnalysisStatus.PENDING), any(), any(Pageable.class)
+        given(analysisRepository.findPendingIdsByCreatedAtBefore(
+                any(), any(Pageable.class)
         )).willReturn(List.of());
-        given(analysisRepository.findIdsByStatusAndProcessingStartedAtBefore(
-                eq(AnalysisStatus.PROCESSING), any(), any(Pageable.class)
+        given(analysisRepository.findProcessingIdsByProcessingStartedAtBefore(
+                any(), any(Pageable.class)
         )).willReturn(List.of(21L));
         AnalysisRecoveryScheduler scheduler = new AnalysisRecoveryScheduler(
                 analysisRepository,

@@ -24,22 +24,22 @@ public interface AnalysisRepository extends JpaRepository<Analysis, Long> {
 
     @Query("""
             select a.id from Analysis a
-            where a.status = :status and a.createdAt <= :cutoff
+            where a.status = com.mr.domain.analysis.entity.enums.AnalysisStatus.PENDING
+              and a.createdAt <= :cutoff
             order by a.createdAt asc, a.id asc
             """)
-    List<Long> findIdsByStatusAndCreatedAtBefore(
-            @Param("status") AnalysisStatus status,
+    List<Long> findPendingIdsByCreatedAtBefore(
             @Param("cutoff") Instant cutoff,
             Pageable pageable
     );
 
     @Query("""
             select a.id from Analysis a
-            where a.status = :status and a.processingStartedAt <= :cutoff
+            where a.status = com.mr.domain.analysis.entity.enums.AnalysisStatus.PROCESSING
+              and a.processingStartedAt <= :cutoff
             order by a.processingStartedAt asc, a.id asc
             """)
-    List<Long> findIdsByStatusAndProcessingStartedAtBefore(
-            @Param("status") AnalysisStatus status,
+    List<Long> findProcessingIdsByProcessingStartedAtBefore(
             @Param("cutoff") Instant cutoff,
             Pageable pageable
     );
