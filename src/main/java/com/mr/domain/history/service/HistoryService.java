@@ -11,6 +11,7 @@ import com.mr.domain.history.dto.res.HistoryDetailResponseDTO;
 import com.mr.domain.history.dto.res.HistoryListResponseDTO;
 import com.mr.domain.history.dto.res.HistoryListResponseDTO.Item;
 import com.mr.domain.history.exception.HistoryErrorStatus;
+import com.mr.domain.playing.projection.HistoryPlayingSummary;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
@@ -52,13 +53,13 @@ public class HistoryService {
 
         Instant cutoff = resolveCutoff(period);
         PageRequest pageRequest = PageRequest.of(page, size);
-        Slice<Playing> slice = cutoff == null
-                ? playingRepository.findPlayingsByUserAndStatus(
+        Slice<HistoryPlayingSummary> slice = cutoff == null
+                ? playingRepository.findHistorySummariesByUserAndStatus(
                         userId, PlayingStatus.COMPLETED, pageRequest)
-                : playingRepository.findPlayingsByUserAndStatusSince(
+                : playingRepository.findHistorySummariesByUserAndStatusSince(
                         userId, PlayingStatus.COMPLETED, cutoff, pageRequest);
 
-        List<Playing> playings = slice.getContent();
+        List<HistoryPlayingSummary> playings = slice.getContent();
         Long nextPlayingId = findNextPlayingId(userId, cutoff, slice);
         Map<Long, Analysis> latestByPlayingId = fetchLatestCompletedAnalyses(playings, nextPlayingId);
 
@@ -115,15 +116,15 @@ public class HistoryService {
     }
 
     private List<Item> buildItems(
-            List<Playing> playings, Long nextPlayingId, Map<Long, Analysis> latestByPlayingId) {
+            List<HistoryPlayingSummary> playings, Long nextPlayingId, Map<Long, Analysis> latestByPlayingId) {
         List<Item> items = new ArrayList<>();
 
         for (int i = 0; i < playings.size(); i++) {
-            Playing current = playings.get(i);
-            Analysis currentAnalysis = latestByPlayingId.get(current.getId());
+            HistoryPlayingSummary current = playings.get(i);
+            Analysis currentAnalysis = latestByPlayingId.get(current.getPlayingId());
 
             Long previousPlayingId = i + 1 < playings.size()
-                    ? playings.get(i + 1).getId()
+                    ? playings.get(i + 1).getPlayingId()
                     : nextPlayingId;
             Analysis previousAnalysis = latestByPlayingId.get(previousPlayingId);
             Integer scoreChange = computeScoreChange(currentAnalysis, previousAnalysis);
@@ -134,20 +135,20 @@ public class HistoryService {
         return items;
     }
 
-    private Long findNextPlayingId(Long userId, Instant cutoff, Slice<Playing> slice) {
+    private Long findNextPlayingId(Long userId, Instant cutoff, Slice<HistoryPlayingSummary> slice) {
         if (!slice.hasNext() || slice.getContent().isEmpty()) {
             return null;
         }
 
-        Playing lastPlaying = slice.getContent().get(slice.getContent().size() - 1);
+        HistoryPlayingSummary lastPlaying = slice.getContent().get(slice.getContent().size() - 1);
         PageRequest pageRequest = PageRequest.of(0, 1);
         List<Long> nextPlayingIds = cutoff == null
                 ? playingRepository.findNextPlayingId(
                         userId, PlayingStatus.COMPLETED,
-                        lastPlaying.getEndedAt(), lastPlaying.getId(), pageRequest)
+                        lastPlaying.getEndedAt(), lastPlaying.getPlayingId(), pageRequest)
                 : playingRepository.findNextPlayingIdSince(
                         userId, PlayingStatus.COMPLETED, cutoff,
-                        lastPlaying.getEndedAt(), lastPlaying.getId(), pageRequest);
+                        lastPlaying.getEndedAt(), lastPlaying.getPlayingId(), pageRequest);
 
         return nextPlayingIds
                 .stream()
@@ -155,8 +156,8 @@ public class HistoryService {
                 .orElse(null);
     }
 
-    private Map<Long, Analysis> fetchLatestCompletedAnalyses(List<Playing> playings, Long nextPlayingId) {
-        List<Long> playingIds = new ArrayList<>(playings.stream().map(Playing::getId).toList());
+    private Map<Long, Analysis> fetchLatestCompletedAnalyses(List<HistoryPlayingSummary> playings, Long nextPlayingId) {
+        List<Long> playingIds = new ArrayList<>(playings.stream().map(HistoryPlayingSummary::getPlayingId).toList());
         if (nextPlayingId != null) {
             playingIds.add(nextPlayingId);
         }
