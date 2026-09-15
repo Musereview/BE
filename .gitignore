@@ -71,6 +71,11 @@ src/main/resources/application.example.yml
 
 # Docs
 /docs/
+!/docs/
+/docs/*
+!/docs/runbook/
+/docs/runbook/*
+!/docs/runbook/index-recovery.md
 
 # Claude
 /.claude/

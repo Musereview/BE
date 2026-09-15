@@ -1,6 +1,5 @@
 package com.mr.domain.analysis.scheduler;
 
-import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import java.time.Clock;
 import java.time.Duration;
@@ -52,16 +51,14 @@ public class AnalysisRecoveryScheduler {
     )
     public void recoverPendingAnalyses() {
         Instant now = Instant.now(clock);
-        List<Long> pendingIds = analysisRepository.findIdsByStatusAndCreatedAtBefore(
-                AnalysisStatus.PENDING,
+        List<Long> pendingIds = analysisRepository.findPendingIdsByCreatedAtBefore(
                 now.minus(pendingThreshold),
                 PageRequest.of(0, batchSize)
         );
         submitPending(pendingIds);
 
         Instant processingCutoff = now.minus(processingThreshold);
-        List<Long> processingIds = analysisRepository.findIdsByStatusAndProcessingStartedAtBefore(
-                AnalysisStatus.PROCESSING,
+        List<Long> processingIds = analysisRepository.findProcessingIdsByProcessingStartedAtBefore(
                 processingCutoff,
                 PageRequest.of(0, batchSize)
         );
