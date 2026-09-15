@@ -24,6 +24,7 @@ import com.mr.domain.history.dto.res.HistoryListResponseDTO;
 import com.mr.domain.history.exception.HistoryErrorStatus;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
+import com.mr.domain.playing.projection.HistoryPlayingSummary;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.User;
 import com.mr.global.apipayload.exception.GeneralException;
@@ -96,7 +97,7 @@ class HistoryServiceTest {
     @Test
     @DisplayName("getHistories - 결과가 0건이면 빈 목록을 반환하고 Analysis는 조회하지 않는다")
     void getHistories_empty_returnsEmptyList() {
-        given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any()))
+        given(playingRepository.findHistorySummariesByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(new SliceImpl<>(List.of(), PageRequest.of(0, 10), false));
 
         HistoryListResponseDTO response = historyService.getHistories(1L, 0, 10, null);
@@ -109,11 +110,14 @@ class HistoryServiceTest {
     @Test
     @DisplayName("getHistories - 최신 COMPLETED 분석이 없는 Playing은 latestAnalysisId가 null이다")
     void getHistories_noCompletedAnalysis_latestAnalysisIdIsNull() {
-        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, Instant.now());
-        BackingTrack backingTrack = mock(BackingTrack.class);
-        given(playing.getBackingTrack()).willReturn(backingTrack);
-        given(backingTrack.getId()).willReturn(11L);
-        given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any()))
+        HistoryPlayingSummary playing = mock(HistoryPlayingSummary.class);
+        given(playing.getPlayingId()).willReturn(1L);
+        given(playing.getBackingTrackId()).willReturn(11L);
+        given(playing.getBackingTrackTitle()).willReturn("Test Track");
+        given(playing.getDurationSec()).willReturn(60);
+        given(playing.getEndedAt()).willReturn(Instant.now());
+
+        given(playingRepository.findHistorySummariesByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(new SliceImpl<>(List.of(playing), PageRequest.of(0, 10), false));
         given(analysisRepository.findByPlayingIdInAndStatusOrderByCreatedAtDescIdDesc(
                 anyList(), eq(AnalysisStatus.COMPLETED)))
@@ -130,9 +134,22 @@ class HistoryServiceTest {
     @Test
     @DisplayName("getHistories - 마지막 페이지에서는 인접 항목과 점수 차이를 계산하고 마지막 항목은 null이다")
     void getHistories_scoreChange_comparesAdjacentItemsOnLastPage() {
-        Playing playing1 = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, Instant.now());
-        Playing playing2 = mockPlaying(2L, 1L, PlayingStatus.COMPLETED, Instant.now().minus(1, ChronoUnit.DAYS));
-        given(playingRepository.findPlayingsByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any()))
+        HistoryPlayingSummary playing1 = mock(HistoryPlayingSummary.class);
+        HistoryPlayingSummary playing2 = mock(HistoryPlayingSummary.class);
+
+        given(playing1.getPlayingId()).willReturn(1L);
+        given(playing1.getBackingTrackId()).willReturn(11L);
+        given(playing1.getBackingTrackTitle()).willReturn("Test Track01");
+        given(playing1.getDurationSec()).willReturn(60);
+        given(playing1.getEndedAt()).willReturn(Instant.now());
+
+        given(playing2.getPlayingId()).willReturn(2L);
+        given(playing2.getBackingTrackId()).willReturn(22L);
+        given(playing2.getBackingTrackTitle()).willReturn("Test Track02");
+        given(playing2.getDurationSec()).willReturn(60);
+        given(playing2.getEndedAt()).willReturn(Instant.now().minus(1, ChronoUnit.DAYS));
+
+        given(playingRepository.findHistorySummariesByUserAndStatus(eq(1L), eq(PlayingStatus.COMPLETED), any()))
                 .willReturn(new SliceImpl<>(List.of(playing1, playing2), PageRequest.of(0, 10), false));
 
         Analysis analysis1 = completedAnalysis(1L, 90);
@@ -145,7 +162,7 @@ class HistoryServiceTest {
 
         assertThat(response.items().get(0).scoreChange()).isEqualTo(10);
         assertThat(response.items().get(1).scoreChange()).isNull();
-        assertThat(response.items().get(0).backingTrackId()).isNull();
+        assertThat(response.items().get(0).backingTrackId()).isEqualTo(11L);
         verify(playingRepository, never()).findNextPlayingId(any(), any(), any(), any(), any());
         verify(playingRepository, never()).findNextPlayingIdSince(any(), any(), any(), any(), any(), any());
     }
@@ -155,9 +172,22 @@ class HistoryServiceTest {
     void getHistories_scoreChange_comparesLastItemWithNextPage() {
         Instant firstEndedAt = Instant.parse("2026-07-31T12:00:00Z");
         Instant secondEndedAt = firstEndedAt.minus(1, ChronoUnit.DAYS);
-        Playing playing1 = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, firstEndedAt);
-        Playing playing2 = mockPlaying(2L, 1L, PlayingStatus.COMPLETED, secondEndedAt);
-        given(playingRepository.findPlayingsByUserAndStatus(
+
+        HistoryPlayingSummary playing1 = mock(HistoryPlayingSummary.class);
+        HistoryPlayingSummary playing2 = mock(HistoryPlayingSummary.class);
+
+        given(playing1.getPlayingId()).willReturn(1L);
+        given(playing1.getBackingTrackId()).willReturn(11L);
+        given(playing1.getBackingTrackTitle()).willReturn("Test Track01");
+        given(playing1.getDurationSec()).willReturn(60);
+
+        given(playing2.getPlayingId()).willReturn(2L);
+        given(playing2.getBackingTrackId()).willReturn(22L);
+        given(playing2.getBackingTrackTitle()).willReturn("Test Track02");
+        given(playing2.getDurationSec()).willReturn(60);
+        given(playing2.getEndedAt()).willReturn(secondEndedAt);
+
+        given(playingRepository.findHistorySummariesByUserAndStatus(
                 eq(1L), eq(PlayingStatus.COMPLETED), eq(PageRequest.of(0, 2))))
                 .willReturn(new SliceImpl<>(List.of(playing1, playing2), PageRequest.of(0, 2), true));
         given(playingRepository.findNextPlayingId(
@@ -185,8 +215,12 @@ class HistoryServiceTest {
     @DisplayName("기간 필터가 있으면 cutoff 전용 쿼리로 다음 연주를 조회한다")
     void getHistories_scoreChange_usesSinceQueryWithPeriod() {
         Instant endedAt = Instant.parse("2026-07-31T12:00:00Z");
-        Playing playing = mockPlaying(1L, 1L, PlayingStatus.COMPLETED, endedAt);
-        given(playingRepository.findPlayingsByUserAndStatusSince(
+        HistoryPlayingSummary playing = mock(HistoryPlayingSummary.class);
+        given(playing.getPlayingId()).willReturn(1L);
+        given(playing.getEndedAt()).willReturn(endedAt);
+        given(playing.getDurationSec()).willReturn(60);
+
+        given(playingRepository.findHistorySummariesByUserAndStatusSince(
                 eq(1L), eq(PlayingStatus.COMPLETED), any(Instant.class),
                 eq(PageRequest.of(0, 1))))
                 .willReturn(new SliceImpl<>(List.of(playing), PageRequest.of(0, 1), true));
@@ -206,14 +240,14 @@ class HistoryServiceTest {
     @Test
     @DisplayName("getHistories - 기간 필터가 있으면 cutoff 전용 쿼리를 사용한다")
     void getHistories_withPeriod_usesSinceQuery() {
-        given(playingRepository.findPlayingsByUserAndStatusSince(
+        given(playingRepository.findHistorySummariesByUserAndStatusSince(
                 eq(1L), eq(PlayingStatus.COMPLETED), any(Instant.class), eq(PageRequest.of(0, 10))))
                 .willReturn(new SliceImpl<>(List.of(), PageRequest.of(0, 10), false));
 
         HistoryListResponseDTO response = historyService.getHistories(1L, 0, 10, HistoryPeriod.WEEKLY);
 
         assertThat(response.items()).isEmpty();
-        verify(playingRepository).findPlayingsByUserAndStatusSince(
+        verify(playingRepository).findHistorySummariesByUserAndStatusSince(
                 eq(1L), eq(PlayingStatus.COMPLETED), any(Instant.class), eq(PageRequest.of(0, 10)));
     }
 
