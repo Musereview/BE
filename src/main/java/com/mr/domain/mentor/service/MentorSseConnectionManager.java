@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongFunction;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
@@ -36,9 +37,21 @@ public class MentorSseConnectionManager {
         emitter.onError(exception -> recover(connection, true));
         emitter.onCompletion(() -> recover(connection, false));
 
-        Connection previous = activeConnections.put(sessionId, connection);
+        AtomicReference<Connection> previousReference = new AtomicReference<>();
+        activeConnections.compute(sessionId, (id, previous) -> {
+            if (previous != null) {
+                synchronized (previous) {
+                    if (previous.terminate()) {
+                        previousReference.set(previous);
+                    }
+                }
+            }
+            return connection;
+        });
+
+        Connection previous = previousReference.get();
         if (previous != null) {
-            closeSuperseded(previous);
+            previous.emitter().complete();
         }
         return connection;
     }
@@ -48,7 +61,10 @@ public class MentorSseConnectionManager {
     }
 
     public void sendStart(Connection connection, MentorStreamEventDTO.Start event) {
-        send(connection.emitter(), "start", event);
+        synchronized (connection) {
+            ensureActive(connection);
+            send(connection.emitter(), "start", event);
+        }
     }
 
     public void sendChunk(Connection connection, String chunk) {
@@ -59,20 +75,19 @@ public class MentorSseConnectionManager {
     }
 
     public void complete(Connection connection, Supplier<MentorStreamEventDTO.Complete> completion) {
-        MentorStreamEventDTO.Complete event;
         synchronized (connection) {
             ensureActive(connection);
-            event = completion.get();
+            MentorStreamEventDTO.Complete event = completion.get();
             connection.terminate();
+            try {
+                send(connection.emitter(), "complete", event);
+            } catch (RuntimeException exception) {
+                log.debug("AI mentor completion event could not be delivered. sessionId={}", connection.sessionId());
+            } finally {
+                connection.emitter().complete();
+            }
         }
         remove(connection);
-        try {
-            send(connection.emitter(), "complete", event);
-        } catch (RuntimeException exception) {
-            log.debug("AI mentor completion event could not be delivered. sessionId={}", connection.sessionId());
-        } finally {
-            connection.emitter().complete();
-        }
     }
 
     public void fail(Connection connection, MentorErrorStatus errorStatus) {
@@ -111,18 +126,9 @@ public class MentorSseConnectionManager {
         }
     }
 
-    private void closeSuperseded(Connection connection) {
-        synchronized (connection) {
-            if (!connection.terminate()) {
-                return;
-            }
-        }
-        remove(connection);
-        connection.emitter().complete();
-    }
-
     private void ensureActive(Connection connection) {
-        if (connection.isTerminated()) {
+        if (connection.isTerminated()
+                || activeConnections.get(connection.sessionId()) != connection) {
             throw new ConnectionTerminatedException();
         }
     }

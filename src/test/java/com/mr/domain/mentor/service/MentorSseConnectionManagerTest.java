@@ -1,6 +1,7 @@
 package com.mr.domain.mentor.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.mr.domain.mentor.dto.res.MentorStreamEventDTO;
 import com.mr.domain.mentor.exception.MentorErrorStatus;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter.DataWithMediaType;
@@ -29,6 +31,103 @@ class MentorSseConnectionManagerTest {
         assertThat(emitters.get(0).completeCount()).isOne();
         assertThat(emitters.get(1).completeCount()).isZero();
         assertThat(recoveryCount).hasValue(0);
+    }
+
+    @Test
+    void open_sameSession_waitsForInFlightChunkBeforeReplacingConnection() throws Exception {
+        List<TestSseEmitter> emitters = new ArrayList<>();
+        MentorSseConnectionManager manager = manager(emitters);
+        MentorSseConnectionManager.Connection previous = manager.open(1L, "previous-token", () -> {
+        });
+        CountDownLatch chunkStarted = new CountDownLatch(1);
+        CountDownLatch allowChunk = new CountDownLatch(1);
+        emitters.get(0).blockNextSend(chunkStarted, allowChunk);
+
+        Thread chunkThread = new Thread(() -> manager.sendChunk(previous, "chunk"));
+        chunkThread.start();
+        assertThat(chunkStarted.await(1, TimeUnit.SECONDS)).isTrue();
+
+        AtomicReference<MentorSseConnectionManager.Connection> current = new AtomicReference<>();
+        CountDownLatch replacementStarted = new CountDownLatch(1);
+        CountDownLatch replacementCompleted = new CountDownLatch(1);
+        Thread replacementThread = new Thread(() -> {
+            replacementStarted.countDown();
+            current.set(manager.open(1L, "current-token", () -> {
+            }));
+            replacementCompleted.countDown();
+        });
+        replacementThread.start();
+
+        assertThat(replacementStarted.await(1, TimeUnit.SECONDS)).isTrue();
+        assertThat(replacementCompleted.await(100, TimeUnit.MILLISECONDS)).isFalse();
+        allowChunk.countDown();
+        chunkThread.join(1_000L);
+        replacementThread.join(1_000L);
+
+        assertThat(replacementCompleted.getCount()).isZero();
+        assertThat(emitters.get(0).completeCount()).isOne();
+        manager.sendChunk(current.get(), "current-chunk");
+    }
+
+    @Test
+    void open_sameSession_waitsForInFlightCompletionBeforeReplacingConnection() throws Exception {
+        List<TestSseEmitter> emitters = new ArrayList<>();
+        MentorSseConnectionManager manager = manager(emitters);
+        MentorSseConnectionManager.Connection previous = manager.open(1L, "previous-token", () -> {
+        });
+        CountDownLatch completionStarted = new CountDownLatch(1);
+        CountDownLatch allowCompletion = new CountDownLatch(1);
+
+        Thread completionThread = new Thread(() -> manager.complete(previous, () -> {
+            completionStarted.countDown();
+            await(allowCompletion);
+            return new MentorStreamEventDTO.Complete(null);
+        }));
+        completionThread.start();
+        assertThat(completionStarted.await(1, TimeUnit.SECONDS)).isTrue();
+
+        CountDownLatch replacementStarted = new CountDownLatch(1);
+        CountDownLatch replacementCompleted = new CountDownLatch(1);
+        Thread replacementThread = new Thread(() -> {
+            replacementStarted.countDown();
+            manager.open(1L, "current-token", () -> {
+            });
+            replacementCompleted.countDown();
+        });
+        replacementThread.start();
+
+        assertThat(replacementStarted.await(1, TimeUnit.SECONDS)).isTrue();
+        assertThat(replacementCompleted.await(100, TimeUnit.MILLISECONDS)).isFalse();
+        allowCompletion.countDown();
+        completionThread.join(1_000L);
+        replacementThread.join(1_000L);
+
+        assertThat(replacementCompleted.getCount()).isZero();
+        assertEvent(emitters.get(0), "complete", new MentorStreamEventDTO.Complete(null));
+    }
+
+    @Test
+    void supersededConnection_rejectsStartChunkAndCompletion() {
+        List<TestSseEmitter> emitters = new ArrayList<>();
+        MentorSseConnectionManager manager = manager(emitters);
+        MentorSseConnectionManager.Connection previous = manager.open(1L, "previous-token", () -> {
+        });
+        manager.open(1L, "current-token", () -> {
+        });
+        AtomicInteger completionCount = new AtomicInteger();
+
+        assertThatThrownBy(() -> manager.sendStart(
+                previous, new MentorStreamEventDTO.Start(10L, 1L, null)))
+                .isInstanceOf(MentorSseConnectionManager.ConnectionTerminatedException.class);
+        assertThatThrownBy(() -> manager.sendChunk(previous, "chunk"))
+                .isInstanceOf(MentorSseConnectionManager.ConnectionTerminatedException.class);
+        assertThatThrownBy(() -> manager.complete(previous, () -> {
+            completionCount.incrementAndGet();
+            return new MentorStreamEventDTO.Complete(null);
+        })).isInstanceOf(MentorSseConnectionManager.ConnectionTerminatedException.class);
+
+        assertThat(completionCount).hasValue(0);
+        assertThat(emitters.get(0).sentEvents()).isEmpty();
     }
 
     @Test
@@ -166,6 +265,8 @@ class MentorSseConnectionManagerTest {
         private Consumer<Throwable> errorCallback;
         private Runnable completionCallback;
         private final List<SseEventBuilder> sentEvents = new ArrayList<>();
+        private CountDownLatch sendStarted;
+        private CountDownLatch allowSend;
         private int completeCount;
 
         private TestSseEmitter(Long timeout) {
@@ -189,6 +290,12 @@ class MentorSseConnectionManagerTest {
 
         @Override
         public synchronized void send(SseEventBuilder builder) throws IOException {
+            if (sendStarted != null) {
+                sendStarted.countDown();
+                awaitSend();
+                sendStarted = null;
+                allowSend = null;
+            }
             sentEvents.add(builder);
         }
 
@@ -215,6 +322,22 @@ class MentorSseConnectionManagerTest {
 
         private synchronized List<SseEventBuilder> sentEvents() {
             return List.copyOf(sentEvents);
+        }
+
+        private synchronized void blockNextSend(CountDownLatch sendStarted, CountDownLatch allowSend) {
+            this.sendStarted = sendStarted;
+            this.allowSend = allowSend;
+        }
+
+        private void awaitSend() {
+            try {
+                if (!allowSend.await(1, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Timed out waiting to release SSE send.");
+                }
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(exception);
+            }
         }
     }
 }
