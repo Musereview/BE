@@ -68,13 +68,17 @@ class AnalysisRecoveryRepositoryTest {
                 Analysis.createPending(user, playing, 3, 4, "{}"));
         Analysis recentPending = analysisRepository.save(
                 Analysis.createPending(user, playing, 5, 6, "{}"));
-        Analysis staleProcessing = Analysis.createPending(user, playing, 7, 8, "{}");
-        staleProcessing.startProcessing(Instant.parse("2026-09-10T23:59:00Z"));
-        analysisRepository.save(staleProcessing);
-        Analysis olderStaleProcessing = Analysis.createPending(user, playing, 11, 12, "{}");
+        Analysis olderStaleProcessing = Analysis.createPending(user, playing, 7, 8, "{}");
         olderStaleProcessing.startProcessing(Instant.parse("2026-09-10T23:58:00Z"));
         analysisRepository.save(olderStaleProcessing);
-        Analysis recentProcessing = Analysis.createPending(user, playing, 9, 10, "{}");
+        Instant staleProcessingStartedAt = Instant.parse("2026-09-10T23:59:00Z");
+        Analysis firstStaleProcessing = Analysis.createPending(user, playing, 9, 10, "{}");
+        firstStaleProcessing.startProcessing(staleProcessingStartedAt);
+        analysisRepository.save(firstStaleProcessing);
+        Analysis secondStaleProcessing = Analysis.createPending(user, playing, 11, 12, "{}");
+        secondStaleProcessing.startProcessing(staleProcessingStartedAt);
+        analysisRepository.save(secondStaleProcessing);
+        Analysis recentProcessing = Analysis.createPending(user, playing, 13, 14, "{}");
         recentProcessing.startProcessing(Instant.parse("2026-09-11T00:01:00Z"));
         analysisRepository.saveAndFlush(recentProcessing);
 
@@ -87,7 +91,10 @@ class AnalysisRecoveryRepositoryTest {
         assertThat(analysisRepository.findPendingIdsByCreatedAtBefore(cutoff, limit))
                 .containsExactly(firstStalePending.getId(), secondStalePending.getId());
         assertThat(analysisRepository.findProcessingIdsByProcessingStartedAtBefore(cutoff, limit))
-                .containsExactly(olderStaleProcessing.getId(), staleProcessing.getId());
+                .containsExactly(
+                        olderStaleProcessing.getId(),
+                        firstStaleProcessing.getId(),
+                        secondStaleProcessing.getId());
     }
 
     private void updateCreatedAt(Analysis analysis, Instant createdAt) {
