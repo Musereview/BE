@@ -3,6 +3,7 @@ package com.mr.domain.statistics.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.mr.domain.analysis.entity.Analysis;
+import com.mr.domain.analysis.entity.enums.AnalysisStatus;
 import com.mr.domain.analysis.repository.AnalysisRepository;
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.backingtrack.entity.enums.AccessLevel;
@@ -32,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -110,6 +112,41 @@ class StatisticsAggregationPerformanceTest {
         transactionTemplate.executeWithoutResult(status -> verifyAggregatedResult(userId, analysisCount));
     }
 
+    @Test
+    void mapsDecimalAverageProjectionToBigDecimalWithoutPrecisionLoss() {
+        BigDecimal average = transactionTemplate.execute(status -> {
+            User user = userRepository.save(User.createFromOAuth("https://example.com/profile.png"));
+            BackingTrack backingTrack = backingTrackRepository.save(BackingTrack.create(
+                    user,
+                    1L,
+                    "스킬 평균 타입 검증",
+                    "JAZZ",
+                    "C",
+                    ScaleType.MAJOR,
+                    "4/4",
+                    120,
+                    300,
+                    "backing-tracks/average-projection-test.mp3",
+                    null,
+                    AccessLevel.PRIVATE,
+                    Level.BASIC));
+            Playing playing = playingRepository.save(Playing.createBackingTrack(user, backingTrack, 120));
+
+            analysisRepository.saveAll(List.of(
+                    createCompletedAnalysis(user, playing, new BigDecimal("80.00")),
+                    createCompletedAnalysis(user, playing, new BigDecimal("80.10"))));
+            analysisRepository.flush();
+
+            return analysisRepository.aggregateWeeklySkillAveragesByUserAndStatusSince(
+                    user.getUserId(),
+                    AnalysisStatus.COMPLETED,
+                    FIXED_INSTANT.minusSeconds(1))
+                    .getScaleScore();
+        });
+
+        assertThat(average).isEqualByComparingTo("80.05");
+    }
+
     private Measurement measure(Statistics statistics, Long userId) {
         resetWarmStatistics(userId);
         statistics.clear();
@@ -166,16 +203,20 @@ class StatisticsAggregationPerformanceTest {
     }
 
     private Analysis createCompletedAnalysis(User user, Playing playing) {
+        return createCompletedAnalysis(user, playing, EXPECTED_SCORE);
+    }
+
+    private Analysis createCompletedAnalysis(User user, Playing playing, BigDecimal score) {
         Analysis analysis = Analysis.createPending(user, playing, 1, 4, "{}");
         analysis.startProcessing(FIXED_INSTANT.minusSeconds(1));
         analysis.complete(
                 80,
                 null,
                 "성능 측정",
-                EXPECTED_SCORE,
-                EXPECTED_SCORE,
-                EXPECTED_SCORE,
-                EXPECTED_SCORE,
+                score,
+                score,
+                score,
+                score,
                 "{}",
                 FIXED_INSTANT);
         return analysis;

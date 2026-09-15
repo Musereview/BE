@@ -20,6 +20,8 @@ spring:
     enabled: true
     baseline-on-migrate: true
     baseline-version: 0
+    postgresql:
+      transactional-lock: false
 
 oauth:
   cookie:

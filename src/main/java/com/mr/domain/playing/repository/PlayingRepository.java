@@ -1,9 +1,11 @@
 package com.mr.domain.playing.repository;
 
+import com.mr.domain.playing.projection.HistoryPlayingSummary;
+import com.mr.domain.playing.projection.HomeRecentPlayingSummary;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import jakarta.persistence.LockModeType;
-import java.sql.Date;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -16,36 +18,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PlayingRepository extends JpaRepository<Playing, Long> {
-
-    @Query("""
-            select p from Playing p
-            left join fetch p.backingTrack
-            where p.user.userId = :userId
-              and p.status = :status
-              and p.deletedAt is null
-            order by p.endedAt desc, p.id desc
-            """)
-    Slice<Playing> findPlayingsByUserAndStatus(
-            @Param("userId") Long userId,
-            @Param("status") PlayingStatus status,
-            Pageable pageable
-    );
-
-    @Query("""
-            select p from Playing p
-            left join fetch p.backingTrack
-            where p.user.userId = :userId
-              and p.status = :status
-              and p.deletedAt is null
-              and p.endedAt >= :cutoff
-            order by p.endedAt desc, p.id desc
-            """)
-    Slice<Playing> findPlayingsByUserAndStatusSince(
-            @Param("userId") Long userId,
-            @Param("status") PlayingStatus status,
-            @Param("cutoff") Instant cutoff,
-            Pageable pageable
-    );
 
     @Query("""
             select p.id from Playing p
@@ -97,20 +69,6 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
               and p.deletedAt is null
             """)
     Optional<Playing> findByIdWithBackingTrackForUpdate(@Param("id") Long id);
-
-    @Query("""
-            select p from Playing p
-            where p.user.userId = :userId
-              and p.status = :status
-              and p.deletedAt is null
-              and p.endedAt >= :since
-            order by p.endedAt desc
-            """)
-    List<Playing> findByUserAndStatusSince(
-            @Param("userId") Long userId,
-            @Param("status") PlayingStatus status,
-            @Param("since") Instant since
-    );
 
     @Query("""
             select count(p) as sessionCount,
@@ -183,5 +141,66 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
             @Param("status") PlayingStatus status,
             @Param("since") Instant since,
             @Param("excludePlayingId") Long excludePlayingId
+    );
+
+    @Query("""
+        select p.id as playingId,
+               bt.id as backingTrackId,
+               bt.title as backingTrackTitle,
+               p.durationSec as durationSec,
+               p.endedAt as endedAt
+        from Playing p
+        left join p.backingTrack bt
+        where p.user.userId = :userId
+          and p.status = :status
+          and p.deletedAt is null
+        order by p.endedAt desc, p.id desc
+        """)
+    Slice<HistoryPlayingSummary> findHistorySummariesByUserAndStatus(
+            @Param("userId") Long userId,
+            @Param("status") PlayingStatus status,
+            Pageable pageable
+    );
+
+    @Query("""
+        select p.id as playingId,
+               bt.id as backingTrackId,
+               bt.title as backingTrackTitle,
+               p.durationSec as durationSec,
+               p.endedAt as endedAt
+        from Playing p
+        left join p.backingTrack bt
+        where p.user.userId = :userId
+          and p.status = :status
+          and p.deletedAt is null
+          and p.endedAt >= :cutoff
+        order by p.endedAt desc, p.id desc
+        """)
+    Slice<HistoryPlayingSummary> findHistorySummariesByUserAndStatusSince(
+            @Param("userId") Long userId,
+            @Param("status") PlayingStatus status,
+            @Param("cutoff") Instant cutoff,
+            Pageable pageable
+    );
+
+    @Query("""
+        select p.id as playingId,
+            bt.title as backingTrackTitle,
+            bt.genre as backingTrackGenre,
+            bt.keySignature as backingTrackKeySignature,
+            p.bpm as bpm,
+            p.endedAt as endedAt,
+            p.durationSec as durationSec
+        from Playing p
+        left join p.backingTrack bt
+        where p.user.userId = :userId
+            and p.status = :status
+            and p.deletedAt is null 
+        order by p.endedAt desc, p.id desc
+        """)
+    Slice<HomeRecentPlayingSummary> findRecentPlayingSummariesByUserAndStatus(
+            @Param("userId") Long userId,
+            @Param("status") PlayingStatus status,
+            Pageable pageable
     );
 }

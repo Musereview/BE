@@ -2,8 +2,7 @@ package com.mr.domain.history.dto.res;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mr.domain.analysis.entity.Analysis;
-import com.mr.domain.backingtrack.entity.BackingTrack;
-import com.mr.domain.playing.entity.Playing;
+import com.mr.domain.playing.projection.HistoryPlayingSummary;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
@@ -63,14 +62,13 @@ public record HistoryListResponseDTO(
             String relativeDate
     ) {
 
-        public static Item of(Playing playing, Analysis latestAnalysis, Integer scoreChange, String relativeDate) {
-            BackingTrack backingTrack = playing.getBackingTrack();
+        public static Item of(HistoryPlayingSummary playing, Analysis latestAnalysis, Integer scoreChange, String relativeDate) {
 
             return new Item(
-                    playing.getId(),
-                    backingTrack != null ? backingTrack.getId() : null,
+                    playing.getPlayingId(),
+                    playing.getBackingTrackId(),
                     latestAnalysis != null ? latestAnalysis.getId() : null,
-                    backingTrack != null ? backingTrack.getTitle() : null,
+                    playing.getBackingTrackTitle(),
                     latestAnalysis != null ? latestAnalysis.getSummary() : null,
                     scoreChange,
                     toDurationMinutes(playing.getDurationSec()),
