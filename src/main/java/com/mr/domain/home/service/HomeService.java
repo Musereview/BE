@@ -10,9 +10,9 @@ import com.mr.domain.home.dto.res.HomeResponseDTO.RecommendedLearning;
 import com.mr.domain.home.dto.res.HomeResponseDTO.Streak;
 import com.mr.domain.home.dto.res.HomeResponseDTO.Streak.DayAttendance;
 import com.mr.domain.home.dto.res.HomeResponseDTO.UserSummary;
+import com.mr.domain.playing.projection.HomeRecentPlayingSummary;
 import com.mr.domain.learning.dto.res.LearningHomeResponseDTO;
 import com.mr.domain.learning.service.LearningService;
-import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.Student;
@@ -24,12 +24,10 @@ import com.mr.domain.user.repository.StudentRepository;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.util.RelativeDateFormatter;
-import java.sql.Date;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -46,7 +44,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class HomeService {
 
     private static final int RECENT_PLAYINGS_LIMIT = 5;
-    private static final int STREAK_LOOKBACK_DAYS = 60;
     private static final int SECONDS_PER_HOUR = 3600;
 
     private final UserRepository userRepository;
@@ -61,16 +58,12 @@ public class HomeService {
 
         Set<LocalDate> practiceDates = fetchPracticeDates(userId);
 
-        Instant since = Instant.now().minus(STREAK_LOOKBACK_DAYS, ChronoUnit.DAYS);
-        List<Playing> recentCompleted =
-                playingRepository.findByUserAndStatusSince(userId, PlayingStatus.COMPLETED, since);
-
         LearningHomeResponseDTO.CurrentLearning currentLearning = learningService.getCurrentLearning(userId);
 
         return new HomeResponseDTO(
                 buildUserSummary(user),
                 buildStreak(practiceDates),
-                buildPracticeSummary(recentCompleted),
+                buildPracticeSummary(userId),
                 LearningSummary.from(currentLearning),
                 buildRecommendedLearnings(userId, currentLearning),
                 buildRecentPlayings(userId)
@@ -171,7 +164,7 @@ public class HomeService {
         };
     }
 
-    private PracticeSummary buildPracticeSummary(List<Playing> recentCompleted) {
+    private PracticeSummary buildPracticeSummary(Long userId) {
         ZoneId kstZone = ZoneId.of("Asia/Seoul"); // 명시적인 한국 타임존
         LocalDate today = LocalDate.now(kstZone); // KST 기준 오늘 날짜
 
@@ -185,25 +178,28 @@ public class HomeService {
                 .atStartOfDay(kstZone)
                 .toInstant();
 
-        int weeklySeconds = sumDurationSince(recentCompleted, weekStart);
-        int monthlySeconds = sumDurationSince(recentCompleted, monthStart);
+        PlayingRepository.WeeklyPracticeTotals weeklyPracticeTotals =
+                playingRepository.aggregateTotalsByUserAndStatusSince(
+                        userId, PlayingStatus.COMPLETED, weekStart
+                );
+
+        PlayingRepository.WeeklyPracticeTotals monthlyPracticeTotals =
+                playingRepository.aggregateTotalsByUserAndStatusSince(
+                        userId, PlayingStatus.COMPLETED, monthStart
+                );
+
+        long weeklySeconds = weeklyPracticeTotals.getTotalDurationSec();
+        long monthlySeconds = monthlyPracticeTotals.getTotalDurationSec();
 
         return new PracticeSummary(
-                weeklySeconds / SECONDS_PER_HOUR,
-                monthlySeconds / SECONDS_PER_HOUR,
+                (int) (weeklySeconds / SECONDS_PER_HOUR),
+                (int) (monthlySeconds / SECONDS_PER_HOUR),
                 today.getMonthValue() + "월"
         );
     }
 
-    private int sumDurationSince(List<Playing> playings, Instant since) {
-        return playings.stream()
-                .filter(p -> p.getEndedAt() != null && !p.getEndedAt().isBefore(since))
-                .mapToInt(p -> p.getDurationSec() != null ? p.getDurationSec() : 0)
-                .sum();
-    }
-
     private List<RecentPlaying> buildRecentPlayings(Long userId) {
-        Slice<Playing> slice = playingRepository.findPlayingsByUserAndStatus(
+        Slice<HomeRecentPlayingSummary> slice = playingRepository.findRecentPlayingSummariesByUserAndStatus(
                 userId, PlayingStatus.COMPLETED, PageRequest.of(0, RECENT_PLAYINGS_LIMIT));
 
         return slice.getContent().stream()

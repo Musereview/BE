@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -15,8 +16,8 @@ import com.mr.domain.home.dto.res.HomeResponseDTO.DayOfWeekCode;
 import com.mr.domain.home.dto.res.HomeResponseDTO.Streak.DayAttendance;
 import com.mr.domain.learning.dto.res.LearningHomeResponseDTO;
 import com.mr.domain.learning.service.LearningService;
-import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
+import com.mr.domain.playing.projection.HomeRecentPlayingSummary;
 import com.mr.domain.playing.repository.PlayingRepository;
 import com.mr.domain.user.entity.Instrument;
 import com.mr.domain.user.entity.Student;
@@ -28,12 +29,10 @@ import com.mr.domain.user.repository.StudentInstrumentRepository;
 import com.mr.domain.user.repository.StudentRepository;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
-import java.sql.Date;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -77,20 +76,13 @@ class HomeServiceTest {
         lenient().when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         lenient().when(studentRepository.findByUser(user)).thenReturn(Optional.empty());
         lenient().when(playingRepository.findDistinctEndedDatesByUserAndStatus(anyLong(), any())).thenReturn(List.of());
-        lenient().when(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).thenReturn(List.of());
-        lenient().when(playingRepository.findPlayingsByUserAndStatus(anyLong(), any(), any()))
-                .thenReturn(new SliceImpl<>(List.of()));
-        lenient().when(learningService.getCurrentLearning(anyLong())).thenReturn(null);
-    }
 
-    private Playing mockPlaying(Instant endedAt, Integer durationSec) {
-        Playing playing = mock(Playing.class);
-        lenient().when(playing.getId()).thenReturn(1L);
-        lenient().when(playing.getEndedAt()).thenReturn(endedAt);
-        lenient().when(playing.getDurationSec()).thenReturn(durationSec);
-        lenient().when(playing.getBpm()).thenReturn(120);
-        lenient().when(playing.getBackingTrack()).thenReturn(null);
-        return playing;
+        PlayingRepository.WeeklyPracticeTotals totals = mock(PlayingRepository.WeeklyPracticeTotals.class);
+        lenient().when(totals.getTotalDurationSec()).thenReturn(0L);
+        lenient().when(totals.getSessionCount()).thenReturn(0L);
+        lenient().when(playingRepository.aggregateTotalsByUserAndStatusSince(anyLong(), any(), any(Instant.class))).thenReturn(totals);
+        lenient().when(playingRepository.findRecentPlayingSummariesByUserAndStatus(anyLong(), any(), any())).thenReturn(new SliceImpl<>(List.of()));
+        lenient().when(learningService.getCurrentLearning(anyLong())).thenReturn(null);
     }
 
     private Instant toInstant(LocalDate date) {
@@ -227,16 +219,11 @@ class HomeServiceTest {
     void getHome_practiceSummary_sumsDurationInHours() {
         stubBaseline(1L);
 
-        ZoneId kstZone = ZoneId.of("Asia/Seoul");
-        Instant todayStart = LocalDate.now(kstZone).atStartOfDay(kstZone).toInstant();
-        List<Playing> recent = List.of(
-                mockPlaying(todayStart, 3600),
-                mockPlaying(todayStart.plus(2, ChronoUnit.HOURS), 3600)
-        );
-        given(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).willReturn(recent);
-
+        PlayingRepository.WeeklyPracticeTotals totals =
+                mock(PlayingRepository.WeeklyPracticeTotals.class);
+        given(totals.getTotalDurationSec()).willReturn(7200L);
+        given(playingRepository.aggregateTotalsByUserAndStatusSince(eq(1L), eq(PlayingStatus.COMPLETED), any(Instant.class))).willReturn(totals);
         HomeResponseDTO response = homeService.getHome(1L);
-
         assertThat(response.practiceSummary().weeklyPracticeHours()).isEqualTo(2);
         assertThat(response.practiceSummary().monthlyPracticeHours()).isEqualTo(2);
     }
@@ -248,15 +235,18 @@ class HomeServiceTest {
 
         ZoneId kstZone = ZoneId.of("Asia/Seoul");
         Instant weekStart = LocalDate.now(kstZone).with(DayOfWeek.MONDAY).atStartOfDay(kstZone).toInstant();
-        List<Playing> recent = List.of(
-                mockPlaying(weekStart, 3600),
-                mockPlaying(weekStart.minus(1, ChronoUnit.SECONDS), 3600)
-        );
-        given(playingRepository.findByUserAndStatusSince(anyLong(), any(), any())).willReturn(recent);
+
+        PlayingRepository.WeeklyPracticeTotals weeklyPracticeTotals = mock(PlayingRepository.WeeklyPracticeTotals.class);
+        PlayingRepository.WeeklyPracticeTotals monthlyPracticeTotals = mock(PlayingRepository.WeeklyPracticeTotals.class);
+        given(weeklyPracticeTotals.getTotalDurationSec()).willReturn(3600L);
+        given(monthlyPracticeTotals.getTotalDurationSec()).willReturn(7200L);
+        given(playingRepository.aggregateTotalsByUserAndStatusSince(eq(1L),eq(PlayingStatus.COMPLETED), any(Instant.class)))
+                .willReturn(weeklyPracticeTotals, monthlyPracticeTotals);
 
         HomeResponseDTO response = homeService.getHome(1L);
 
         assertThat(response.practiceSummary().weeklyPracticeHours()).isEqualTo(1);
+        verify(playingRepository).aggregateTotalsByUserAndStatusSince(eq(1L), eq(PlayingStatus.COMPLETED), eq(weekStart));
     }
 
     @Test
@@ -345,8 +335,15 @@ class HomeServiceTest {
     void getHome_recentPlayings_mapsFromRepository() {
         stubBaseline(1L);
 
-        Playing playing = mockPlaying(Instant.now(), 600);
-        given(playingRepository.findPlayingsByUserAndStatus(1L, PlayingStatus.COMPLETED, PageRequest.of(0, 5)))
+        HomeRecentPlayingSummary playing = mock(HomeRecentPlayingSummary.class);
+        given(playing.getPlayingId()).willReturn(1L);
+        given(playing.getBackingTrackTitle()).willReturn("Test Track");
+        given(playing.getBackingTrackGenre()).willReturn("JAZZ");
+        given(playing.getBackingTrackKeySignature()).willReturn("C");
+        given(playing.getBpm()).willReturn(120);
+        given(playing.getEndedAt()).willReturn(Instant.now());
+        given(playing.getDurationSec()).willReturn(600);
+        given(playingRepository.findRecentPlayingSummariesByUserAndStatus(1L, PlayingStatus.COMPLETED, PageRequest.of(0, 5)))
                 .willReturn(new SliceImpl<>(List.of(playing)));
 
         HomeResponseDTO response = homeService.getHome(1L);

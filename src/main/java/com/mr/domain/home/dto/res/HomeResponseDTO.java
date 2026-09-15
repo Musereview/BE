@@ -1,9 +1,8 @@
 package com.mr.domain.home.dto.res;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.mr.domain.backingtrack.entity.BackingTrack;
+import com.mr.domain.playing.projection.HomeRecentPlayingSummary;
 import com.mr.domain.learning.dto.res.LearningHomeResponseDTO;
-import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.user.entity.enums.TheoryLevel;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.DayOfWeek;
@@ -197,14 +196,13 @@ public record HomeResponseDTO(
             Integer durationMinutes
     ) {
 
-        public static RecentPlaying of(Playing playing, String relativeTime) {
-            BackingTrack backingTrack = playing.getBackingTrack();
+        public static RecentPlaying of(HomeRecentPlayingSummary playing, String relativeTime) {
 
             return new RecentPlaying(
-                    playing.getId(),
-                    backingTrack != null ? backingTrack.getTitle() : null,
-                    backingTrack != null ? backingTrack.getGenre() : null,
-                    backingTrack != null ? backingTrack.getKeySignature() : null,
+                    playing.getPlayingId(),
+                    playing.getBackingTrackTitle(),
+                    playing.getBackingTrackGenre(),
+                    playing.getBackingTrackKeySignature(),
                     playing.getBpm(),
                     playing.getEndedAt(),
                     relativeTime,
