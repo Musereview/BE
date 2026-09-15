@@ -131,6 +131,19 @@ class MentorSseConnectionManagerTest {
     }
 
     @Test
+    void closeSilently_alreadyTerminated_doesNotCompleteAgain() {
+        List<TestSseEmitter> emitters = new ArrayList<>();
+        MentorSseConnectionManager manager = manager(emitters);
+        MentorSseConnectionManager.Connection connection = manager.open(1L, "token", () -> {
+        });
+
+        manager.closeSilently(connection);
+        manager.closeSilently(connection);
+
+        assertThat(emitters.get(0).completeCount()).isOne();
+    }
+
+    @Test
     void completion_previousRecoveryFinishesLate_doesNotRemoveCurrentConnection() throws Exception {
         List<TestSseEmitter> emitters = new ArrayList<>();
         MentorSseConnectionManager manager = manager(emitters);

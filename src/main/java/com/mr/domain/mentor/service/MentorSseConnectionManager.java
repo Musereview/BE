@@ -110,7 +110,9 @@ public class MentorSseConnectionManager {
 
     public void closeSilently(Connection connection) {
         synchronized (connection) {
-            connection.terminate();
+            if (!connection.terminate()) {
+                return;
+            }
         }
         remove(connection);
         connection.emitter().complete();
