@@ -71,6 +71,9 @@ class AnalysisRecoveryRepositoryTest {
         Analysis staleProcessing = Analysis.createPending(user, playing, 7, 8, "{}");
         staleProcessing.startProcessing(Instant.parse("2026-09-10T23:59:00Z"));
         analysisRepository.save(staleProcessing);
+        Analysis olderStaleProcessing = Analysis.createPending(user, playing, 11, 12, "{}");
+        olderStaleProcessing.startProcessing(Instant.parse("2026-09-10T23:58:00Z"));
+        analysisRepository.save(olderStaleProcessing);
         Analysis recentProcessing = Analysis.createPending(user, playing, 9, 10, "{}");
         recentProcessing.startProcessing(Instant.parse("2026-09-11T00:01:00Z"));
         analysisRepository.saveAndFlush(recentProcessing);
@@ -84,7 +87,7 @@ class AnalysisRecoveryRepositoryTest {
         assertThat(analysisRepository.findPendingIdsByCreatedAtBefore(cutoff, limit))
                 .containsExactly(firstStalePending.getId(), secondStalePending.getId());
         assertThat(analysisRepository.findProcessingIdsByProcessingStartedAtBefore(cutoff, limit))
-                .containsExactly(staleProcessing.getId());
+                .containsExactly(olderStaleProcessing.getId(), staleProcessing.getId());
     }
 
     private void updateCreatedAt(Analysis analysis, Instant createdAt) {
