@@ -24,6 +24,8 @@ import com.mr.domain.user.repository.StudentRepository;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.util.RelativeDateFormatter;
+
+import java.sql.Date;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -81,8 +83,9 @@ public class HomeService {
 
     // 연속 출석일수는 기간 상한이 없어야 하므로 별도로 전체 기간 날짜만 조회
     private Set<LocalDate> fetchPracticeDates(Long userId) {
-        return playingRepository.findDistinctEndedDatesByUserAndStatus(userId, PlayingStatus.COMPLETED).stream()
-                .map(instant -> instant.atZone(ZoneId.of("Asia/Seoul")).toLocalDate())  // DB에서 꺼낸 UTC 시간(Instant)을 한국 시간대(Asia/Seoul)로 해서 달력 날짜(LocalDate)만 뽑아냄
+        return playingRepository.findDistinctEndedDatesByUserAndStatus(userId, PlayingStatus.COMPLETED.name())
+                .stream()
+                .map(Date::toLocalDate)
                 .collect(Collectors.toSet());
     }
 
