@@ -29,6 +29,8 @@ import com.mr.domain.user.repository.StudentInstrumentRepository;
 import com.mr.domain.user.repository.StudentRepository;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
+
+import java.sql.Date;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -85,10 +87,6 @@ class HomeServiceTest {
         lenient().when(learningService.getCurrentLearning(anyLong())).thenReturn(null);
     }
 
-    private Instant toInstant(LocalDate date) {
-        return date.atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant();
-    }
-
     @Test
     @DisplayName("getHome - 존재하지 않는 사용자면 404")
     void getHome_userNotFound_throws404() {
@@ -138,8 +136,12 @@ class HomeServiceTest {
         stubBaseline(1L);
 
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED)).willReturn(List.of(
-                toInstant(today), toInstant(today.minusDays(1)), toInstant(today.minusDays(2)), toInstant(today.minusDays(5))
+        given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED.name()))
+                .willReturn(List.of(
+                Date.valueOf(today),
+                Date.valueOf(today.minusDays(1)),
+                Date.valueOf(today.minusDays(2)),
+                Date.valueOf(today.minusDays(5))
         ));
 
         HomeResponseDTO response = homeService.getHome(1L);
@@ -153,11 +155,11 @@ class HomeServiceTest {
         stubBaseline(1L);
 
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        List<Instant> endedDates = java.util.stream.IntStream.range(0, 65)
+        List<Date> endedDates = java.util.stream.IntStream.range(0, 65)
                 .mapToObj(today::minusDays)
-                .map(this::toInstant)
+                .map(Date::valueOf)
                 .toList();
-        given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED)).willReturn(endedDates);
+        given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED.name())).willReturn(endedDates);
 
         HomeResponseDTO response = homeService.getHome(1L);
 
@@ -170,8 +172,8 @@ class HomeServiceTest {
         stubBaseline(1L);
 
         LocalDate yesterday = LocalDate.now(ZoneId.of("Asia/Seoul")).minusDays(1);
-        given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED))
-                .willReturn(List.of(toInstant(yesterday)));
+        given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED.name()))
+                .willReturn(List.of(Date.valueOf(yesterday)));
 
         HomeResponseDTO response = homeService.getHome(1L);
 
@@ -184,8 +186,10 @@ class HomeServiceTest {
         stubBaseline(1L);
 
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED))
-                .willReturn(List.of(toInstant(today), toInstant(today), toInstant(today)));
+        Date todayDate = Date.valueOf(today);
+
+        given(playingRepository.findDistinctEndedDatesByUserAndStatus(1L, PlayingStatus.COMPLETED.name()))
+                .willReturn(List.of(todayDate, todayDate, todayDate));
 
         HomeResponseDTO response = homeService.getHome(1L);
 
