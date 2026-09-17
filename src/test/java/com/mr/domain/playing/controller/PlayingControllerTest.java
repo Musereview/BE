@@ -5,6 +5,8 @@ import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
 import com.mr.domain.playing.dto.res.AnalysisContextResponse;
 import com.mr.domain.playing.entity.enums.MidiType;
+import com.mr.domain.playing.service.PlayingFileService;
+import com.mr.domain.playing.service.PlayingQueryService;
 import com.mr.domain.playing.service.PlayingService;
 import com.mr.domain.user.entity.enums.UserRole;
 import com.mr.global.apipayload.handler.GlobalExceptionHandler;
@@ -56,6 +58,12 @@ class PlayingControllerTest {
     @Mock
     private PlayingService playingService;
 
+    @Mock
+    private PlayingFileService playingFileService;
+
+    @Mock
+    private PlayingQueryService playingQueryService;
+
     @BeforeEach
     void setUp() {
         objectMapper = Jackson2ObjectMapperBuilder.json()
@@ -63,7 +71,7 @@ class PlayingControllerTest {
                 .build();
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new PlayingController(playingService))
+                .standaloneSetup(new PlayingController(playingService, playingFileService, playingQueryService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(
                         new MappingJackson2HttpMessageConverter(objectMapper)
@@ -173,7 +181,7 @@ class PlayingControllerTest {
                     null,
                     60
             );
-            given(playingService.getAnalysisContext(USER_ID, PLAYING_ID))
+            given(playingQueryService.getAnalysisContext(USER_ID, PLAYING_ID))
                     .willReturn(response);
 
             mockMvc.perform(get(
@@ -190,7 +198,7 @@ class PlayingControllerTest {
                             .value("https://example.com/backing.mp3"))
                     .andExpect(jsonPath("$.data.totalBars").value(60));
 
-            then(playingService).should()
+            then(playingQueryService).should()
                     .getAnalysisContext(USER_ID, PLAYING_ID);
         }
     }
