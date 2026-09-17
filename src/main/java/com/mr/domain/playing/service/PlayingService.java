@@ -2,16 +2,11 @@ package com.mr.domain.playing.service;
 
 import com.mr.domain.backingtrack.entity.BackingTrack;
 import com.mr.domain.backingtrack.repository.BackingTrackRepository;
-import com.mr.domain.analysis.service.AnalysisBarCalculator;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
-import com.mr.domain.playing.dto.req.RecordingUploadUrlRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
-import com.mr.domain.playing.dto.res.AnalysisContextResponse;
 import com.mr.domain.playing.dto.res.PlayingDeleteResponse;
-import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
-import com.mr.domain.playing.dto.res.RecordingUploadUrlResponse;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.exception.PlayingErrorStatus;
@@ -43,7 +38,6 @@ import static com.mr.domain.backingtrack.entity.enums.AccessLevel.PUBLIC;
 public class PlayingService {
 
     private final PlayingRepository playingRepository;
-    private final AnalysisBarCalculator analysisBarCalculator;
     private final UserRepository userRepository;
     private final BackingTrackRepository backingTrackRepository;
     private final S3FileService s3FileService;
@@ -91,25 +85,6 @@ public class PlayingService {
 
     }
 
-    @Transactional(readOnly = true)
-    public RecordingUploadUrlResponse createRecordingUploadUrl(
-            Long userId, Long playingId, RecordingUploadUrlRequest request
-    ) {
-        validatePlayingId(playingId);
-
-        Playing playing = playingRepository.findByIdAndDeletedAtIsNull(playingId)
-                .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
-
-        playing.validatePlayingOwner(userId);
-        playing.validateInProgress();
-
-        return RecordingUploadUrlResponse.from(s3FileService.createPresignedUpload(
-                userId,
-                S3FileType.RECORDING,
-                request.toCommand())
-        );
-    }
-
     public MidiEventSaveResponse saveMidiEvents(
             Long userId, Long playingId, MidiEventSaveRequest request
     ) {
@@ -153,65 +128,6 @@ public class PlayingService {
                     playing.getMidiData().size()
             );
         });
-    }
-
-    @Transactional(readOnly = true)
-    public PlayingDetailResponse getPlayingDetail(Long userId, Long playingId) {
-        validatePlayingId(playingId);
-
-        Playing playing = playingRepository.findByIdWithBackingTrack(playingId)
-                .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
-
-        playing.validatePlayingOwner(userId);
-        playing.validateCompleted();
-
-        String recordingFileUrl =
-                s3FileService.createPresignedDownload(
-                        userId,
-                        S3FileType.RECORDING,
-                        playing.getRecordingObjectKey()
-                );
-
-        return PlayingDetailResponse.from(playing, recordingFileUrl);
-    }
-
-    @Transactional(readOnly = true)
-    public AnalysisContextResponse getAnalysisContext(Long userId, Long playingId) {
-        validatePlayingId(playingId);
-
-        Playing playing = playingRepository.findByIdWithBackingTrack(playingId)
-                .orElseThrow(() -> new GeneralException(PlayingErrorStatus.PLAYING_NOT_FOUND));
-
-        playing.validatePlayingOwner(userId);
-        playing.validateCompleted();
-        if (playing.getBackingTrack() == null) {
-            throw new GeneralException(PlayingErrorStatus.BACKING_TRACK_NOT_FOUND);
-        }
-
-        String recordingFileUrl =
-                s3FileService.createPresignedDownload(
-                        userId,
-                        S3FileType.RECORDING,
-                        playing.getRecordingObjectKey()
-                );
-
-        BackingTrack backingTrack = playing.getBackingTrack();
-
-        String backingTrackAudioFileUrl = null;
-
-        if (backingTrack.getAudioObjectKey() != null
-                && !backingTrack.getAudioObjectKey().isBlank()) {
-
-            backingTrackAudioFileUrl =
-                    s3FileService.createPresignedDownload(
-                            backingTrack.getUser().getUserId(),
-                            S3FileType.BACKING_TRACK,
-                            backingTrack.getAudioObjectKey()
-                    );
-        }
-
-        int totalBars = analysisBarCalculator.calculate(playing).totalBars();
-        return AnalysisContextResponse.from(playing, totalBars, recordingFileUrl, backingTrackAudioFileUrl);
     }
 
     @Transactional

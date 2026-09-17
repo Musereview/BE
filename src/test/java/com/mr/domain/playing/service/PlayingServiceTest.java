@@ -1,18 +1,13 @@
 package com.mr.domain.playing.service;
 
 import com.mr.domain.backingtrack.entity.BackingTrack;
-import com.mr.domain.analysis.service.AnalysisBarCalculator;
 import com.mr.domain.backingtrack.entity.enums.AccessLevel;
 import com.mr.domain.backingtrack.repository.BackingTrackRepository;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
 import com.mr.domain.playing.dto.req.PlayingStartRequest;
-import com.mr.domain.playing.dto.req.RecordingUploadUrlRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
-import com.mr.domain.playing.dto.res.AnalysisContextResponse;
 import com.mr.domain.playing.dto.res.PlayingDeleteResponse;
-import com.mr.domain.playing.dto.res.PlayingDetailResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
-import com.mr.domain.playing.dto.res.RecordingUploadUrlResponse;
 import com.mr.domain.playing.entity.MidiEventData;
 import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.MidiType;
@@ -25,9 +20,7 @@ import com.mr.domain.user.entity.User;
 import com.mr.domain.user.repository.UserRepository;
 import com.mr.global.apipayload.exception.GeneralException;
 import com.mr.global.event.PlayingCompletedEvent;
-import com.mr.global.file.s3.dto.FileUploadCommand;
 import com.mr.global.file.s3.dto.ValidatedFile;
-import com.mr.global.file.s3.dto.PresignedUrlUpload;
 import com.mr.global.file.s3.enums.S3FileType;
 import com.mr.global.file.s3.service.S3FileService;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,7 +44,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,9 +67,6 @@ class PlayingServiceTest {
     private static final Integer BPM = 120;
     private static final String RECORDING_OBJECT_KEY =
             "recordings/1/2026-08-02/150000_a1b2c3.mp3";
-    private static final String RECORDING_FILE_URL =
-            "https://test-bucket.s3.ap-northeast-2.amazonaws.com/"
-                    + RECORDING_OBJECT_KEY;
     private static final String BACKING_TRACK_OBJECT_KEY =
             "backing-tracks/1/2026-08-02/150000_a1b2c3.mp3";
     private static final String BACKING_TRACK_FILE_URL =
@@ -85,9 +74,6 @@ class PlayingServiceTest {
 
     @Mock
     private PlayingRepository playingRepository;
-
-    @Mock
-    private AnalysisBarCalculator analysisBarCalculator;
 
     @Mock
     private UserRepository userRepository;
@@ -898,189 +884,6 @@ class PlayingServiceTest {
     }
 
     @Nested
-    @DisplayName("연주 세션 단건 조회")
-    class GetPlayingDetail {
-
-        @Test
-        @DisplayName("본인의 완료된 연주 세션을 조회한다")
-        void getPlayingDetailSuccess() {
-
-            when(playingRepository.findByIdWithBackingTrack(playingId))
-                    .thenReturn(Optional.of(playing));
-
-            when(playing.getId()).thenReturn(playingId);
-            when(playing.getStatus()).thenReturn(PlayingStatus.COMPLETED);
-
-            PlayingDetailResponse response =
-                    playingService.getPlayingDetail(userId, playingId);
-
-            assertThat(response.playingId()).isEqualTo(playingId);
-            assertThat(response.status()).isEqualTo(PlayingStatus.COMPLETED);
-
-            verify(playing).validatePlayingOwner(userId);
-            verify(playing).validateCompleted();
-        }
-
-        @Test
-        @DisplayName("연주 세션 ID가 1 미만이면 예외가 발생한다")
-        void invalidPlayingId() {
-            assertThatThrownBy(() ->
-                    playingService.getPlayingDetail(1L, 0L)
-            )
-                    .isInstanceOf(GeneralException.class)
-                    .satisfies(exception -> {
-                        GeneralException generalException =
-                                (GeneralException) exception;
-
-                        assertThat(generalException.getCode())
-                                .isEqualTo(PlayingErrorStatus.INVALID_PLAYING_ID);
-                    });
-        }
-
-        @Test
-        @DisplayName("연주 세션이 존재하지 않으면 예외가 발생한다")
-        void playingNotFound() {
-            // given
-            Long playingId = 10L;
-
-            given(playingRepository.findByIdWithBackingTrack(playingId))
-                    .willReturn(Optional.empty());
-
-            // when & then
-            assertThatThrownBy(() ->
-                    playingService.getPlayingDetail(1L, playingId)
-            )
-                    .isInstanceOf(GeneralException.class);
-        }
-
-        @Test
-        @DisplayName("다른 사용자의 연주 세션이면 예외가 발생한다")
-        void playingAccessDenied() {
-
-            when(playingRepository.findByIdWithBackingTrack(playingId))
-                    .thenReturn(Optional.of(playing));
-
-            doThrow(new GeneralException(
-                    PlayingErrorStatus.PLAYING_ACCESS_DENIED))
-                    .when(playing)
-                    .validatePlayingOwner(userId);
-
-            assertThatThrownBy(() ->
-                    playingService.getPlayingDetail(userId, playingId))
-                    .isInstanceOf(GeneralException.class);
-
-            verify(playing, never()).validateCompleted();
-        }
-
-        @Test
-        @DisplayName("완료되지 않은 연주 세션이면 예외가 발생한다")
-        void playingNotCompleted() {
-
-            when(playingRepository.findByIdWithBackingTrack(playingId))
-                    .thenReturn(Optional.of(playing));
-
-            doThrow(new GeneralException(
-                    PlayingErrorStatus.PLAYING_NOT_COMPLETED))
-                    .when(playing)
-                    .validateCompleted();
-
-            assertThatThrownBy(() ->
-                    playingService.getPlayingDetail(userId, playingId))
-                    .isInstanceOf(GeneralException.class);
-        }
-    }
-
-    @Nested
-    @DisplayName("분석 마디 선택 정보 조회")
-    class GetAnalysisContext {
-
-        @Test
-        @DisplayName("본인의 완료된 연주와 전체 마디 수를 조회한다")
-        void getAnalysisContextSuccess() {
-            when(playingRepository.findByIdWithBackingTrack(playingId))
-                    .thenReturn(Optional.of(playing));
-            when(playing.getBackingTrack()).thenReturn(backingTrack);
-            when(playing.getId()).thenReturn(playingId);
-            when(backingTrack.getId()).thenReturn(backingTrackId);
-            when(playing.getBpm()).thenReturn(BPM);
-            when(playing.getMidiData()).thenReturn(List.of());
-            when(backingTrack.getTimeSignature()).thenReturn("4/4");
-            when(analysisBarCalculator.calculate(playing))
-                    .thenReturn(new AnalysisBarCalculator.BarMetrics(
-                            new int[]{4, 4},
-                            2_000D,
-                            60
-                    ));
-
-            AnalysisContextResponse response =
-                    playingService.getAnalysisContext(userId, playingId);
-
-            assertThat(response.playingId()).isEqualTo(playingId);
-            assertThat(response.backingTrackId()).isEqualTo(backingTrackId);
-            assertThat(response.totalBars()).isEqualTo(60);
-            verify(playing).validatePlayingOwner(userId);
-            verify(playing).validateCompleted();
-        }
-
-        @Test
-        @DisplayName("백킹트랙이 연결되지 않으면 예외가 발생한다")
-        void backingTrackNotFound() {
-            when(playingRepository.findByIdWithBackingTrack(playingId))
-                    .thenReturn(Optional.of(playing));
-            when(playing.getBackingTrack()).thenReturn(null);
-
-            assertThatThrownBy(() ->
-                    playingService.getAnalysisContext(userId, playingId)
-            )
-                    .isInstanceOf(GeneralException.class)
-                    .hasFieldOrPropertyWithValue(
-                            "code",
-                            PlayingErrorStatus.BACKING_TRACK_NOT_FOUND
-                    );
-
-            verify(analysisBarCalculator, never()).calculate(any());
-        }
-
-        @Test
-        @DisplayName("완료되지 않은 연주는 분석 정보를 조회할 수 없다")
-        void playingNotCompleted() {
-            when(playingRepository.findByIdWithBackingTrack(playingId))
-                    .thenReturn(Optional.of(playing));
-            doThrow(new GeneralException(PlayingErrorStatus.PLAYING_NOT_COMPLETED))
-                    .when(playing)
-                    .validateCompleted();
-
-            assertThatThrownBy(() ->
-                    playingService.getAnalysisContext(userId, playingId)
-            )
-                    .isInstanceOf(GeneralException.class)
-                    .hasFieldOrPropertyWithValue(
-                            "code",
-                            PlayingErrorStatus.PLAYING_NOT_COMPLETED
-                    );
-
-            verify(analysisBarCalculator, never()).calculate(any());
-        }
-
-        @Test
-        @DisplayName("다른 사용자의 연주는 조회할 수 없다")
-        void playingAccessDenied() {
-            when(playingRepository.findByIdWithBackingTrack(playingId))
-                    .thenReturn(Optional.of(playing));
-            doThrow(new GeneralException(PlayingErrorStatus.PLAYING_ACCESS_DENIED))
-                    .when(playing)
-                    .validatePlayingOwner(userId);
-
-            assertThatThrownBy(() ->
-                    playingService.getAnalysisContext(userId, playingId)
-            ).isInstanceOf(GeneralException.class);
-
-            verify(playing, never()).validateCompleted();
-            verify(analysisBarCalculator, never()).calculate(any());
-        }
-    }
-
-    @Nested
     @DisplayName("연주 기록 삭제")
     class DeletePlaying {
 
@@ -1210,131 +1013,6 @@ class PlayingServiceTest {
 
             verify(playingRepository, never())
                     .findByIdAndDeletedAtIsNull(any());
-        }
-    }
-
-    @Nested
-    @DisplayName("녹음 파일 업로드 URL 발급")
-    class CreateRecordingUploadUrl {
-
-        @Test
-        @DisplayName("진행 중인 본인의 연주이면 녹음 파일 업로드 URL을 발급한다")
-        void createRecordingUploadUrl_success() {
-            // given
-            RecordingUploadUrlRequest request =
-                    new RecordingUploadUrlRequest(
-                            "recording.mp3",
-                            "audio/mpeg",
-                            1_024L
-                    );
-
-            FileUploadCommand command =
-                    request.toCommand();
-
-            PresignedUrlUpload presignedUpload =
-                    new PresignedUrlUpload(
-                            RECORDING_OBJECT_KEY,
-                            "https://example.com/presigned-upload-url",
-                            Instant.now().plusSeconds(600),
-                            Map.of("Content-Type", "audio/mpeg")
-                    );
-
-            RecordingUploadUrlResponse expectedResponse =
-                    RecordingUploadUrlResponse.from(
-                            presignedUpload
-                    );
-
-            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
-                    .thenReturn(Optional.of(playing));
-
-            when(s3FileService.createPresignedUpload(
-                    userId,
-                    S3FileType.RECORDING,
-                    command
-            )).thenReturn(presignedUpload);
-
-            // when
-            RecordingUploadUrlResponse response =
-                    playingService.createRecordingUploadUrl(
-                            userId,
-                            playingId,
-                            request
-                    );
-
-            // then
-            assertThat(response)
-                    .isEqualTo(expectedResponse);
-
-            verify(playingRepository)
-                    .findByIdAndDeletedAtIsNull(playingId);
-
-            verify(playing)
-                    .validatePlayingOwner(userId);
-
-            verify(playing)
-                    .validateInProgress();
-
-            verify(s3FileService)
-                    .createPresignedUpload(userId, S3FileType.RECORDING, command);
-        }
-
-        @Test
-        @DisplayName("진행 중이 아닌 연주에는 녹음 파일 업로드 URL을 발급하지 않는다")
-        void createRecordingUploadUrl_notInProgress() {
-            // given
-            RecordingUploadUrlRequest request =
-                    new RecordingUploadUrlRequest(
-                            "recording.mp3",
-                            "audio/mpeg",
-                            1_024L
-                    );
-
-            when(playingRepository.findByIdAndDeletedAtIsNull(playingId))
-                    .thenReturn(Optional.of(playing));
-
-            doThrow(
-                    new GeneralException(
-                            PlayingErrorStatus.INVALID_PLAYING_STATUS
-                    )
-            )
-                    .when(playing)
-                    .validateInProgress();
-
-            // when & then
-            assertThatThrownBy(() ->
-                    playingService.createRecordingUploadUrl(
-                            userId,
-                            playingId,
-                            request
-
-                    )
-            )
-                    .isInstanceOf(GeneralException.class)
-                    .satisfies(exception -> {
-                        GeneralException generalException =
-                                (GeneralException) exception;
-
-                        assertThat(generalException.getCode())
-                                .isEqualTo(
-                                        PlayingErrorStatus.INVALID_PLAYING_STATUS
-                                );
-                    });
-
-            verify(playingRepository)
-                    .findByIdAndDeletedAtIsNull(playingId);
-
-            verify(playing)
-                    .validatePlayingOwner(userId);
-
-            verify(playing)
-                    .validateInProgress();
-
-            verify(s3FileService, never())
-                    .createPresignedUpload(
-                            anyLong(),
-                            any(S3FileType.class),
-                            any(FileUploadCommand.class)
-                    );
         }
     }
 }

@@ -7,6 +7,8 @@ import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
 import com.mr.domain.playing.dto.res.AnalysisContextResponse;
 import com.mr.domain.playing.dto.res.PlayingStartResponse;
 import com.mr.domain.playing.dto.res.RecordingUploadUrlResponse;
+import com.mr.domain.playing.service.PlayingFileService;
+import com.mr.domain.playing.service.PlayingQueryService;
 import com.mr.domain.playing.service.PlayingService;
 import com.mr.global.apipayload.ApiResponse;
 import com.mr.global.security.principal.CustomUserDetails;
@@ -30,6 +32,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlayingController {
 
     private final PlayingService playingService;
+    private final PlayingFileService playingFileService;
+    private final PlayingQueryService playingQueryService;
 
     @Operation(
             summary = "연주 세션 시작 API",
@@ -61,7 +65,7 @@ public class PlayingController {
         Long userId = userDetails.getUserId();
 
         RecordingUploadUrlResponse response =
-                playingService.createRecordingUploadUrl(userId, playingId, request);
+                playingFileService.createRecordingUploadUrl(userId, playingId, request);
         return ApiResponse.onSuccess(response);
     }
 
@@ -99,7 +103,7 @@ public class PlayingController {
             @Parameter(description = "연주 ID", example = "128")
             @PathVariable Long playingId
     ) {
-        AnalysisContextResponse response = playingService.getAnalysisContext(
+        AnalysisContextResponse response = playingQueryService.getAnalysisContext(
                 userDetails.getUserId(),
                 playingId
         );
