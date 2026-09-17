@@ -6,6 +6,7 @@ import com.mr.domain.playing.entity.Playing;
 import com.mr.domain.playing.entity.enums.PlayingStatus;
 import jakarta.persistence.LockModeType;
 
+import java.sql.Date;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -85,16 +86,17 @@ public interface PlayingRepository extends JpaRepository<Playing, Long> {
             @Param("since") Instant since
     );
 
-    @Query("""
-            select p.endedAt from Playing p
-            where p.user.userId = :userId
-              and p.status = :status
-              and p.deletedAt is null
-              and p.endedAt is not null
-            """)
-    List<Instant> findDistinctEndedDatesByUserAndStatus(
+    @Query(value = """
+        SELECT DISTINCT CAST(p.ended_at AT TIME ZONE 'Asia/Seoul' AS date)
+        FROM playing p
+        WHERE p.user_id = :userId
+          AND p.status = :status
+          AND p.deleted_at IS NULL
+          AND p.ended_at IS NOT NULL
+        """, nativeQuery = true)
+    List<Date> findDistinctEndedDatesByUserAndStatus(
             @Param("userId") Long userId,
-            @Param("status") PlayingStatus status
+            @Param("status") String status
     );
 
     @Query("""
