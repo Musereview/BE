@@ -2,18 +2,23 @@ package com.mr.domain.playing.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mr.domain.playing.dto.req.MidiEventSaveRequest;
+import com.mr.domain.playing.dto.req.RecordingUploadUrlRequest;
 import com.mr.domain.playing.dto.res.MidiEventSaveResponse;
 import com.mr.domain.playing.dto.res.AnalysisContextResponse;
+import com.mr.domain.playing.dto.res.RecordingUploadUrlResponse;
 import com.mr.domain.playing.entity.enums.MidiType;
 import com.mr.domain.playing.service.PlayingFileService;
 import com.mr.domain.playing.service.PlayingQueryService;
 import com.mr.domain.playing.service.PlayingService;
 import com.mr.domain.user.entity.enums.UserRole;
 import com.mr.global.apipayload.handler.GlobalExceptionHandler;
+import com.mr.global.file.s3.dto.PresignedUrlUpload;
 import com.mr.global.security.principal.CustomUserDetails;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.AfterEach;
@@ -35,6 +40,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static com.mr.domain.playing.constant.MidiEventConstants.MAX_MIDI_EVENT_COUNT;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -399,5 +405,37 @@ class PlayingControllerTest {
                 ), RECORDING_OBJECT_KEY
 
         );
+    }
+
+    @Nested
+    @DisplayName("녹음 파일 업로드 URL 발급")
+    class CreateRecordingUploadUrl {
+
+        @Test
+        @DisplayName("녹음 파일 업로드 URL 발급 요청을 PlayingFileService에 위임한다")
+        void createRecordingUploadUrlSuccess() throws Exception {
+            RecordingUploadUrlRequest request =
+                    new RecordingUploadUrlRequest("recording.mp3", "audio/mpeg", 1_024L);
+
+            PresignedUrlUpload presignedUpload =
+                    new PresignedUrlUpload(
+                            "recordings/1/recording.mp3",
+                            "https://example.com/presigned-upload-url",
+                            Instant.now().plusSeconds(600),
+                            Map.of("Content-Type", "audio/mpeg")
+                    );
+
+            RecordingUploadUrlResponse response = RecordingUploadUrlResponse.from(presignedUpload);
+
+            given(playingFileService.createRecordingUploadUrl(eq(USER_ID), eq(PLAYING_ID), any(RecordingUploadUrlRequest.class)))
+                    .willReturn(response);
+
+            mockMvc.perform(post("/api/playings/{playingId}/recording-upload-url", PLAYING_ID)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk());
+
+            then(playingFileService).should().createRecordingUploadUrl(eq(USER_ID), eq(PLAYING_ID), any(RecordingUploadUrlRequest.class));
+        }
     }
 }
